@@ -7,6 +7,7 @@ import { IntroScene } from './logic/IntroScene.js';
 import { TimeSystem } from './logic/TimeSystem.js';
 import { DragManager } from './logic/DragManager.js';   
 import { UIRenderer } from './ui/UIRenderer.js';
+import { StoryManager } from './logic/StoryManager.js';
 
 // 2. 程序入口
 async function init() {
@@ -28,6 +29,15 @@ async function init() {
 
     // 播放剧情
     IntroScene.init(); 
+
+    // ============================================================
+    // ✨ 新增：检查每日剧情事件 (包裹)
+    // ============================================================
+    // 放在 TimeSystem.init 之后，确保 Day 已经是最新的
+    // 放在 IntroScene 之后，防止冲突（通常 IntroScene 只在Day 1触发）
+    setTimeout(() => {
+        StoryManager.checkDailyEvents();
+    }, 1000); // 延迟1秒执行，给界面一点淡入的时间，体验更好
     
     UIRenderer.log("欢迎回家。");
 }

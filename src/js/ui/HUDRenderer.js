@@ -145,12 +145,35 @@ export const HUDRenderer = {
         const body = document.getElementById('letter-view-body');
         const title = document.getElementById('letter-view-title');
         
+        // 渲染信件内容
         if(body) body.innerHTML = data.content.replace(/\n/g, '<br>');
         if(title) title.innerText = data.title;
         
-        if(!UserData.hasReadMail(data.day)) {
+        // ❌ 删除旧逻辑：不要一打开就标记已读，否则关闭时就无法触发"第一次阅读"的判定了
+        /* if(!UserData.hasReadMail(data.day)) {
             UserData.markMailAsRead(data.day);
             this.updateMailboxStatus();
+        } 
+        */
+
+        // ✨ 新增逻辑：绑定关闭按钮事件
+        // 请确保 index.html 中信件弹窗的关闭按钮 ID 为 'btn-close-letter'
+        const closeBtn = document.getElementById('btn-close-letter');
+        
+        if (closeBtn) {
+            // 覆盖 onclick 事件
+            closeBtn.onclick = () => {
+                // 1. 关闭弹窗
+                ModalManager.close('modal-letter');
+                
+                // 2. 核心：通知 MailManager 信件已关闭，尝试触发读后感
+                MailManager.onCloseMail(data.day);
+                
+                // 3. 刷新红点 (因为 onCloseMail 里会把信件标记为已读)
+                this.updateMailboxStatus();
+            };
+        } else {
+            console.warn("未找到 ID 为 'btn-close-letter' 的关闭按钮，无法绑定剧情触发器。");
         }
     },
 
