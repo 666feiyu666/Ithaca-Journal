@@ -38,7 +38,15 @@ export const SidebarRenderer = {
         if (editor) {
             editor.oninput = () => {
                 if (this.activeEntryId) {
+                    // 1. 更新数据层 (Journal.js 会计算字数变化并更新 UserData)
                     Journal.updateEntry(this.activeEntryId, editor.value);
+                    
+                    // ✨ 修复：实时刷新 HUD 字数显示
+                    // 因为 Journal.updateEntry 可能已经修改了 UserData.totalWords，
+                    // 这里必须手动通知 HUD 重新渲染数字。
+                    HUDRenderer.updateAll(); 
+
+                    // 2. 更新保存状态提示
                     this.updateSaveStatus("正在保存...", "#666");
                     
                     // 防抖模拟保存完成提示

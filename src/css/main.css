@@ -745,3 +745,35 @@ body.interaction-locked #btn-skip-intro,
 body.interaction-locked .dialogue-box-container {
     pointer-events: auto !important;
 }
+
+/* =========================================
+   修复：日记编辑器滚动条
+   (覆盖全局的隐藏设置，单独显示滚动条)
+   ========================================= */
+
+/* 1. 确保输入框允许垂直滚动 */
+#editor-area {
+    overflow-y: auto; 
+}
+
+/* 2. 恢复滚动条显示 (覆盖全局的 display: none) */
+#editor-area::-webkit-scrollbar {
+    display: block; /* 关键！显示出来 */
+    width: 8px;     /* 设置宽度，不要太宽以免遮挡文字 */
+}
+
+/* 3. 滚动条轨道 (背景) */
+#editor-area::-webkit-scrollbar-track {
+    background: transparent; /* 透明轨道，保持简洁 */
+}
+
+/* 4. 滚动条滑块 (拖动部分) */
+#editor-area::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1); /* 平时是淡淡的灰色 */
+    border-radius: 4px;                   /* 圆角设计 */
+}
+
+/* 5. 鼠标悬停在滑块上时加深颜色 */
+#editor-area::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(93, 64, 55, 0.4); /* 使用主题棕色 #5d4037 的半透明版本 */
+}
