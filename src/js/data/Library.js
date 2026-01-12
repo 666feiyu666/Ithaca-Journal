@@ -139,13 +139,26 @@ export const Library = {
    async init() {
         // 1. 读取存档
         const saved = await window.ithacaSystem.loadData('library_data.json');
+        
+        // 🛡️【关键修复】安全加载逻辑
+        let loadedBooks = [];
         if (saved) {
-            this.books = JSON.parse(saved);
-        } else {
-            this.books = [];
+            try {
+                const parsed = JSON.parse(saved);
+                // 必须确保它是数组，如果是对象 {} 则回退为空数组 []
+                if (Array.isArray(parsed)) {
+                    loadedBooks = parsed;
+                } else {
+                    console.warn("[Library] 警告：library_data.json 格式不正确(不是数组)，已自动重置为空书架。");
+                }
+            } catch (err) {
+                console.error("[Library] JSON 解析失败，重置为空:", err);
+            }
         }
+        this.books = loadedBooks;
 
         // --- 🧹 现有逻辑：清理旧的系统书 ---
+        // (由于上面保证了 this.books 绝对是数组，这一行现在安全了)
         this.books = this.books.filter(b => {
             const isOldSystemBook = (b.title.includes("伊萨卡手记") && b.id !== GUIDE_BOOK_I.id && !b.isMystery);
             return !isOldSystemBook;
@@ -165,22 +178,17 @@ export const Library = {
         }
 
         // ============================================================
-        // ✨ 新增修复逻辑：强制更新《糖水菠萝的日记》的封面
+        // ✨ 现有逻辑：强制更新《糖水菠萝的日记》的封面
         // ============================================================
         const targetBookId = "book_pineapple_diary_complete";
         const pineappleBook = this.books.find(b => b.id === targetBookId);
         
         if (pineappleBook) {
-            // 强制覆盖为新的绿色封面 (booksheet1)
             pineappleBook.cover = "assets/images/booksheet/booksheet1.png"; 
-            
-            // 顺手再次确保它是只读的
             pineappleBook.isReadOnly = true; 
-            
-            console.log("已修复《糖水菠萝的日记》封面与属性");
         }
 
-        // 3. 保存更改到硬盘
+        // 3. 保存更改到硬盘 (这会把正确的数组格式写回文件，彻底修复坏档)
         this.save(); 
     },
 

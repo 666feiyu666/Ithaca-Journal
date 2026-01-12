@@ -6,7 +6,8 @@ const fs = require('fs');
 // 1. 定义数据存储路径 (持久化存档目录)
 // Windows: %APPDATA%/伊萨卡手记-测试版/save_data/
 // macOS: ~/Library/Application Support/伊萨卡手记-测试版/save_data/
-const DATA_DIR = path.join(app.getPath('userData'), 'save_data');
+const SAVE_FOLDER_NAME = app.isPackaged ? 'save_data' : 'save_data_dev_test5';
+const DATA_DIR = path.join(app.getPath('userData'), SAVE_FOLDER_NAME);
 
 // 确保存档目录存在
 if (!fs.existsSync(DATA_DIR)) {

@@ -38,22 +38,22 @@ export const Journal = {
 
         const newEntry = {
             id: Date.now(),
+            // 🛡️ 核心修复：必须记录这篇日记是属于哪一天的！
+            // 如果 UserData 还没加载完，默认就是第 1 天
+            day: UserData.state.day || 1, 
+            
             date: dateStr,
             time: timeStr,
             content: "", 
             isConfirmed: false,
             savedWordCount: 0,
-            
-            // ✨ 核心变更：默认为空数组，表示“未归档/收件箱”
-            // 用户之后可以通过 toggleNotebook 来添加归属
             notebookIds: [] 
         };
         
-        this.entries.unshift(newEntry); // 新的放最上面
+        this.entries.unshift(newEntry); 
         this.save();
         return newEntry;
     },
-
     // ✨ 核心新增：切换归属状态 (Toggle)
     // 供 UI 层的“标签栏”调用：点一下加进去，再点一下移出来
     toggleNotebook(entryId, notebookId) {
@@ -101,9 +101,12 @@ export const Journal = {
         }
     },
 
-    // 确认日记（领取墨水 & 首次计入字数）
+    // 确认日记
     confirmEntry(id) {
-        const entry = this.entries.find(e => e.id === id);
+        // 🛡️ 核心修复：使用 == 而不是 === 
+        // 防止 UI 传过来的是字符串 ID ("12345") 而数据里是数字 (12345)
+        const entry = this.entries.find(e => e.id == id);
+        
         if (entry && !entry.isConfirmed) {
             entry.isConfirmed = true;
 
@@ -120,7 +123,6 @@ export const Journal = {
         }
         return false;
     },
-
     // 删除日记
     deleteEntry(id) {
         const index = this.entries.findIndex(e => e.id === id);

@@ -722,3 +722,26 @@ textarea:focus { border-color: #999; }
     from { transform: translateX(0); opacity: 1; }
     to { transform: translateX(120%); opacity: 0; }
 }
+
+/* === 全局交互锁定 (用于剧情/引导模式) === */
+
+/* 当 body 带有 interaction-locked 类时：*/
+body.interaction-locked .top-right-toolbar,    /* 右上角工具栏 (设置, 背包等) */
+body.interaction-locked .bottom-right-toolbar, /* 右下角成就按钮 */
+body.interaction-locked .room-hud,             /* 左上角/左下角的状态栏 */
+body.interaction-locked #scene-map,            /* 如果地图在底下，也禁止点击 */
+body.interaction-locked .map-node-hotspot      /* 地图热点 */
+{
+    pointer-events: none !important; /* 核心：让鼠标穿透，无法点击 */
+    opacity: 0.5;                    /* 可选：让它们变半透明，暗示不可用 */
+    filter: grayscale(100%);         /* 可选：变灰 */
+    transition: all 0.3s ease;
+}
+
+/* 极其重要：必须允许剧情层本身可以点击！否则剧情也没法点了 */
+body.interaction-locked #scene-intro,
+body.interaction-locked .intro-container,
+body.interaction-locked #btn-skip-intro,
+body.interaction-locked .dialogue-box-container {
+    pointer-events: auto !important;
+}

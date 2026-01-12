@@ -29,12 +29,16 @@ export const UserData = {
     // 初始化
     async init() {
         const saved = await window.ithacaSystem.loadData('user_data.json');
-    
+        
+        // 标记是否为纯新用户（根据是否读取到存档来判断）
+        let isNewUser = false;
+
         if (saved) {
             this.state = JSON.parse(saved);
             console.log("存档加载成功！内容：", this.state);
         } else {
-            console.log("未找到存档，将创建新进度");
+            console.log("未找到存档，使用默认初始状态");
+            isNewUser = true; // <--- 标记为新用户
         }
 
         // --- 1. 基础数据兼容性修补 ---
