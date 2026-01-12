@@ -1,6 +1,7 @@
 /* src/js/logic/MailManager.js */
 import { UserData } from '../data/UserData.js';
 import { StoryManager } from './StoryManager.js';
+import { HUDRenderer } from '../ui/HUDRenderer.js'; // ✨ 新增引入：用于显示Toast
 
 export const MailManager = {
     // 📖 21天信件库 (剧本配置)
@@ -382,6 +383,18 @@ PPT做得花团锦簇，日报写得洋洋洒洒，早到晚退，那是我的�
         }
     },
 
+    // ✨ 新增：21天读后感引导语配置 (你可以根据信件内容自定义)
+    REFLECTION_PROMPTS: {
+        1: "看着这封关于'开始'的信，你是否也想起了某个重新出发的时刻？",
+        2: "关于'被遗忘的草稿'，你有想要找回的碎片吗？",
+        3: "你觉得自己正活在哪个'剧本'里？",
+        4: "你如何定义'成功'与'失败'？",
+        // ... 中间的天数可以留空，代码会使用默认文案 ...
+        21: "这是最后一封信了。现在的你，想对最初的自己说些什么？"
+    },
+
+    TOTAL_LETTER_DAYS: 21, // 总天数阈值
+
     /**
      * 检查今天是否有新信 (用于红点提示)
      */
@@ -461,5 +474,138 @@ PPT做得花团锦簇，日报写得洋洋洒洒，早到晚退，那是我的�
             }
         }
         return list;
-    }
+    },
+
+    /**
+     * ✨ 核心重构：当信件 UI 关闭时被调用
+     * 逻辑：标记已读 -> 检查是否写过感想 -> (没写过) 弹出输入框
+     */
+    onCloseMail(day) {
+        // 1. 标记已读
+        UserData.markMailAsRead(day);
+
+        // 2. 检查是否已经写过感想了？(避免重复弹窗)
+        const replies = UserData.getAllReplies();
+        if (replies[day]) {
+            return; 
+        }
+
+        // 3. 开启“读后感”流程
+        this.startReflectionFlow(day);
+    },
+
+    /**
+     * ✨ 新增：开启读后感弹窗
+     */
+    startReflectionFlow(day) {
+        const modal = document.getElementById('modal-mail-reflection');
+        const promptEl = document.getElementById('reflection-prompt');
+        const inputEl = document.getElementById('reflection-input');
+        const btnSubmit = document.getElementById('btn-submit-reflection');
+        const btnSkip = document.getElementById('btn-skip-reflection');
+
+        if (!modal) return;
+
+        // 设置引导语
+        const promptText = this.REFLECTION_PROMPTS[day] || "此刻，你的脑海中浮现了什么...";
+        promptEl.innerText = promptText;
+        
+        // 清空输入框
+        inputEl.value = "";
+
+        // 绑定事件 (先解绑旧事件防止多次触发)
+        btnSubmit.onclick = null;
+        btnSkip.onclick = null;
+
+        btnSubmit.onclick = () => {
+            const content = inputEl.value.trim();
+            // 如果用户没填，给一个默认的留白文本
+            this.finishReflection(day, content || "（以此沉默回应）"); 
+        };
+
+        btnSkip.onclick = () => {
+            this.finishReflection(day, "（未记录感想）");
+        };
+
+        // 显示弹窗
+        modal.style.display = 'flex';
+    },
+
+    /**
+     * ✨ 新增：完成记录并保存
+     */
+    finishReflection(day, content) {
+        // 1. 保存数据
+        UserData.saveMailReply(day, content);
+        
+        // 2. 关闭弹窗
+        document.getElementById('modal-mail-reflection').style.display = 'none';
+        
+        // 3. 反馈
+        HUDRenderer.log("💭 思绪已记录。");
+
+        // 4. 检查是否触发最终彩蛋 (集齐21天)
+        this.checkEasterEgg();
+    },
+
+    /**
+     * ✨ 新增：检查彩蛋逻辑
+     */
+    checkEasterEgg() {
+        if (UserData.state.hasReceivedEasterEggBook) return;
+
+        const replies = UserData.getAllReplies();
+        // 简单判断：回复的数量是否达到总天数
+        if (Object.keys(replies).length >= this.TOTAL_LETTER_DAYS) {
+            this.generateTheBook();
+        }
+    },
+
+    /**
+     * ✨ 新增：生成那本“玩家与糖水菠萝的共同回忆录”
+     */
+    generateTheBook() {
+        console.log("🎉 触发 21 天彩蛋！正在编纂书籍...");
+
+        let bookContent = "# 伊萨卡回信集\n\n";
+        bookContent += "致 亲爱的房客：\n\n当你读到这句话时，你已经陪伴我走过了漫长的旅途。这些是你留下的足迹。\n\n---\n\n";
+
+        const replies = UserData.getAllReplies();
+
+        for (let i = 1; i <= this.TOTAL_LETTER_DAYS; i++) {
+            const reply = replies[i] || "（无记录）";
+            const prompt = this.REFLECTION_PROMPTS[i] || `Day ${i} 的随想`;
+            
+            bookContent += `### Day ${i}\n`;
+            bookContent += `> *${prompt}*\n\n`; // 引用当时的引导语
+            bookContent += `${reply}\n\n`;      // 玩家的评论
+            bookContent += `***\n\n`;           // 分割线
+        }
+
+        bookContent += "\n感谢你在伊萨卡的停留。\n—— 你的朋友 糖水菠萝";
+
+        // 创建书籍对象
+        const specialBook = {
+            id: 'book_easter_egg_21',
+            title: '21',
+            author: '你 & 糖水菠萝',
+            content: bookContent,
+            cover: 'assets/images/booksheet/booksheet3.png', // 使用特殊的绿色封面
+            isRare: true, 
+            price: 9999
+        };
+
+        // 添加到图书馆
+        Library.addBook(specialBook);
+        
+        // 标记已领取
+        UserData.state.hasReceivedEasterEggBook = true;
+        UserData.save();
+
+        // 延迟一点弹出提示
+        setTimeout(() => {
+            alert("✨ 叮！书架上突然多了一本厚厚的书...\n\n恭喜获得隐藏书籍：《21》");
+            HUDRenderer.log("🏆 获得珍藏书籍：《21》");
+        }, 1500);
+    },
 };

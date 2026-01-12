@@ -23,7 +23,14 @@ export const UserData = {
         // 结构: { id: 'nb_xxx', name: '我的小说', icon: 'path/to/img', isDefault: boolean, createdAt: timestamp }
         notebooks: [], 
         readMails: [],   // 已读邮件ID列表
-        achievements: [] // 已解锁成就ID列表
+        achievements: [], // 已解锁成就ID列表
+
+        // ✨ 新增：存储玩家对每日信件的回复/感想
+        // 结构: { "1": "今天天气真好...", "2": "原来他是这个意思..." }
+        mailReplies: {}, 
+        
+        // ✨ 新增：标记彩蛋书是否已领取
+        hasReceivedEasterEggBook: false,
     },
 
     // 初始化
@@ -123,6 +130,18 @@ export const UserData = {
             this.state.readMails.push(day);
             this.save();
         }
+    },
+
+    // ✨ 新增方法：保存回复
+    saveMailReply(day, content) {
+        if (!this.state.mailReplies) this.state.mailReplies = {};
+        this.state.mailReplies[day] = content;
+        this.save();
+    },
+
+    // ✨ 新增方法：获取所有回复（用于生成书）
+    getAllReplies() {
+        return this.state.mailReplies || {};
     },
 
     // ============================================================
