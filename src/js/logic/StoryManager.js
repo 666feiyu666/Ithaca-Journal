@@ -445,19 +445,33 @@ export const StoryManager = {
      * 当用户关闭邮件时调用此函数
      * @param {number} day - 邮件对应的天数
      */
-    tryTriggerMailReaction(day) {
-        // 1. 构造剧本 ID (例如 mail_reaction_day1)
+    tryTriggerMailReaction(day, onComplete) {
         const scriptKey = `mail_reaction_day${day}`;
         
-        // 2. 检查是否有对应的剧本
+        // 1. 检查是否有对应的剧本
         if (this.scripts[scriptKey]) {
             console.log(`[StoryManager] 触发邮件读后感: ${scriptKey}`);
-            // 延迟一点点触发，让邮件界面完全关闭后的体验更流畅
+            
+            // 2. 延迟 300ms 触发，给 UI 关闭留点时间
             setTimeout(() => {
                 this.startStory(scriptKey);
+
+                // 🔥 关键：设置剧情结束后的回调
+                // 当对话播完点击背景关闭时，endStory() 会调用这个函数
+                this._onStoryComplete = () => {
+                    // 如果外部传了回调（比如弹出输入框），就执行它
+                    if (onComplete) {
+                        onComplete();
+                    } else {
+                        // 默认行为：检查有没有包裹 (兼容旧逻辑)
+                        this.checkDailyEvents();
+                    }
+                };
             }, 300); 
-            return true;
+            
+            return true; // 告诉调用者：有剧情，我接管了
         }
-        return false;
+        
+        return false; // 没剧情
     }
 };
