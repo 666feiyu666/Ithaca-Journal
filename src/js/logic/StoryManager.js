@@ -249,15 +249,14 @@ export const StoryManager = {
             { speaker: "我", text: "（指尖划过书脊的声音）" },
             { speaker: "我", text: "嗯？最上层深处好像卡着什么东西……" },
             { speaker: "我", text: "（用力拉拽的声音）" },
-            { speaker: "我", text: "掉出来一本封面是绿色的书，上面印着：'伊萨卡手记 I：出发'。" },
-            { speaker: "我", text: "是前任租客，还是……这个房间留给我的？既然在书架上，那就是我的了。" }
+            { speaker: "我", text: "掉出来一本封面是绿色的书，上面印着：'伊萨卡手记 I：序言'。" }
         ],
         // ✨ 新增：第7天剧情
         package_day_7: [
             { speaker: "系统", text: "（笃笃笃—— 门外传来了敲门声）" },
             { speaker: "我", text: "谁？" },
             { speaker: "系统", text: "（无人应答。你打开门，发现地毯上放着一个牛皮纸包裹）" },
-            { speaker: "我", text: "寄件人是……'G.C. Library'？" },
+            { speaker: "我", text: "寄件人是……'糖水菠萝'" },
             { speaker: "我", text: "拆开看看吧。" },
             { speaker: "系统", text: "你获得了：《伊萨卡手记 II》。已自动放入书架。" }
         ],
