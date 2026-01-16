@@ -2,7 +2,7 @@
 
 export const TOTAL_LETTER_DAYS = 21;
 
-// 📝 每日读后感引导语
+// 📝 每日读后感引导语 - 其实可以做得更好…
 export const  REFLECTION_PROMPTS = {
     1: "你有什么想说的吗？",
     2: "你有什么想说的吗？",

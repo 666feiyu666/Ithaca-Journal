@@ -38,6 +38,13 @@ export const MailManager = {
         // 1. 标记已读
         UserData.markMailAsRead(day);
 
+        // ✨ 新增逻辑：触发“i菠萝”成就 (累计读信 10 封)
+        // 获取已读列表的长度
+        const readCount = UserData.state.readMails ? UserData.state.readMails.length : 0;
+        if (readCount >= 10) {
+            UserData.unlockAchievement('ach_pineapple');
+        }
+
         // 2. 检查是否已经写过回复 (防止重复触发流程)
         const replies = UserData.getAllReplies();
         if (replies[day]) {

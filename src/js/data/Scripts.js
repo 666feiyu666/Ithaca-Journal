@@ -75,8 +75,9 @@ export const Scripts = {
         title: "读信感想 (Day 1)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "（翻到信纸背面）" },
+            { speaker: "我", text: "这就……没了？这断得也太突然了吧。" },
+            { speaker: "我", text: "不过，“未来的新房客”……是在说我吗？" }
         ]
     },
 
@@ -86,19 +87,22 @@ export const Scripts = {
         title: "读信感想 (Day 2)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "（忍不住笑出声）原来上一封是废稿啊，吓我一跳。" },
+            { speaker: "我", text: "他说的那本书……《伊萨卡手记》……" },
+            { speaker: "我", text: "（看向书架底层那本积了灰的旧书）" },
+            { speaker: "我", text: "原来它一直都在这儿。" }
         ]
     },
-    
+
     // === 信件读后感 (Day 3) ===
     "mail_reaction_day3": {
         id: "mail_reaction_day3",
         title: "读信感想 (Day 3)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "叙事处理意义，科学处理事实……" },
+            { speaker: "我", text: "虽然听起来有点掉书袋，但他说的“活在哪个剧本里”，好像有点道理。" },
+            { speaker: "我", text: "那我现在的剧本是什么呢？" }
         ]
     },
 
@@ -108,8 +112,9 @@ export const Scripts = {
         title: "读信感想 (Day 4)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "小明和小红……这形容简直太真实了。" },
+            { speaker: "我", text: "看着窗外的CBD，有时候确实觉得那些光都不属于我。" },
+            { speaker: "我", text: "（轻叹）原来大家光鲜亮丽的背后，焦虑都是一样的。" }
         ]
     },
 
@@ -119,8 +124,9 @@ export const Scripts = {
         title: "读信感想 (Day 5)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "“把第一人称和第三人称拉到一张桌子上”……" },
+            { speaker: "我", text: "这画面感太强了。不过，这确实是最难的部分吧。" },
+            { speaker: "我", text: "被他这么一说，我也开始好奇他接下来会怎么做了。" }
         ]
     },
 
@@ -130,8 +136,9 @@ export const Scripts = {
         title: "读信感想 (Day 6)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "这就去G市了？剧情发展好快！" },
+            { speaker: "我", text: "不过……能通过做自己喜欢的事被看到，真好啊。" },
+            { speaker: "我", text: "（看着信纸上的字迹）加油啊，糖水菠萝。" }
         ]
     },
 
@@ -141,8 +148,9 @@ export const Scripts = {
         title: "读信感想 (Day 7)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "（看着那圈明显的咖啡渍）" },
+            { speaker: "我", text: "这家伙……" },
+            { speaker: "我", text: "既然失而复得，那我也好好读读这一章吧。" }
         ]
     },
 
@@ -152,8 +160,9 @@ export const Scripts = {
         title: "读信感想 (Day 8)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "竟然在一封信里认真写起了书评……" },
+            { speaker: "我", text: "“以为自己在追求幸福，却亲手完成陷落”。" },
+            { speaker: "我", text: "啊，好有意思！" }
         ]
     },
 
@@ -163,8 +172,9 @@ export const Scripts = {
         title: "读信感想 (Day 9)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "那个电梯里的瞬间……我好像也有过。" },
+            { speaker: "我", text: "承认自己嫉妒，确实是一件挺难堪、但也挺解脱的事。" },
+            { speaker: "我", text: "（沉默了片刻）" }
         ]
     },
 
@@ -174,8 +184,9 @@ export const Scripts = {
         title: "读信感想 (Day 10)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "不要急着翻译成“我想要”，而是“我在渴望什么”。" },
+            { speaker: "我", text: "这家伙，不去当心理咨询师可惜了。" },
+            { speaker: "我", text: "所以我到底在渴望什么呢？" }
         ]
     },
 
@@ -185,8 +196,9 @@ export const Scripts = {
         title: "读信感想 (Day 11)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "（下意识看了一眼房间角落里堆着的快递盒）" },
+            { speaker: "我", text: "买的是“未来的自己”……" },
+            { speaker: "我", text: "别骂了别骂了，这就去拆快递。" }
         ]
     },
 
@@ -196,8 +208,9 @@ export const Scripts = {
         title: "读信感想 (Day 12)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "“见光死”是因为验证机制不同……这个角度很清奇。" },
+            { speaker: "我", text: "确实，有时候对着屏幕，反而更能说出那些平时说不出口的话。" },
+            { speaker: "我", text: "就像现在，我对着一封信在自言自语一样。" }
         ]
     },
 
@@ -207,8 +220,9 @@ export const Scripts = {
         title: "读信感想 (Day 13)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "白天社畜，晚上文青……这说的不就是我吗？" },
+            { speaker: "我", text: "做一只知道大事的刺猬……" },
+            { speaker: "我", text: "听起来，似乎比做一只疲惫的狐狸要有安全感。" }
         ]
     },
 
@@ -218,8 +232,7 @@ export const Scripts = {
         title: "读信感想 (Day 14)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "居然还专门打印寄过来了……神奇。" },
         ]
     },
 
@@ -229,8 +242,9 @@ export const Scripts = {
         title: "读信感想 (Day 15)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "画风突变！" },
+            { speaker: "我", text: "刚才还在聊奥德修斯，突然就开始赶Due了。" },
+            { speaker: "我", text: "这该死的真实感……加油吧，打工人。" }
         ]
     },
 
@@ -240,8 +254,9 @@ export const Scripts = {
         title: "读信感想 (Day 16)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "“先假装没看到”……哈哈，这是世界通用的摸鱼技巧吗？" },
+            { speaker: "我", text: "不过，“先跑起来，再变好看”……" },
+            { speaker: "我", text: "这句话对我这种拖延症晚期患者，好像很有用。" }
         ]
     },
 
@@ -251,8 +266,8 @@ export const Scripts = {
         title: "读信感想 (Day 17)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "玩游戏还能写分析报告，这就是专业人士吗？" },
+            { speaker: "我", text: "我也想把“玩”变成正事啊……" }
         ]
     },
 
@@ -262,8 +277,8 @@ export const Scripts = {
         title: "读信感想 (Day 18)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "彩蛋？" },
+            { speaker: "我", text: "好奇他藏了什么……" },
         ]
     },
 
@@ -273,8 +288,9 @@ export const Scripts = {
         title: "读信感想 (Day 19)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "最后一天了啊……" },
+            { speaker: "我", text: "隔着纸都能感觉到那种既紧张又期待的心情。" },
+            { speaker: "我", text: "祝你顺利，糖水菠萝。" }
         ]
     },
 
@@ -284,8 +300,9 @@ export const Scripts = {
         title: "读信感想 (Day 20)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "（咽了一下口水）" },
+            { speaker: "我", text: "看着这串菜名，我的肚子非常不争气地叫了一声。" },
+            { speaker: "我", text: "不行，今晚我也要点个外卖庆祝一下……虽然不知道庆祝什么。" }
         ]
     },
 
@@ -295,8 +312,10 @@ export const Scripts = {
         title: "读信感想 (Day 21)",
         type: "reaction",
         content: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
+            { speaker: "我", text: "（读到“我看见你了”时，心跳漏了一拍）" },
+            { speaker: "我", text: "他是在……跟我说话？" },
+            { speaker: "我", text: "（抬头看向虚空，仿佛那里真的有一双眼睛）" },
+            { speaker: "我", text: "谢谢你，糖水菠萝。我会写下去的。" }
         ]
     },
 };
