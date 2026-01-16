@@ -2,7 +2,7 @@
 import { UserData } from '../data/UserData.js';
 import { Library } from '../data/Library.js';
 import { UIRenderer } from '../ui/UIRenderer.js';
-import { ModalManager } from '../ui/ModalManager.js';
+import { Scripts } from '../data/Scripts.js';
 
 // 📝 补充定义：防止报错，定义第一本书的配置
 const GUIDE_BOOK_CONFIG = {
@@ -160,7 +160,6 @@ export const StoryManager = {
     },
 
     showSceneDialogue(title, htmlContent, bgSrc) {
-        // ... (保持原有逻辑，简略) ...
         const scene = document.getElementById('scene-intro');
         const bgImg = scene.querySelector('.intro-bg');
         const room = document.getElementById('scene-room');
@@ -195,51 +194,10 @@ export const StoryManager = {
         if (bgImg) { bgImg.style.display = 'block'; bgImg.src = 'assets/images/city/street0.png'; }
     },
 
-    // ============================================================
-    // 4. 剧情脚本
-    // ============================================================
-    scripts: {
-        find_first_note: [
-            { speaker: "我", text: "既然已经住下了，整理一下这边的旧书架吧。" },
-            { speaker: "我", text: "（指尖划过书脊的声音）" },
-            { speaker: "我", text: "嗯？最上层深处好像卡着什么东西……" },
-            { speaker: "我", text: "（用力拉拽的声音）" },
-            { speaker: "我", text: "掉出来一本封面是绿色的书，上面印着：'伊萨卡手记 I：序言'。" }
-        ],
-        package_day_7: [
-            { speaker: "系统", text: "（笃笃笃—— 门外传来了敲门声）" },
-            { speaker: "我", text: "谁？" },
-            { speaker: "系统", text: "（无人应答。你打开门，发现地毯上放着一个牛皮纸包裹）" },
-            { speaker: "我", text: "寄件人是……'糖水菠萝'" },
-            { speaker: "我", text: "拆开看看吧。" },
-            { speaker: "系统", text: "你获得了：《伊萨卡手记 II》。已自动放入书架。" }
-        ],
-        package_day_14: [
-            { speaker: "我", text: "门口好像又有动静了。" },
-            { speaker: "系统", text: "（还是那个熟悉的牛皮纸包裹，静静地躺在门口）" },
-            { speaker: "系统", text: "你获得了：《伊萨卡手记 III》。已自动放入书架。" }
-        ],
-        package_day_21: [
-            { speaker: "我", text: "看来今天也是收快递的日子。" },
-            { speaker: "系统", text: "（包裹如约而至，上面还附着一片干枯的橄榄叶）" },
-            { speaker: "系统", text: "你获得了：《伊萨卡手记 IV》。已自动放入书架。" }
-        ],
-        mail_reaction_day1: [
-            { speaker: "我", text: "什么鬼，是不是寄错了？" },
-            { speaker: "我", text: "（合上信纸）" }
-        ],
-        mail_reaction_day3: [ 
-            { speaker: "我", text: "……" },
-            { speaker: "我", text: "……" }
-        ],
-        mail_reaction_day7: [ 
-            { speaker: "我", text: "……" },
-            { speaker: "我", text: "……" }
-        ],
-    },
-
     currentIndex: 0,
     activeScript: null,
+    // 记录当前播放的脚本ID，方便记录日志（可选）
+    activeScriptId: null,
 
     /**
      * 🟢 核心重构：尝试触发书架剧情
@@ -285,9 +243,23 @@ export const StoryManager = {
     },
 
     startStory(scriptKey) {
-        this.activeScript = this.scripts[scriptKey];
+        // 👈 3. 修改获取方式：从 Scripts 数据中获取
+        const scriptData = Scripts[scriptKey];
+        
+        if (!scriptData) {
+            console.error("未找到剧本:", scriptKey);
+            return;
+        }
+
+        this.activeScript = scriptData.content; // 获取内容数组
+        this.activeScriptId = scriptKey;        // 记录ID
         this.currentIndex = 0;
         
+        // 记录该剧情已解锁 (方便ReviewLog)
+        // 我们利用 UserData 记录一个 unlockedScripts 列表
+        UserData.unlockScript(scriptKey); 
+
+        // ... (后续 UI 显示逻辑保持不变) ...
         const scene = document.getElementById('scene-intro');
         scene.style.display = 'flex';
         scene.style.opacity = 1;
