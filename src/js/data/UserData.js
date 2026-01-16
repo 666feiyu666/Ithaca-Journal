@@ -63,6 +63,27 @@ export const UserData = {
                 this.state.hasWatchedIntro = false;
             }
         }
+
+        // ============================================================
+        // 🟢 修复补充：旧存档剧情回顾数据迁移
+        // ============================================================
+        if (!this.state.unlockedScripts) this.state.unlockedScripts = [];
+
+        // 1. 如果玩家看过开场白，补录 intro_scene
+        if (this.state.hasWatchedIntro && !this.state.unlockedScripts.includes('intro_scene')) {
+            this.state.unlockedScripts.push('intro_scene');
+            console.log("自动补录剧情回顾: intro_scene");
+        }
+
+        // 2. 如果玩家发现过第一本书，补录 find_first_note
+        // (判断依据可以是 hasFoundMysteryEntry 或者 inventory 里有相关道具，这里假设用 hasFoundMysteryEntry 标记)
+        if (this.state.hasFoundMysteryEntry && !this.state.unlockedScripts.includes('find_first_note')) {
+            this.state.unlockedScripts.push('find_first_note');
+            console.log("自动补录剧情回顾: find_first_note");
+        }
+        
+        // 保存一下迁移后的数据
+        this.save();
         
         // 新手礼包/房间重置检测
         if (!this.state.layout) {
