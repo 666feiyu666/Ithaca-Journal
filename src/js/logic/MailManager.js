@@ -424,23 +424,29 @@ PPT做得花团锦簇，日报写得洋洋洒洒，早到晚退，那是我的�
         // 1. 标记已读
         UserData.markMailAsRead(day);
 
-        // 2. 定义“下一步要做什么” (即弹出读后感输入框)
+        // 2. 检查是否已经写过回复 (防止重复触发流程)
+        const replies = UserData.getAllReplies();
+        if (replies[day]) {
+            // 如果已经写过感想，直接检查后续事件（如是否有新书包裹），然后结束
+            StoryManager.checkDailyEvents();
+            return; 
+        }
+
+        // 3. 定义“下一步要做什么” (弹出读后感输入框)
         const nextStep = () => {
-             const replies = UserData.getAllReplies();
-             // 只有没写过感想时，才弹窗
-             if (!replies[day]) {
+             // 再次获取最新状态（防御性编程）
+             const currentReplies = UserData.getAllReplies();
+             if (!currentReplies[day]) {
                  this.startReflectionFlow(day);
-             } else {
-                 // 如果都做完了，顺便检查一下有没有 Day7 包裹之类的
-                 StoryManager.checkDailyEvents();
              }
         };
 
-        // 3. 尝试触发“自言自语”对话 (传入 nextStep 作为回调)
-        // 如果有对话 (tryTrigger 返回 true)，StoryManager 会在播完后自动调用 nextStep
-        // 如果没对话 (tryTrigger 返回 false)，我们需要手动立即调用 nextStep
+        // 4. 尝试触发“自言自语”对话
+        // 只有当不仅有剧本，而且(可选)还没看过时才播放
+        // 这里我们将 nextStep 作为回调传入
         const hasReactionStory = StoryManager.tryTriggerMailReaction(day, nextStep);
 
+        // 5. 如果没有触发剧情（比如那天没剧本，或者已经看过了），立即执行下一步
         if (!hasReactionStory) {
             nextStep();
         }
