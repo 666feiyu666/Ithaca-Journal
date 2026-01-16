@@ -4,7 +4,7 @@
 ---
 
 ## 📖 关于本项目 (About)
-![Ithaca Room](assets/images/room/room_goal.png)
+![Ithaca Room](src/assets/images/room/room_goal.png)
 
 **《伊萨卡手记》** 是一款融合了**叙事理论**与**游戏化机制**的桌面端日记应用。
 
