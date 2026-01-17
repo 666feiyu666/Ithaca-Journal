@@ -446,148 +446,84 @@ const GUIDE_BOOK_IV = {
 
 export const Library = {
     books: [],
-    
-   async init() {
-        // 1. 读取存档
-        const saved = await window.ithacaSystem.loadData('library_data.json');
-        
-        // 🛡️【关键修复】安全加载逻辑
-        let loadedBooks = [];
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                // 必须确保它是数组，如果是对象 {} 则回退为空数组 []
-                if (Array.isArray(parsed)) {
-                    loadedBooks = parsed;
-                } else {
-                    console.warn("[Library] 警告：library_data.json 格式不正确(不是数组)，已自动重置为空书架。");
-                }
-            } catch (err) {
-                console.error("[Library] JSON 解析失败，重置为空:", err);
-            }
-        }
-        this.books = loadedBooks;
 
-        // --- 🧹 现有逻辑：清理旧的系统书 ---
-        // (由于上面保证了 this.books 绝对是数组，这一行现在安全了)
-        this.books = this.books.filter(b => {
-            const isOldSystemBook = (b.title.includes("伊萨卡手记") && b.id !== GUIDE_BOOK_I.id && !b.isMystery);
-            return !isOldSystemBook;
+    init() {
+        this.load();
+        
+        // 确保初始化时至少有一本默认的书
+        if (this.books.length === 0) {
+            this.addBook("未命名手稿", "assets/images/booksheet/booksheet1.png");
+        }
+        
+        // 数据迁移：确保 isDeleted 字段存在
+        let hasChanges = false;
+        this.books.forEach(b => {
+            if(b.isDeleted === undefined) {
+                b.isDeleted = false;
+                hasChanges = true;
+            }
         });
-
-        // --- 🛠️ 现有逻辑：注入/更新《伊萨卡手记 I》 ---
-        const guideIndex = this.books.findIndex(b => b.id === GUIDE_BOOK_I.id);
-        if (guideIndex === -1) {
-            this.books.unshift(GUIDE_BOOK_I);
-        } else {
-            this.books[guideIndex] = { 
-                ...this.books[guideIndex], 
-                content: GUIDE_BOOK_I.content,
-                isReadOnly: true,
-                title: GUIDE_BOOK_I.title
-            };
-        }
-
-        // ============================================================
-        // ✨ 现有逻辑：强制更新《糖水菠萝的日记》的封面
-        // ============================================================
-        const targetBookId = "book_pineapple_diary_complete";
-        const pineappleBook = this.books.find(b => b.id === targetBookId);
-        
-        if (pineappleBook) {
-            pineappleBook.cover = "assets/images/booksheet/booksheet1.png"; 
-            pineappleBook.isReadOnly = true; 
-        }
-
-        // 3. 保存更改到硬盘 (这会把正确的数组格式写回文件，彻底修复坏档)
-        this.save(); 
-
-        // ✨ 在初始化结束时也检查一次（防止读档后没触发）
-        this.checkCollectionAchievement();
+        if(hasChanges) this.save();
     },
 
-    // ✨ 新增辅助方法：检查全收集成就
-    checkCollectionAchievement() {
-        const requiredIds = ["guide_book_part1", "guide_book_part2", "guide_book_part3", "guide_book_part4"];
-        // 检查书架上是否包含了所有 requiredIds
-        const hasAll = requiredIds.every(id => this.books.some(b => b.id === id));
-        
-        if (hasAll) {
-            UserData.unlockAchievement('ach_ithaca_full');
+    load() {
+        const data = localStorage.getItem('ithaca_library_books');
+        if (data) {
+            this.books = JSON.parse(data);
         }
     },
 
-    // === ✨ 新增功能：解锁特定的系统书籍 ===
-    unlockSystemBook(partNumber) {
-        let targetBook = null;
-        switch(partNumber) {
-            case 2: targetBook = GUIDE_BOOK_II; break;
-            case 3: targetBook = GUIDE_BOOK_III; break;
-            case 4: targetBook = GUIDE_BOOK_IV; break;
-        }
-
-        if (targetBook) {
-            // 检查是否已经存在，避免重复添加
-            const exists = this.books.find(b => b.id === targetBook.id);
-            if (!exists) {
-                this.books.unshift(targetBook); // 加到最前面
-                this.save();
-                console.log(`[Library] 已解锁系统书籍：${targetBook.title}`);
-
-                // ✨ 每次获得新书后，检查是否集齐
-                this.checkCollectionAchievement();
-                return true;
-            }
-        }
-        return false;
+    save() {
+        localStorage.setItem('ithaca_library_books', JSON.stringify(this.books));
     },
 
-    // 增
-    addBook(book) {
-        this.books.push(book);
-        this.save();
+    /**
+     * 获取所有【未删除】的书籍
+     */
+    getAll() {
+        return this.books.filter(b => !b.isDeleted);
     },
 
-    // 特殊增加逻辑
-    addMysteryBook(data) {
-        const mysteryBook = {
-            id: "mystery_book_01", // 这里如果以后有多本神秘书，建议用 uuid 或传入 ID
-            title: data.title,
-            author: data.author,
-            content: data.content,
-            cover: data.cover,
-            isMystery: true,
-            isCollected: true
+    /**
+     * ✨ 新增：获取回收站里的书籍
+     */
+    getTrash() {
+        return this.books.filter(b => b.isDeleted);
+    },
+
+    addBook(title, coverPath) {
+        const newBook = {
+            id: 'book_' + Date.now(),
+            title: title,
+            cover: coverPath,
+            createdAt: Date.now(),
+            isDeleted: false
         };
-        
-        if (!this.books.find(b => b.id === mysteryBook.id)) {
-            this.books.unshift(mysteryBook);
-            this.save();
-        }
+        this.books.push(newBook);
+        this.save();
+        return newBook;
     },
 
-    // 改 (合并后的版本)
-    updateBook(id, title, content) {
+    updateBook(id, newTitle, newCover) {
         const book = this.books.find(b => b.id === id);
         if (book) {
-            // 🔒 保护逻辑
-            if (book.isReadOnly) {
-                console.warn("试图修改只读书籍，操作被拦截");
-                return false; // 返回 false 表示失败
-            }
-            book.title = title;
-            book.content = content;
+            if (newTitle) book.title = newTitle;
+            if (newCover) book.cover = newCover;
             this.save();
-            return true; // 返回 true 表示成功
+            return true;
         }
         return false;
     },
 
-    // 修改 removeBook 为软删除
+    // ==========================================
+    // ✨ 修改：删除逻辑改为“移入回收站”
+    // ==========================================
     removeBook(id) {
         const book = this.books.find(b => b.id === id);
         if (book) {
-            if (book.isSystem) return false; // 系统书不能删
+            // 如果是某种系统默认书，可能不允许删除 (可选逻辑)
+            // if (book.isSystem) return false; 
+            
             book.isDeleted = true;
             book.deletedAt = Date.now();
             this.save();
@@ -596,7 +532,9 @@ export const Library = {
         return false;
     },
 
-    // ✨ 新增：还原书籍
+    /**
+     * ✨ 新增：还原书籍
+     */
     restoreBook(id) {
         const book = this.books.find(b => b.id === id);
         if (book) {
@@ -608,7 +546,9 @@ export const Library = {
         return false;
     },
 
-    // ✨ 新增：彻底焚毁
+    /**
+     * ✨ 新增：彻底焚毁 (物理删除)
+     */
     hardDeleteBook(id) {
         const index = this.books.findIndex(b => b.id === id);
         if (index !== -1) {
@@ -617,36 +557,5 @@ export const Library = {
             return true;
         }
         return false;
-    },
-
-    // 查
-    getAll() {
-        return this.books;
-    },
-
-    // ✨ 新增：获取回收站里的书
-    getTrash() {
-        return this.books.filter(b => b.isDeleted);
-    },
-
-    // ✨ 新增：重置图书馆（清空所有书籍，但保留系统指南）
-    reset() {
-        // 修复：不直接清空为 []，而是过滤保留只读书籍（如系统指南、剧情道具书）
-        this.books = this.books.filter(b => b.isReadOnly);
-        
-        // 兜底：如果过滤后发现指南不在了 (极小概率)，强制加回来
-        const hasGuide = this.books.some(b => b.id === GUIDE_BOOK_I.id);
-        if (!hasGuide) {
-             this.books.unshift(GUIDE_BOOK_I);
-        }
-
-        // 3. 保存
-        this.save();
-        console.log("📚 图书馆已重置 (保留了系统书籍)");
-    },
-
-    // 存
-    save() {
-        window.ithacaSystem.saveData('library_data.json', JSON.stringify(this.books));
     }
 };

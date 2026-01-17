@@ -1,181 +1,159 @@
 /* src/js/data/Journal.js */
 import { UserData } from './UserData.js';
-import { FragmentSystem } from '../logic/FragmentSystem.js';
 
 export const Journal = {
-    entries: [], 
+    entries: [],
 
-    // 初始化：从本地文件加载数据
-    async init() {
-        const saved = await window.ithacaSystem.loadData('journal_data.json');
-        if (saved) {
-            this.entries = JSON.parse(saved);
-        }
-        
-        // 兼容性处理：把旧的单字段 notebookId 迁移到 notebookIds 数组
-        this.entries.forEach(entry => {
-            if (!entry.notebookIds) {
-                entry.notebookIds = [];
-                // 如果有旧的归属，迁移过来；否则保持为空（归入默认收件箱）
-                if (entry.notebookId) {
-                    entry.notebookIds.push(entry.notebookId);
-                }
+    init() {
+        this.load();
+        // 数据迁移：确保所有日记都有 isDeleted 字段
+        let hasChanges = false;
+        this.entries.forEach(e => {
+            if (e.isDeleted === undefined) {
+                e.isDeleted = false;
+                hasChanges = true;
             }
         });
+        if(hasChanges) this.save();
+    },
 
-        // 如果完全没有日记（第一次运行），默认建一篇
-        if (this.entries.length === 0) {
-            this.createNewEntry();
+    load() {
+        const data = localStorage.getItem('ithaca_journal_entries');
+        if (data) {
+            this.entries = JSON.parse(data);
         }
     },
 
-    // ✨ 修改：新建日记逻辑
-    // 既然是“先记录，后归类”，新建时默认为空数组，即属于 Inbox
+    save() {
+        localStorage.setItem('ithaca_journal_entries', JSON.stringify(this.entries));
+        
+        // 同时更新 UserData 中的字数统计 (只统计未删除的)
+        // 注意：这里我们简单处理，总字数只增不减（成就系统），或者根据需求实时计算。
+        // 为了简单起见，这里只负责保存数据。
+    },
+
+    /**
+     * 获取所有【未删除】的日记
+     */
+    getAll() {
+        return this.entries.filter(e => !e.isDeleted).sort((a, b) => {
+            // 先按日期倒序
+            if (a.date !== b.date) return a.date > b.date ? -1 : 1;
+            // 同一天按时间戳倒序
+            return b.timestamp - a.timestamp;
+        });
+    },
+
+    /**
+     * ✨ 新增：获取所有【废纸篓】里的日记
+     */
+    getTrash() {
+        return this.entries.filter(e => e.isDeleted).sort((a, b) => {
+            // 按删除时间倒序，如果没有删除时间，就按创建时间
+            const timeA = a.deletedAt || a.timestamp;
+            const timeB = b.deletedAt || b.timestamp;
+            return timeB - timeA;
+        });
+    },
+
     createNewEntry() {
         const now = new Date();
-        const dateStr = now.toLocaleDateString(); 
-        const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-        const newEntry = {
-            id: Date.now(),
-            // 🛡️ 核心修复：必须记录这篇日记是属于哪一天的！
-            // 如果 UserData 还没加载完，默认就是第 1 天
-            day: UserData.state.day || 1, 
-            
-            date: dateStr,
-            time: timeStr,
-            content: "", 
+        const entry = {
+            id: 'entry_' + Date.now(),
+            date: now.toLocaleDateString(), 
+            time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            timestamp: Date.now(),
+            content: "",
+            notebookIds: [], // 所属手记本ID列表
+            tags: [],
             isConfirmed: false,
-            savedWordCount: 0,
-            notebookIds: [] 
+            isDeleted: false // 默认为未删除
         };
-        
-        this.entries.unshift(newEntry); 
+        this.entries.unshift(entry);
         this.save();
-        return newEntry;
+        return entry;
     },
-    // ✨ 核心新增：切换归属状态 (Toggle)
-    // 供 UI 层的“标签栏”调用：点一下加进去，再点一下移出来
+
+    updateEntry(id, content) {
+        const entry = this.entries.find(e => e.id === id);
+        if (entry) {
+            // 计算字数增量
+            const oldLen = entry.content ? entry.content.length : 0;
+            const newLen = content.length;
+            const diff = newLen - oldLen;
+
+            entry.content = content;
+            this.save();
+
+            // 更新用户总字数
+            if (diff !== 0) {
+                UserData.addWords(diff);
+            }
+        }
+    },
+
+    confirmEntry(id) {
+        const entry = this.entries.find(e => e.id === id);
+        if (entry && !entry.isConfirmed) {
+            entry.isConfirmed = true;
+            this.save();
+            return true;
+        }
+        return false;
+    },
+
     toggleNotebook(entryId, notebookId) {
         const entry = this.entries.find(e => e.id === entryId);
         if (!entry) return;
 
-        // 确保数组存在
         if (!entry.notebookIds) entry.notebookIds = [];
 
-        const index = entry.notebookIds.indexOf(notebookId);
-        if (index > -1) {
-            // 已存在 -> 移除 (取消勾选)
-            entry.notebookIds.splice(index, 1);
+        if (entry.notebookIds.includes(notebookId)) {
+            entry.notebookIds = entry.notebookIds.filter(id => id !== notebookId);
         } else {
-            // 不存在 -> 添加 (勾选)
             entry.notebookIds.push(notebookId);
         }
         this.save();
     },
 
-    // 更新日记内容 (支持增量字数统计)
-    updateEntry(id, content) {
+    // ==========================================
+    // ✨ 修改：删除逻辑改为“移入回收站”
+    // ==========================================
+    deleteEntry(id) {
         const entry = this.entries.find(e => e.id === id);
         if (entry) {
-            entry.content = content;
-
-            // 如果是"已确认"的日记，需要实时同步字数变化
-            if (entry.isConfirmed) {
-                const newCount = this._countWords(content);
-                const oldCount = entry.savedWordCount || 0; 
-                const diff = newCount - oldCount;
-
-                // 只有字数发生实际变化时才更新 UserData
-                if (diff !== 0) {
-                    UserData.updateWordCount(diff);
-                    entry.savedWordCount = newCount;
-                    
-                    if (diff > 0) {
-                        FragmentSystem.checkWordCountMilestones();
-                    }
-                }
-            }
-
-            this.save();
-        }
-    },
-
-    // 确认日记
-    confirmEntry(id) {
-        // 🛡️ 核心修复：使用 == 而不是 === 
-        // 防止 UI 传过来的是字符串 ID ("12345") 而数据里是数字 (12345)
-        const entry = this.entries.find(e => e.id == id);
-        
-        if (entry && !entry.isConfirmed) {
-            entry.isConfirmed = true;
-
-            const currentCount = this._countWords(entry.content);
-            entry.savedWordCount = currentCount;
-            
-            if (currentCount > 0) {
-                UserData.updateWordCount(currentCount);
-                FragmentSystem.checkWordCountMilestones();
-            }
-
+            entry.isDeleted = true;
+            entry.deletedAt = Date.now(); // 记录删除时间
             this.save();
             return true;
         }
         return false;
     },
-    // 删除日记
-    deleteEntry(id) {
+
+    /**
+     * ✨ 新增：还原日记
+     */
+    restoreEntry(id) {
+        const entry = this.entries.find(e => e.id === id);
+        if (entry) {
+            entry.isDeleted = false;
+            delete entry.deletedAt;
+            this.save();
+            return true;
+        }
+        return false;
+    },
+
+    /**
+     * ✨ 新增：彻底删除 (物理删除)
+     */
+    hardDeleteEntry(id) {
         const index = this.entries.findIndex(e => e.id === id);
         if (index !== -1) {
-            const entry = this.entries[index];
-
-            // 防刷分逻辑：扣除它贡献的字数
-            if (entry.isConfirmed) {
-                const countToRemove = entry.savedWordCount || this._countWords(entry.content);
-                if (countToRemove > 0) {
-                    UserData.updateWordCount(-countToRemove); 
-                }
-            }
-
-            this.entries.splice(index, 1); 
+            this.entries.splice(index, 1);
             this.save();
             return true;
         }
         return false;
-    },    
-
-    getAll() {
-        return this.entries;
-    },
-
-    // ✨ 新增：重置日记本
-    reset() {
-        this.entries = [];
-        
-        // 保存更改 (假设 Journal 内部有 save 方法，或者通过 UserData 保存)
-        // 如果 Journal.js 是独立保存的：
-        if (typeof this.save === 'function') {
-            this.save();
-        } else {
-            // 如果是挂在 UserData 下的：
-            // UserData.state.journal = [];
-            // UserData.save();
-            // 根据您的架构，通常这里应该类似 Library 有个 save
-             window.ithacaSystem.saveData('journal_data.json', JSON.stringify(this.entries));
-        }
-        
-        console.log("📝 日记已清空");
-    },
-
-    // 保存：写入到本地硬盘
-    save() {
-        window.ithacaSystem.saveData('journal_data.json', JSON.stringify(this.entries));
-    },
-
-    // --- 内部工具 ---
-    
-    _countWords(text) {
-        if (!text) return 0;
-        return text.replace(/\s/g, '').length;
     }
 };
