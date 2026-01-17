@@ -368,7 +368,7 @@ export const SidebarRenderer = {
         }
     },
 
-    renderTagBar(entry) {
+   renderTagBar(entry) {
         let tagContainer = document.getElementById('entry-tag-bar');
         
         if (!tagContainer) {
@@ -387,7 +387,45 @@ export const SidebarRenderer = {
 
         tagContainer.innerHTML = `<span style="font-size:12px; color:#999; margin-right:5px;">归档至：</span>`;
 
+        // ============================================================
+        // 1. 手动添加【日常碎片】系统标签 (修复点)
+        // ============================================================
+        const dailyId = 'nb_daily';
+        const isDaily = entry.notebookIds && entry.notebookIds.includes(dailyId);
+        
+        const dailyTag = document.createElement('span');
+        dailyTag.innerHTML = `🧩 日常碎片`; // 使用固定图标和名称
+        dailyTag.style.cssText = "display:inline-flex; align-items:center; font-size:12px; padding:4px 10px; border-radius:15px; cursor:pointer; user-select:none; transition:all 0.2s;";
+        
+        // 选中状态样式
+        if (isDaily) {
+            dailyTag.style.border = "1px solid #ffa000"; // 使用日常碎片的专属橙色
+            dailyTag.style.background = "#ffa000";
+            dailyTag.style.color = "#fff";
+        } else {
+            dailyTag.style.border = "1px solid #ddd";
+            dailyTag.style.background = "#fff";
+            dailyTag.style.color = "#666";
+        }
+
+        dailyTag.onclick = () => {
+            Journal.toggleNotebook(entry.id, dailyId);
+            this.renderTagBar(entry);
+            // 如果当前正处于“日常碎片”视图或“收件箱”视图，刷新整个列表
+            if (this.currentNotebookId === dailyId || this.currentNotebookId === 'INBOX_VIRTUAL_ID') {
+                    this.render(); 
+            }
+        };
+        tagContainer.appendChild(dailyTag);
+
+        // ============================================================
+        // 2. 遍历渲染【用户自定义】标签
+        // ============================================================
         UserData.state.notebooks.forEach(nb => {
+            // 关键：跳过 nb_daily，防止重复（如果它也存在于自定义列表中的话）
+            // 同时也跳过 nb_inbox，因为收件箱通常意味着“无标签”
+            if (nb.id === 'nb_daily' || nb.id === 'nb_inbox') return;
+
             const isSelected = entry.notebookIds && entry.notebookIds.includes(nb.id);
             const tag = document.createElement('span');
             

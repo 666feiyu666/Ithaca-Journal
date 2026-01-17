@@ -17,6 +17,7 @@ export const BookshelfRenderer = {
         this._bindClick('btn-edit-book', () => this.toggleEditMode(true));
         this._bindClick('btn-cancel-edit', () => this.toggleEditMode(false));
         this._bindClick('btn-save-book', () => this.handleSaveBook());
+        this._bindClick('btn-export-book', () => this.handleExportBook());
     },
 
     /**
@@ -242,6 +243,10 @@ export const BookshelfRenderer = {
             if(titleInput) titleInput.value = book.title;
             if(contentInput) contentInput.value = book.content;
         }
+
+        // ✨ 在打开书时，确保导出按钮是可见的（如果是阅读模式）
+        const btnExport = document.getElementById('btn-export-book');
+        if (btnExport) btnExport.style.display = 'inline-block';
     },
 
     /**
@@ -260,6 +265,7 @@ export const BookshelfRenderer = {
         const viewMode = document.getElementById('reader-view-mode');
         const editMode = document.getElementById('reader-edit-mode');
         const btnEdit = document.getElementById('btn-edit-book');
+        const btnExport = document.getElementById('btn-export-book');
         
         if(viewMode) viewMode.style.display = isEdit ? 'none' : 'block';
         if(editMode) editMode.style.display = isEdit ? 'flex' : 'none';
@@ -276,6 +282,11 @@ export const BookshelfRenderer = {
                 // 进入编辑模式后，隐藏“进入编辑”按钮（因为已经在了）
                 btnEdit.style.display = 'none';
             }
+        }
+        
+        // ✨ 逻辑：编辑模式下隐藏导出按钮，阅读模式下显示
+        if (btnExport) {
+            btnExport.style.display = isEdit ? 'none' : 'inline-block';
         }
     },
 
@@ -322,6 +333,33 @@ export const BookshelfRenderer = {
             } else {
                 alert("无法销毁：可能是系统书籍或数据出错。");
             }
+        }
+    },
+
+    /**
+     * ✨ 新增：处理导出书籍
+     */
+    async handleExportBook() {
+        if (!this.currentBookId) return;
+
+        const book = Library.getAll().find(b => b.id === this.currentBookId);
+        if (!book) return;
+
+        // 1. 准备导出内容 (Markdown 格式)
+        // 给标题加个大标题格式，正文保留
+        const exportContent = `# ${book.title}\n\n${book.content}`;
+        
+        // 2. 准备默认文件名 (去除非法字符)
+        const safeTitle = book.title.replace(/[\\/:*?"<>|]/g, "_");
+        const defaultFilename = `${safeTitle}.md`;
+
+        // 3. 调用系统导出
+        const result = await window.ithacaSystem.exportFile(defaultFilename, exportContent);
+
+        if (result.success) {
+            UIRenderer.log(`✨ 书籍已导出至：${result.path}`);
+        } else if (result.message !== '用户取消') {
+            alert(`导出失败：${result.message}`);
         }
     },
 

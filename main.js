@@ -1,5 +1,5 @@
 /* main.js */
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -87,6 +87,34 @@ app.whenReady().then(() => {
         } catch (err) {
             console.error("写入操作失败:", err);
             return false;
+        }
+    });
+
+    // ✨ 新增 C. 导出文件 (另存为)
+    ipcMain.handle('export-file', async (event, defaultName, content) => {
+        try {
+            // 打开系统保存对话框
+            const { canceled, filePath } = await dialog.showSaveDialog({
+                title: '导出伊萨卡手记',
+                defaultPath: defaultName, // 默认文件名
+                filters: [
+                    { name: 'Markdown 文档', extensions: ['md'] },
+                    { name: '文本文件', extensions: ['txt'] },
+                    { name: '所有文件', extensions: ['*'] }
+                ]
+            });
+
+            if (canceled || !filePath) {
+                return { success: false, message: '用户取消' };
+            }
+
+            // 写入文件到用户选择的路径
+            fs.writeFileSync(filePath, content, 'utf-8');
+            return { success: true, path: filePath };
+
+        } catch (err) {
+            console.error("导出失败:", err);
+            return { success: false, message: err.message };
         }
     });
 
