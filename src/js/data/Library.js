@@ -583,34 +583,50 @@ export const Library = {
         return false;
     },
 
-    // 删 (合并后的版本，去掉了 deleteBook，统一用 removeBook)
+    // 修改 removeBook 为软删除
     removeBook(id) {
         const book = this.books.find(b => b.id === id);
-        
-        // 🔒 保护逻辑
-        if (book && book.isReadOnly) {
-            console.warn(`书籍 ${book.title} 是系统书籍，无法销毁。`);
-            return false; 
-        }
-
-        const initialLength = this.books.length;
-        this.books = this.books.filter(b => b.id !== id);
-        
-        if (this.books.length !== initialLength) {
+        if (book) {
+            if (book.isSystem) return false; // 系统书不能删
+            book.isDeleted = true;
+            book.deletedAt = Date.now();
             this.save();
             return true;
         }
         return false;
     },
 
-    // 辅助查询：检查某本书是否已在书架上 (用于判断是否需要触发剧情)
-    hasBook(bookId) {
-        return this.books.some(b => b.id === bookId);
+    // ✨ 新增：还原书籍
+    restoreBook(id) {
+        const book = this.books.find(b => b.id === id);
+        if (book) {
+            book.isDeleted = false;
+            delete book.deletedAt;
+            this.save();
+            return true;
+        }
+        return false;
+    },
+
+    // ✨ 新增：彻底焚毁
+    hardDeleteBook(id) {
+        const index = this.books.findIndex(b => b.id === id);
+        if (index !== -1) {
+            this.books.splice(index, 1);
+            this.save();
+            return true;
+        }
+        return false;
     },
 
     // 查
     getAll() {
         return this.books;
+    },
+
+    // ✨ 新增：获取回收站里的书
+    getTrash() {
+        return this.books.filter(b => b.isDeleted);
     },
 
     // ✨ 新增：重置图书馆（清空所有书籍，但保留系统指南）
