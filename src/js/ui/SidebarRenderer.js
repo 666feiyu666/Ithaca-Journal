@@ -182,16 +182,15 @@ export const SidebarRenderer = {
         }
     },
 
-    // ✨ 新增：渲染回收站列表
+    // ✨ 修复：渲染回收站列表
     renderTrashList() {
         const listEl = document.getElementById('journal-list');
         const headerEl = document.querySelector('.sidebar-header h4');
-        const addBtn = document.getElementById('btn-new-entry'); // 隐藏新建按钮
+        const addBtn = document.getElementById('btn-new-entry');
         
         if (!listEl) return;
         listEl.innerHTML = "";
 
-        // 更新标题
         if (headerEl) {
             headerEl.innerHTML = `<span id="btn-back-level" class="nav-back-btn" style="cursor:pointer; margin-right:5px;">⬅️</span> 🗑️ 废纸篓`;
             const backBtn = document.getElementById('btn-back-level');
@@ -200,14 +199,11 @@ export const SidebarRenderer = {
             }
         }
         
-        // 在回收站里禁用新建日记
         if (addBtn) addBtn.style.display = 'none';
 
-        // 获取数据
         const trashJournals = Journal.getTrash().map(j => ({ ...j, type: 'journal' }));
         const trashBooks = Library.getTrash().map(b => ({ ...b, type: 'book' }));
         
-        // 合并并按删除时间倒序 (如果没有 deletedAt，就用 id 或其他机制兜底)
         const allTrash = [...trashJournals, ...trashBooks].sort((a, b) => {
             const timeA = a.deletedAt || 0;
             const timeB = b.deletedAt || 0;
@@ -219,7 +215,6 @@ export const SidebarRenderer = {
             return;
         }
 
-        // 渲染列表
         allTrash.forEach(item => {
             const div = document.createElement('div');
             div.className = 'list-item';
@@ -242,32 +237,43 @@ export const SidebarRenderer = {
                 </div>
             `;
 
-            // 绑定事件
             const btnRestore = div.querySelector('.btn-restore');
             const btnBurn = div.querySelector('.btn-burn');
 
+            // ♻️ 还原按钮
             btnRestore.onclick = (e) => {
                 e.stopPropagation();
                 if (isJournal) Journal.restoreEntry(item.id);
                 else Library.restoreBook(item.id);
                 
-                this.renderTrashList(); // 刷新列表
-                // 如果恰好正在浏览这个恢复的日记，可能需要刷新编辑器（可选）
+                this.renderTrashList(); 
+                
+                // ✨【关键修复】刷新 HUD，以防还原操作影响字数显示（取决于逻辑）
+                HUDRenderer.updateAll(); 
             };
 
+            // 🔥 焚毁按钮
             btnBurn.onclick = (e) => {
                 e.stopPropagation();
                 if (confirm(`确定要彻底焚毁${isJournal ? '这页日记' : '这本书'}吗？\n此操作就像燃烧后的灰烬，永远无法复原。`)) {
-                    if (isJournal) Journal.hardDeleteEntry(item.id);
-                    else Library.hardDeleteBook(item.id);
+                    if (isJournal) {
+                        Journal.hardDeleteEntry(item.id); // Journal.js 里这个操作会 UserData.updateWordCount(-x)
+                    } else {
+                        Library.hardDeleteBook(item.id);
+                    }
+                    
                     this.renderTrashList();
+
+                    // ✨【关键修复】这里必须调用 updateAll，否则扣除的字数不会立刻显示
+                    HUDRenderer.updateAll(); 
+                    
+                    HUDRenderer.log("🔥 彻底焚毁了记忆。");
                 }
             };
 
             listEl.appendChild(div);
         });
     },
-
     /**
      * Level 1: 渲染手记本目录
      */
@@ -281,7 +287,9 @@ export const SidebarRenderer = {
         
         if (headerEl) headerEl.innerText = "📂 归档系统";
         
+        // ✨ 关键修复：确保按钮是可见的
         if (addBtn) {
+            addBtn.style.display = 'block';
             addBtn.title = "新建日记";
             addBtn.onclick = () => this.handleNewEntry();
         }
@@ -367,6 +375,13 @@ export const SidebarRenderer = {
         
         if (!listEl) return;
         listEl.innerHTML = "";
+
+        // ✨ 关键修复：确保按钮是可见的 (从废纸篓回来后可能会被隐藏)
+        if (addBtn) {
+            addBtn.style.display = 'block'; 
+            addBtn.title = "在此手记本中新建";
+            addBtn.onclick = () => this.handleNewEntry();
+        }
 
         let entries = [];
         let title = "";
