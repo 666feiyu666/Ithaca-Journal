@@ -58,13 +58,14 @@ export const Journal = {
     },
 
     createNewEntry() {
-        // ✨ 修复：使用游戏内的天数 UserData.state.day
-        const currentDay = (UserData.state && UserData.state.day) ? UserData.state.day : 1;
+        // 移除对 UserData.state.day 的依赖
         const now = new Date();
+        // 获取本地格式化的系统日期，例如 "2026/1/17"
+        const dateString = now.toLocaleDateString(); 
         
         const entry = {
             id: 'entry_' + Date.now(),
-            date: `Day ${currentDay}`, 
+            date: dateString, // ✨ 修改此处：由 "Day X" 改为系统日期
             time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
             timestamp: Date.now(),
             createdAt: Date.now(),
@@ -73,7 +74,7 @@ export const Journal = {
             tags: [],
             isConfirmed: false,
             isDeleted: false,
-            savedWordCount: 0 // 用于字数统计差异计算
+            savedWordCount: 0 
         };
         
         this.entries.unshift(entry);
@@ -115,11 +116,6 @@ export const Journal = {
             // ✅ 修复：调用 updateWordCount
             UserData.updateWordCount(wordCount);
             UserData.unlockAchievement('ach_diary'); // 尝试解锁成就
-
-            // 尝试触发剧情
-            if (StoryManager && StoryManager.tryTriggerBookshelfStory) {
-                StoryManager.tryTriggerBookshelfStory();
-            }
 
             this.save();
             return true;
