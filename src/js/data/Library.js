@@ -444,15 +444,18 @@ const GUIDE_BOOK_IV = {
 `
 };
 
+// ==========================================
+// Library 核心逻辑
+// ==========================================
 export const Library = {
     books: [],
 
     init() {
         this.load();
         
-        // 确保初始化时至少有一本默认的书
+        // 确保初始化时至少有一本默认的书 (可选，防止书架完全为空)
         if (this.books.length === 0) {
-            this.addBook("未命名手稿", "assets/images/booksheet/booksheet1.png");
+            // this.addBook("未命名手稿", "assets/images/booksheet/booksheet1.png");
         }
         
         // 数据迁移：确保 isDeleted 字段存在
@@ -477,20 +480,58 @@ export const Library = {
         localStorage.setItem('ithaca_library_books', JSON.stringify(this.books));
     },
 
-    /**
-     * 获取所有【未删除】的书籍
-     */
     getAll() {
         return this.books.filter(b => !b.isDeleted);
     },
 
-    /**
-     * ✨ 新增：获取回收站里的书籍
-     */
     getTrash() {
         return this.books.filter(b => b.isDeleted);
     },
 
+    /**
+     * ✨ [修复新增] 检查书籍是否存在
+     */
+    hasBook(id) {
+        return this.books.some(b => b.id === id && !b.isDeleted);
+    },
+
+    /**
+     * ✨ [修复新增] 解锁系统书籍
+     * index: 1, 2, 3, 4 对应四本手记
+     */
+    unlockSystemBook(index) {
+        let bookConfig = null;
+        if (index === 1) bookConfig = GUIDE_BOOK_I;
+        else if (index === 2) bookConfig = GUIDE_BOOK_II;
+        else if (index === 3) bookConfig = GUIDE_BOOK_III;
+        else if (index === 4) bookConfig = GUIDE_BOOK_IV;
+
+        if (bookConfig) {
+            const exists = this.books.find(b => b.id === bookConfig.id);
+            if (!exists) {
+                // 深拷贝一份配置，防止引用修改
+                const newBook = JSON.parse(JSON.stringify(bookConfig));
+                // 确保没有删除标记
+                newBook.isDeleted = false; 
+                this.books.push(newBook);
+                this.save();
+                console.log(`[Library] Unlocked system book: ${newBook.title}`);
+                return true;
+            } else {
+                // 如果书存在但在回收站里，把它恢复出来
+                if (exists.isDeleted) {
+                    exists.isDeleted = false;
+                    this.save();
+                    return true;
+                }
+            }
+        } else {
+            console.error(`[Library] Unknown system book index: ${index}`);
+        }
+        return false;
+    },
+
+    // 添加普通书籍 (用户创建)
     addBook(title, coverPath) {
         const newBook = {
             id: 'book_' + Date.now(),
@@ -515,15 +556,9 @@ export const Library = {
         return false;
     },
 
-    // ==========================================
-    // ✨ 修改：删除逻辑改为“移入回收站”
-    // ==========================================
     removeBook(id) {
         const book = this.books.find(b => b.id === id);
         if (book) {
-            // 如果是某种系统默认书，可能不允许删除 (可选逻辑)
-            // if (book.isSystem) return false; 
-            
             book.isDeleted = true;
             book.deletedAt = Date.now();
             this.save();
@@ -532,9 +567,6 @@ export const Library = {
         return false;
     },
 
-    /**
-     * ✨ 新增：还原书籍
-     */
     restoreBook(id) {
         const book = this.books.find(b => b.id === id);
         if (book) {
@@ -546,9 +578,6 @@ export const Library = {
         return false;
     },
 
-    /**
-     * ✨ 新增：彻底焚毁 (物理删除)
-     */
     hardDeleteBook(id) {
         const index = this.books.findIndex(b => b.id === id);
         if (index !== -1) {

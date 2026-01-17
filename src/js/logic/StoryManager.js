@@ -108,15 +108,9 @@ export const StoryManager = {
             UserData.state.hasFoundMysteryEntry = true;
             UserData.save();
 
-            // 确保书本存在
-            const targetId = GUIDE_BOOK_CONFIG.id;
-            const exists = Library.getAll().find(b => b.id === targetId);
-
-            if (!exists) {
-                Library.addBook(GUIDE_BOOK_CONFIG);
-            } else {
-                exists.isReadOnly = true; 
-            }
+            // ✨【修复核心】：使用封装的方法解锁第一本书 (Part 1)
+            // 之前这里引用了未定义的 GUIDE_BOOK_CONFIG
+            Library.unlockSystemBook(1); 
 
             // 提示文案
             UIRenderer.log("📖 你发现了《伊萨卡手记 I》");
@@ -210,14 +204,14 @@ export const StoryManager = {
     // ============================================================
     // 3. 每日事件与邮件交互
     // ============================================================
-    
     checkDailyEvents() {
         const day = UserData.state.day;
 
         // 包裹事件回调生成器
-        const createPackageCallback = (bookId, logText) => {
+        const createPackageCallback = (partIndex, logText) => {
              return () => {
-                Library.unlockSystemBook(bookId); 
+                // ✨【修复】：调用 unlockSystemBook (Library现在已经支持此方法)
+                Library.unlockSystemBook(partIndex); 
                 UIRenderer.log(logText);
                 
                 const bookshelfModal = document.getElementById('modal-bookshelf-ui');
@@ -227,6 +221,7 @@ export const StoryManager = {
             };
         };
 
+        // ✨【修复】：Library现在支持 hasBook 方法了，这里不会再报错
         if (day >= 7 && !Library.hasBook("guide_book_part2")) {
             this.startStory('package_day_7');
             this._onStoryComplete = createPackageCallback(2, "📦 收到了新的手记。");

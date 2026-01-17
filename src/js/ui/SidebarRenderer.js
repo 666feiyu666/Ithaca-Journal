@@ -1,7 +1,7 @@
 /* src/js/ui/SidebarRenderer.js */
 import { Journal } from '../data/Journal.js';
+import { Library } from '../data/Library.js';
 import { UserData } from '../data/UserData.js';
-import { ModalManager } from './ModalManager.js';
 import { HUDRenderer } from './HUDRenderer.js'; // 引入 HUD 以刷新墨水
 import { marked } from '../libs/marked.esm.js';   // 引入 marked 以支持预览
 
