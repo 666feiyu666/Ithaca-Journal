@@ -43,7 +43,7 @@ const GUIDE_BOOK_I = {
 
 ---
 
-# 第二章：叙事理论
+## 第二章：叙事理论
 
 在进入书写实践之前，我们需要首先绘制一张地图。现代社会之所以需要“叙事”，并不只是因为故事迷人，而是因为现代性本身把“自我”变成了一项持续进行的工作。
 正如吉登斯所指出的：在晚期现代性条件下，自我不再是传统秩序自然赋予的身份，而是一项必须不断被维护、被解释、被更新的“自我的反思性项目”（Reflexive Project of the Self）。
@@ -68,7 +68,7 @@ const GUIDE_BOOK_I = {
 第二股传统则将目光投向外部世界与人际关系，这一脉络受政治哲学与批判理论的影响深远。
 
 受汉娜·阿伦特（Hannah Arendt）启发，这一传统强调叙事不仅仅是自我的独白，更是进入公共世界的“展示”（Appearance）。
-阿伦特与后来的约尔根·哈贝马斯（Jürgen Habermas）等人指出，叙事是一种社会交往与沟通的重要形式。并没有一个孤立的“我”在讲故事，我们的故事总是交织在人类关系的“网”中。
+阿伦特与后来的尤尔根·哈贝马斯（Jürgen Habermas）等人指出，叙事是一种社会交往与沟通的重要形式。并没有一个孤立的“我”在讲故事，我们的故事总是交织在人类关系的“网”中。
 
 正如当代女性主义批判理论家所言，身份认同是由社会文化环境塑造的。社会通过主流叙事（Master Narratives）为个体提供剧本（如性别角色、成功标准）。
 但这并不意味着我们是完全被动的。个体与社会在语言层面进行着持续的交互建构。通过书写，个体不仅是在确认自我，更可能是在挑战霸权叙事，通过“反叙事”来重塑社会图景。
@@ -508,6 +508,8 @@ export const Library = {
 
         if (bookConfig) {
             const exists = this.books.find(b => b.id === bookConfig.id);
+            let hasChanged = false; // 标记是否有变动
+
             if (!exists) {
                 // 深拷贝一份配置，防止引用修改
                 const newBook = JSON.parse(JSON.stringify(bookConfig));
@@ -516,14 +518,27 @@ export const Library = {
                 this.books.push(newBook);
                 this.save();
                 console.log(`[Library] Unlocked system book: ${newBook.title}`);
-                return true;
+                hasChanged = true;
             } else {
                 // 如果书存在但在回收站里，把它恢复出来
                 if (exists.isDeleted) {
                     exists.isDeleted = false;
                     this.save();
-                    return true;
+                    hasChanged = true;
                 }
+            }
+
+            // ✨ [核心修复] 如果发生了书籍解锁/恢复，检查“这就是伊萨卡手记”成就
+            if (hasChanged) {
+                const requiredBooks = ['guide_book_part1', 'guide_book_part2', 'guide_book_part3', 'guide_book_part4'];
+                // 使用 this.hasBook 检查每一本是否都在
+                const allCollected = requiredBooks.every(id => this.hasBook(id));
+                
+                if (allCollected) {
+                    // 调用 UserData 解锁成就
+                    UserData.unlockAchievement('ach_ithaca_full');
+                }
+                return true;
             }
         } else {
             console.error(`[Library] Unknown system book index: ${index}`);

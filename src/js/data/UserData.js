@@ -164,6 +164,13 @@ export const UserData = {
         if (!this.hasReadMail(day)) {
             this.state.readMails.push(day);
             this.save();
+            
+            // ✨ [修复] 检查是否阅读了10封信
+            // 注意：如果还有其他NPC的信件，这里可能需要过滤 ID，
+            // 但如果只有糖水菠萝的信，直接判断长度即可。
+            if (this.state.readMails.length >= 10) {
+                this.unlockAchievement('ach_pineapple');
+            }
         }
     },
 
