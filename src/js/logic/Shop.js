@@ -7,17 +7,17 @@ export const Shop = {
     catalog: [
         { 
             id: 'item_plant_01', 
-            name: '沙发', 
+            name: '绿植', 
             price: 50, 
-            desc: '开躺！',
-            img: 'assets/images/room/sofa.png' 
+            desc: '清新一下~',
+            img: 'assets/images/room/plant.png' 
         },
         { 
-            id: 'item_rug_blue', 
-            name: '波斯地毯', 
+            id: 'item_bulletin_board', 
+            name: '可以挂好多好多便签', 
             price: 80, 
-            desc: '踩上去软软的，很舒服。',
-            img: 'assets/images/room/rug2.png' 
+            desc: '等一下，为什么一下就挂满了？',
+            img: 'assets/images/room/bulletinboard.png' 
         },
         { 
             id: 'item_cat_orange', 

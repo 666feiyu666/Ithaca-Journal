@@ -16,7 +16,7 @@ const ITEM_DB = {
     'item_chair_default':     { src: 'assets/images/room/chair.png',     type: 'chair' }, 
     'item_bed_default':       { src: 'assets/images/room/bed.png',       type: 'bed' },
     'item_shelf_default':     { src: 'assets/images/room/shelf.png',     type: 'shelf'},   
-    'item_plant_01':          { src: 'assets/images/room/sofa.png',      type: 'deco' },
+    'item_plant_01':          { src: 'assets/images/room/plant.png',      type: 'deco' },
     'item_rug_blue':          { src: 'assets/images/room/rug2.png',      type: 'deco' },
     'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' }
 };
@@ -247,14 +247,14 @@ export const RoomRenderer = {
 
     getFurnitureWidth(type) {
         switch (type) {
-            case 'desk':      return '22%';
-            case 'bookshelf': return '12%';
+            case 'desk':      return '20%';
+            case 'bookshelf': return '14%';
             case 'shelf':     return '12%';
             case 'rug':       return '25%';
-            case 'chair':     return '8%';
-            case 'cat':       return '10%';
+            case 'chair':     return '12%';
+            case 'cat':       return '8%';
             case 'bed':       return '32%';
-            default:          return '15%';
+            default:          return '8%';
         }
     }
 };

@@ -104,33 +104,32 @@ export const DragManager = {
     
     // --- 1. 开始拖拽 (从背包拿新家具) ---
     // targetWidth: 从 UIRenderer 传入的预期像素宽度
-    startDragNew(e, itemId, imgSrc, targetWidth) {
+    startDragNew(e, itemId, imgSrc, targetWidth, isWallItem) {
         if (!this.isDecorating) return;
         e.preventDefault();
 
-        this.draggedItem = { type: 'new', itemId: itemId };
-        this.currentDirection = 1; // 新物品默认正向
+        // 👇 修改点：把 isWallItem 存进去
+        this.draggedItem = { type: 'new', itemId: itemId, isWallItem: isWallItem };
+        this.currentDirection = 1; 
         
         this.createGhost(e.clientX, e.clientY, imgSrc, targetWidth);
         this.showMarker(true);
     },
-
     // --- 2. 开始拖拽 (移动房间里已有的家具) ---
     // 🔧 修复：接收 initialDirection 参数，防止拿起时方向重置
-    startDragExisting(e, uid, imgSrc, initialDirection = 1) {
+    startDragExisting(e, uid, imgSrc, initialDirection = 1, isWallItem) {
         if (!this.isDecorating) return;
         e.preventDefault();
-        e.stopPropagation(); // 防止触发家具的点击事件
+        e.stopPropagation(); 
 
         const el = document.getElementById(`furniture-${uid}`);
-        
-        // 获取当前家具的实际显示宽度，传给 Ghost 防止缩小
         const currentWidth = el ? el.offsetWidth : 100;
         
-        if (el) el.style.opacity = '0.3'; // 原物体变半透明
+        if (el) el.style.opacity = '0.3'; 
 
-        this.draggedItem = { type: 'existing', uid: uid, element: el };
-        this.currentDirection = initialDirection; // ✨ 继承原有方向
+        // 👇 修改点：把 isWallItem 存进去
+        this.draggedItem = { type: 'existing', uid: uid, element: el, isWallItem: isWallItem };
+        this.currentDirection = initialDirection; 
         
         this.createGhost(e.clientX, e.clientY, imgSrc, currentWidth);
         this.showMarker(true);
@@ -203,17 +202,15 @@ export const DragManager = {
                 if (pos.x < 2 || pos.x > 98) return 'invalid';
 
                 // 2. 地板边界限制 (防止拖到地板上)
-                // 墙壁的底部通常在 65% - 70% 左右
-                if (pos.y > 70) return 'invalid';
+                if (pos.y > 100) return 'invalid';
 
                 // 3. ✨ 核心修改：计算动态天花板 (V字形判定) ✨
                 // ----------------------------------------------------
                 const centerX = 50; // 房间中线 X 坐标
-                const roofTop = 5;  // 墙角最高点 (y) -> 你想挂的高处
+                const roofTop = 0;  // 墙角最高点 (y) -> 你想挂的高处
                 
                 // 斜率因子：数值越大，两侧天花板下降得越厉害
-                // 0.55 是等轴测的标准斜率近似值 (每偏离中心 1px，y下降 0.55px)
-                const slope = 0.55; 
+                const slope = 0.45; 
 
                 // 计算当前 x 坐标对应的“合法天花板高度”
                 // 离中心越远，allowedTop 数值越大 (位置越低)
