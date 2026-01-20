@@ -187,34 +187,68 @@ export const DragManager = {
         const hudEl = document.querySelector('.inventory-bar-container');
         if (hudEl) {
             const hudRect = hudEl.getBoundingClientRect();
-            // 如果鼠标进入了黑色区域，视为回收
             if (e.clientX >= hudRect.left && e.clientX <= hudRect.right &&
                 e.clientY >= hudRect.top && e.clientY <= hudRect.bottom) {
                 return 'recycle';
             }
         }
 
-        // 2. 检查是否在房间的菱形地板范围内
+        // 2. 检查有效区域
         if (pos) {
-            // == 菱形参数配置 ==
-            // 这些数值基于 src/css/room.css 网格和背景图透视估算
-            // 中心点(50, 65)，宽半径45，高半径35
-            const centerX = 50;   
-            const centerY = 65;   
-            const rangeX = 45;    
-            const rangeY = 35;    
+            // ✨ 新增逻辑：如果是墙面物品，使用矩形判定
+            if (this.draggedItem && this.draggedItem.isWallItem) {
+                // === 墙面物品判定逻辑 ===
+                
+                // 1. 基础边界限制 (防止拖出屏幕左右)
+                if (pos.x < 2 || pos.x > 98) return 'invalid';
 
-            // 计算曼哈顿距离公式: |dx|/Rx + |dy|/Ry <= 1
-            const dist = Math.abs(pos.x - centerX) / rangeX + Math.abs(pos.y - centerY) / rangeY;
+                // 2. 地板边界限制 (防止拖到地板上)
+                // 墙壁的底部通常在 65% - 70% 左右
+                if (pos.y > 70) return 'invalid';
 
-            // 🔧 修复：将阈值从 1.1/1.3 提高到 1.5
-            // 1.5 允许家具的一半左右超出地板边缘，完美解决“贴墙变红”的问题
-            if (dist <= 1.5) {
+                // 3. ✨ 核心修改：计算动态天花板 (V字形判定) ✨
+                // ----------------------------------------------------
+                const centerX = 50; // 房间中线 X 坐标
+                const roofTop = 5;  // 墙角最高点 (y) -> 你想挂的高处
+                
+                // 斜率因子：数值越大，两侧天花板下降得越厉害
+                // 0.55 是等轴测的标准斜率近似值 (每偏离中心 1px，y下降 0.55px)
+                const slope = 0.55; 
+
+                // 计算当前 x 坐标对应的“合法天花板高度”
+                // 离中心越远，allowedTop 数值越大 (位置越低)
+                const currentCeilingY = roofTop + (Math.abs(pos.x - centerX) * slope);
+
+                // 如果当前鼠标 y 比天花板还高 (即数值更小)，则无效
+                if (pos.y < currentCeilingY) {
+                    return 'invalid';
+                }
+
+                // 4. (可选) 如果只想限制在左墙
+                // if (pos.x > 50) return 'invalid'; 
+
                 return 'valid';
+            }
+            else {
+                // ✨ 原有逻辑：地面物品，保持菱形判定
+                
+                // 中心点(50, 65)，宽半径45，高半径35
+                const centerX = 50;   
+                const centerY = 65;   
+                const rangeX = 45;    
+                const rangeY = 35;    
+
+                // 计算曼哈顿距离公式: |dx|/Rx + |dy|/Ry <= 1
+                const dist = Math.abs(pos.x - centerX) / rangeX + Math.abs(pos.y - centerY) / rangeY;
+
+                // 地板阈值 1.5
+                if (dist <= 1.5) {
+                    return 'valid';
+                }
             }
         }
 
-        // 3. 既不在回收区，也不在菱形地板内 -> 无效
+        // 3. 既不在回收区，也不在合法区域 -> 无效
         return 'invalid';
     },
 

@@ -14,11 +14,20 @@ const ITEM_DB = {
     'item_bookshelf_default': { src: 'assets/images/room/bookshelf.png', type: 'bookshelf' },
     'item_rug_default':       { src: 'assets/images/room/rug1.png',      type: 'rug' },
     'item_chair_default':     { src: 'assets/images/room/chair.png',     type: 'chair' }, 
-    'item_bed_default':       { src: 'assets/images/room/bed.png',       type: 'bed' },   
+    'item_bed_default':       { src: 'assets/images/room/bed.png',       type: 'bed' },
+    'item_shelf_default':     { src: 'assets/images/room/shelf.png',     type: 'shelf'},   
     'item_plant_01':          { src: 'assets/images/room/sofa.png',      type: 'deco' },
     'item_rug_blue':          { src: 'assets/images/room/rug2.png',      type: 'deco' },
     'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' }
 };
+
+// 定义哪些 type 属于墙面装饰
+const WALL_TYPES = ['shelf']; 
+
+// 辅助函数：判断是否为墙面物品
+function isWallType(type) {
+    return WALL_TYPES.includes(type);
+}
 
 export const RoomRenderer = {
     
@@ -74,12 +83,22 @@ export const RoomRenderer = {
         img.style.width = this.getFurnitureWidth(config.type);
 
         // --- 事件绑定 ---
-
         // 1. 拖拽开始 (MouseDown)
         img.onmousedown = (e) => {
             if (DragManager.isDecorating) {
                 e.stopPropagation();
-                DragManager.startDragExisting(e, itemData.uid, config.src, itemData.direction || 1);
+                
+                // ✨✨✨ 判断是否为墙面物品
+                const isWallItem = isWallType(config.type);
+
+                // 🔧 传入 isWallItem 参数 (对应 DragManager 上一步的修改)
+                DragManager.startDragExisting(
+                    e, 
+                    itemData.uid, 
+                    config.src, 
+                    itemData.direction || 1, 
+                    isWallItem // <--- 新增参数
+                );
             }
         };
 
@@ -142,20 +161,28 @@ export const RoomRenderer = {
                     slot.appendChild(countBadge);
                 }
 
-               // 绑定拖拽生成新家具事件
-               slot.onmousedown = (e) => {
+                // 绑定拖拽生成新家具事件
+                slot.onmousedown = (e) => {
                     const roomEl = document.querySelector('.iso-room');
                     const roomWidth = roomEl ? roomEl.offsetWidth : 1000;
-                    
-                    // 计算拖拽时的相对宽度
+                        
                     let widthPercent = 0.15;
                     const widthStr = this.getFurnitureWidth(config.type);
                     if(widthStr.includes('%')) widthPercent = parseFloat(widthStr) / 100;
-                    
+                        
                     const targetWidth = roomWidth * widthPercent;
-                    
-                    // 调用 DragManager 开始创建新家具
-                    DragManager.startDragNew(e, itemId, config.src, targetWidth);
+                        
+                    // ✨✨✨ 判断是否为墙面物品
+                    const isWallItem = isWallType(config.type);
+
+                    // 🔧 传入 isWallItem 参数 (对应 DragManager 上一步的修改)
+                    DragManager.startDragNew(
+                        e, 
+                        itemId, 
+                        config.src, 
+                        targetWidth, 
+                        isWallItem // <--- 新增参数
+                     );
                 };
             } else {
                 // 如果用光了，变灰
@@ -222,6 +249,7 @@ export const RoomRenderer = {
         switch (type) {
             case 'desk':      return '22%';
             case 'bookshelf': return '12%';
+            case 'shelf':     return '12%';
             case 'rug':       return '25%';
             case 'chair':     return '8%';
             case 'cat':       return '10%';

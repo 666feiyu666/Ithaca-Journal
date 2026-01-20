@@ -102,7 +102,7 @@ export const UserData = {
         if (!this.state.layout) {
             console.log("检测到新用户/重置状态，发放新手礼包...");
             this.state.layout = []; 
-            const starterPack = ['item_desk_default', 'item_bookshelf_default', 'item_rug_default', 'item_chair_default', 'item_bed_default'];
+            const starterPack = ['item_desk_default', 'item_bookshelf_default', 'item_rug_default', 'item_chair_default', 'item_bed_default','item_shelf_default'];
             starterPack.forEach(id => {
                 if (!this.state.inventory.includes(id)) this.state.inventory.push(id);
             });
