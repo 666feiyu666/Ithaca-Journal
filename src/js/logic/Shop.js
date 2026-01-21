@@ -8,21 +8,35 @@ export const Shop = {
         { 
             id: 'item_plant_01', 
             name: '绿植', 
-            price: 50, 
+            price: 30, 
             desc: '清新一下~',
             img: 'assets/images/room/plant.png' 
+        },
+        {
+            id : 'item_trash_bin',
+            name : '垃圾桶',
+            price : 50,
+            desc : '保持房间整洁的小帮手。',
+            img : 'assets/images/room/trashbin.png'
         },
         { 
             id: 'item_bulletin_board', 
             name: '小公告板', 
             price: 80, 
-            desc: '等一下，为什么一下就挂满了？',
+            desc: '等一下，为什么挂满了？',
             img: 'assets/images/room/bulletinboard.png' 
+        },
+                {
+            id : 'item_bed_shelf',
+            name : '床头架',
+            price : 120,
+            desc : '放在床头的小架子，很方便。',
+            img : 'assets/images/room/bedshelf.png'
         },
         { 
             id: 'item_cat_orange', 
             name: '橘猫', 
-            price: 100, 
+            price: 200, 
             desc: '它吃得很多，但很可爱。',
             img: 'assets/images/room/cat.png' 
         }

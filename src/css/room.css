@@ -6,7 +6,7 @@
 .room-container {
     width: 100vw;
     height: 100vh;
-    background: #2b2b2b; /* 深色背景，作为屏幕边缘填充 */
+    background: #4b3e35; /* 深色背景，作为屏幕边缘填充 */
     display: flex;
     justify-content: center;
     align-items: center;

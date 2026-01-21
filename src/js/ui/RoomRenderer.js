@@ -15,14 +15,16 @@ const ITEM_DB = {
     'item_rug_default':       { src: 'assets/images/room/rug1.png',      type: 'rug' },
     'item_chair_default':     { src: 'assets/images/room/chair.png',     type: 'chair' }, 
     'item_bed_default':       { src: 'assets/images/room/bed.png',       type: 'bed' },
-    'item_shelf_default':     { src: 'assets/images/room/shelf.png',     type: 'shelf'},   
+    'item_shelf_default':     { src: 'assets/images/room/shelf.png',     type: 'shelf'},
+    'item_trash_bin':      { src: 'assets/images/room/trashbin.png',  type: 'bin' },
     'item_plant_01':          { src: 'assets/images/room/plant.png',      type: 'deco' },
     'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' },
-    'item_bulletin_board':     { src: 'assets/images/room/bulletinboard.png', type: 'board' }
+    'item_bulletin_board':     { src: 'assets/images/room/bulletinboard.png', type: 'board' },
+    'item_bed_shelf':     { src: 'assets/images/room/bedshelf.png', type: 'bedshelf' }
 };
 
 // 定义哪些 type 属于墙面装饰
-const WALL_TYPES = ['shelf','board']; 
+const WALL_TYPES = ['shelf','board','bedshelf']; 
 
 // 辅助函数：判断是否为墙面物品
 function isWallType(type) {
@@ -239,6 +241,22 @@ export const RoomRenderer = {
                     }, 200);
                 }
                 break;
+            
+            // ✨✨✨ 修改部分开始：添加 shelf 的点击事件
+            case 'shelf':
+                // 1. 打开背包弹窗
+                ModalManager.open('modal-backpack');
+                
+                // 2. 渲染背包内容
+                // 假设逻辑在 HUDRenderer 中 (根据你的项目习惯)
+                // 如果你有单独的 BackpackRenderer，请替换为 BackpackRenderer.render()
+                if (HUDRenderer && HUDRenderer.renderBackpack) {
+                    HUDRenderer.renderBackpack();
+                } else {
+                    console.warn("未找到 HUDRenderer.renderBackpack 方法，背包可能为空");
+                }
+                break;
+            // ✨✨✨ 修改部分结束
 
             default:
                 break;
@@ -255,6 +273,8 @@ export const RoomRenderer = {
             case 'cat':       return '8%';
             case 'bed':       return '32%';
             case 'board':     return '15%';
+            case 'bin':      return '6%';
+            case 'bedshelf': return '15%';
             default:          return '8%';
         }
     }

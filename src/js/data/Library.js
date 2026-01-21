@@ -546,25 +546,73 @@ export const Library = {
         return false;
     },
 
-    // 添加普通书籍 (用户创建)
-    addBook(title, coverPath) {
-        const newBook = {
-            id: 'book_' + Date.now(),
-            title: title,
-            cover: coverPath,
-            createdAt: Date.now(),
-            isDeleted: false
-        };
+    /**
+     * ✨【终极修复】智能添加书籍
+     * 既支持传入完整的 book 对象 (Binder调用)，也支持传入散装参数 (测试/旧代码调用)
+     */
+    addBook(bookOrTitle, content, coverPath) {
+        let newBook;
+
+        // 情况 A：Binder 传过来的是一个打包好的对象
+        if (typeof bookOrTitle === 'object' && bookOrTitle !== null) {
+            newBook = bookOrTitle;
+            
+            // 补全可能缺失的系统字段
+            if (!newBook.id) newBook.id = 'book_' + Date.now();
+            if (newBook.isDeleted === undefined) newBook.isDeleted = false;
+            if (!newBook.createdAt) newBook.createdAt = Date.now();
+            
+            // 确保内容字段存在 (防止 undefined)
+            if (newBook.content === undefined) newBook.content = "";
+        } 
+        // 情况 B：传过来的是标题、内容、封面 (散装参数)
+        else {
+            // 这里兼容你可能手写的 Library.addBook("标题", "内容", "封面")
+            // 注意：如果第二个参数看起来像路径（旧代码遗留），做个容错
+            let finalContent = content;
+            let finalCover = coverPath;
+            
+            if (!finalCover && finalContent && finalContent.length < 200 && (finalContent.includes('/') || finalContent.includes('.'))) {
+                 // 仅仅是为了防止旧代码把封面传到了内容的位置
+                 finalCover = finalContent;
+                 finalContent = "";
+            }
+
+            newBook = {
+                id: 'book_' + Date.now(),
+                title: bookOrTitle,
+                content: finalContent || "",
+                cover: finalCover || "assets/images/booksheet/booksheet1.png",
+                createdAt: Date.now(),
+                isDeleted: false
+            };
+        }
+
         this.books.push(newBook);
         this.save();
+        
+        console.log(`[Library] Added book: ${newBook.title}`, newBook); // 方便调试
         return newBook;
     },
 
-    updateBook(id, newTitle, newCover) {
+    updateBook(id, newTitle, newContent, newCover) { // ✨ 参数顺序修改：添加 newContent
         const book = this.books.find(b => b.id === id);
         if (book) {
-            if (newTitle) book.title = newTitle;
-            if (newCover) book.cover = newCover;
+            // 更新标题
+            if (newTitle !== undefined && newTitle !== null) {
+                book.title = newTitle;
+            }
+            
+            // ✨ 【核心修复】：正确更新内容
+            if (newContent !== undefined && newContent !== null) {
+                book.content = newContent;
+            }
+
+            // 更新封面（如果有传入第4个参数）
+            if (newCover) {
+                book.cover = newCover;
+            }
+
             this.save();
             return true;
         }
