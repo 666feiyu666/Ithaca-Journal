@@ -346,9 +346,12 @@
     filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
     transition: filter 0.2s;
 }
+/* ✅ 修改后：补上 scaleX(var(--dir)) */
 .iso-room.decorating .pixel-furniture:hover {
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 1));
-    transform: scale(1.02);
+    
+    /* 核心修改：先读取方向变量，再进行缩放 */
+    transform: scaleX(var(--dir)) scale(1.02);
 }
 
 /* 装修网格投影 (符合透视的菱形) */

@@ -17,12 +17,12 @@ const ITEM_DB = {
     'item_bed_default':       { src: 'assets/images/room/bed.png',       type: 'bed' },
     'item_shelf_default':     { src: 'assets/images/room/shelf.png',     type: 'shelf'},   
     'item_plant_01':          { src: 'assets/images/room/plant.png',      type: 'deco' },
-    'item_rug_blue':          { src: 'assets/images/room/rug2.png',      type: 'deco' },
-    'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' }
+    'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' },
+    'item_bulletin_board':     { src: 'assets/images/room/bulletinboard.png', type: 'board' }
 };
 
 // 定义哪些 type 属于墙面装饰
-const WALL_TYPES = ['shelf']; 
+const WALL_TYPES = ['shelf','board']; 
 
 // 辅助函数：判断是否为墙面物品
 function isWallType(type) {
@@ -254,6 +254,7 @@ export const RoomRenderer = {
             case 'chair':     return '12%';
             case 'cat':       return '8%';
             case 'bed':       return '32%';
+            case 'board':     return '15%';
             default:          return '8%';
         }
     }

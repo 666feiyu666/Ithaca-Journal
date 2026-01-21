@@ -14,7 +14,7 @@ export const Shop = {
         },
         { 
             id: 'item_bulletin_board', 
-            name: '可以挂好多好多便签', 
+            name: '小公告板', 
             price: 80, 
             desc: '等一下，为什么一下就挂满了？',
             img: 'assets/images/room/bulletinboard.png' 
