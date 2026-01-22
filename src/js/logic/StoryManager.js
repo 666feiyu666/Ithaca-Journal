@@ -48,41 +48,79 @@ export const StoryManager = {
         };
     },
 
-    showSceneDialogue(title, htmlContent, bgSrc) {
+    // 🟢 修改这个方法，增加 charSrc 参数
+    showSceneDialogue(title, htmlContent, bgSrc, charSrc = null) {
         const scene = document.getElementById('scene-intro');
         const bgImg = scene.querySelector('.intro-bg');
-        const room = document.getElementById('scene-room');
-        const skipBtn = document.getElementById('btn-skip-intro');
-        const speakerEl = document.getElementById('dialogue-speaker');
-        const textEl = document.getElementById('dialogue-text');
-        const box = document.getElementById('intro-dialogue-box');
+        
+        // ✨ 获取立绘元素
+        const charImg = document.getElementById('intro-character');
 
+        const room = document.getElementById('scene-room');
+        const box = document.getElementById('intro-dialogue-box');
+        
+        // 1. 显示场景层
         if (room) room.style.display = 'none';
         scene.style.display = 'flex';
         scene.style.opacity = 1;
-        if (bgImg) { bgImg.style.display = 'block'; bgImg.src = bgSrc; }
         scene.style.background = 'rgba(0, 0, 0, 0.2)'; 
-        if (skipBtn) skipBtn.style.display = 'none';
-        box.style.display = 'flex';
+        
+        // 2. 设置背景图
+        if (bgImg) { 
+            bgImg.style.display = 'block'; 
+            bgImg.src = bgSrc; 
+        }
 
+        // ✨ 3. 设置立绘逻辑 (核心修改)
+        if (charImg) {
+            if (charSrc) {
+                // 如果传了图片路径，就显示
+                charImg.src = charSrc;
+                charImg.style.display = 'block';
+            } else {
+                // 如果没传，一定要隐藏 (防止显示上一次的图片)
+                charImg.style.display = 'none';
+            }
+        }
+
+        // 4. 设置文本内容
+        const speakerEl = document.getElementById('dialogue-speaker');
+        const textEl = document.getElementById('dialogue-text');
+        
         speakerEl.innerText = title;
         speakerEl.style.color = "#d84315"; 
         textEl.innerHTML = htmlContent;
-        box.onclick = () => { box.style.display = 'none'; box.onclick = null; };
+
+        // 5. 绑定点击关闭事件
+        box.style.display = 'flex';
+        box.onclick = () => { 
+            box.style.display = 'none'; 
+            box.onclick = null; 
+            // 注意：因为这里只是关闭对话框，背景还留着给玩家看
+            // 真正的退出是靠 returnHome()，那里也要记得隐藏立绘
+        };
     },
 
+    // 🟢 修改 returnHome，确保回家时立绘消失
     returnHome() {
         const scene = document.getElementById('scene-intro');
-        const bgImg = scene.querySelector('.intro-bg');
+        const charImg = document.getElementById('intro-character'); // ✨
         const room = document.getElementById('scene-room');
         const box = document.getElementById('intro-dialogue-box');
 
         scene.style.display = 'none';
+        
+        // ✨ 确保回家时立绘隐藏，否则下次打开可能会闪现
+        if (charImg) charImg.style.display = 'none';
+
         if (room) room.style.display = 'block';
         if (box) box.style.display = 'flex';
+        
+        // 重置背景为默认
+        const bgImg = scene.querySelector('.intro-bg');
         if (bgImg) { bgImg.style.display = 'block'; bgImg.src = 'assets/images/city/street0.png'; }
     },
-
+    
     // ============================================================
     // 2. 剧情播放核心 (State Management)
     // ============================================================
