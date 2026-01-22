@@ -19,8 +19,12 @@ const ITEM_DB = {
     'item_trash_bin':      { src: 'assets/images/room/trashbin.png',  type: 'bin' },
     'item_plant_01':          { src: 'assets/images/room/plant.png',      type: 'deco' },
     'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' },
+    'item_cat_house':      { src: 'assets/images/room/cathouse.png', type: 'cathouse' },
     'item_bulletin_board':     { src: 'assets/images/room/bulletinboard.png', type: 'board' },
-    'item_bed_shelf':     { src: 'assets/images/room/bedshelf.png', type: 'bedshelf' }
+    'item_bed_shelf':     { src: 'assets/images/room/bedshelf.png', type: 'bedshelf' },
+    'item_sofa':          { src: 'assets/images/room/sofa.png',      type: 'sofa' },
+    'item_clothing':      { src: 'assets/images/room/clothing.png', type: 'clothing' },
+    'item_box':         { src: 'assets/images/room/box.png',      type: 'box' },
 };
 
 // 定义哪些 type 属于墙面装饰
@@ -271,10 +275,13 @@ export const RoomRenderer = {
             case 'rug':       return '25%';
             case 'chair':     return '12%';
             case 'cat':       return '8%';
+            case 'cathouse':  return '12%';
             case 'bed':       return '32%';
             case 'board':     return '15%';
             case 'bin':      return '6%';
             case 'bedshelf': return '15%';
+            case 'sofa':      return '15%';
+            case 'clothing':  return '6%';
             default:          return '8%';
         }
     }

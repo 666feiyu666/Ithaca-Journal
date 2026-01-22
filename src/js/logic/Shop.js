@@ -26,12 +26,33 @@ export const Shop = {
             desc: '等一下，为什么挂满了？',
             img: 'assets/images/room/bulletinboard.png' 
         },
-                {
+        {
+            id : 'item_clothing',
+            name : '衣架',
+            price : 90,
+            desc : '用来挂衣服的架子。',
+            img : 'assets/images/room/clothing.png'
+        },
+        {
             id : 'item_bed_shelf',
             name : '床头架',
             price : 120,
             desc : '放在床头的小架子，很方便。',
             img : 'assets/images/room/bedshelf.png'
+        },
+        {
+            id : 'item_box',
+            name : '收纳箱',
+            price : 130,
+            desc : '可以装各种东西的箱子。',
+            img : 'assets/images/room/box.png'
+        },
+        { 
+            id: 'item_sofa', 
+            name: '小沙发', 
+            price: 150, 
+            desc: '开躺吧~',
+            img: 'assets/images/room/sofa.png' 
         },
         { 
             id: 'item_cat_orange', 
@@ -39,6 +60,13 @@ export const Shop = {
             price: 200, 
             desc: '它吃得很多，但很可爱。',
             img: 'assets/images/room/cat.png' 
+        },
+        {
+            id: 'item_cat_house',
+            name: '猫窝',
+            price: 220,
+            desc: '但是它似乎更喜欢你的床',
+            img: 'assets/images/room/cathouse.png'
         }
     ],
 
