@@ -50,14 +50,13 @@ export const StoryManager = {
 
     // 🟢 修改这个方法，增加 charSrc 参数
     showSceneDialogue(title, htmlContent, bgSrc, charSrc = null) {
-        const scene = document.getElementById('scene-intro');
+        const scene = document.getElementById('scene-city');
         const bgImg = scene.querySelector('.intro-bg');
         
         // ✨ 获取立绘元素
-        const charImg = document.getElementById('intro-character');
-
+        const charImg = document.getElementById('city-character');
         const room = document.getElementById('scene-room');
-        const box = document.getElementById('intro-dialogue-box');
+        const box = document.getElementById('city-dialogue-box');
         
         // 1. 显示场景层
         if (room) room.style.display = 'none';
@@ -84,8 +83,8 @@ export const StoryManager = {
         }
 
         // 4. 设置文本内容
-        const speakerEl = document.getElementById('dialogue-speaker');
-        const textEl = document.getElementById('dialogue-text');
+        const speakerEl = document.getElementById('city-dialogue-speaker');
+        const textEl = document.getElementById('city-dialogue-text');
         
         speakerEl.innerText = title;
         speakerEl.style.color = "#d84315"; 
@@ -103,10 +102,10 @@ export const StoryManager = {
 
     // 🟢 修改 returnHome，确保回家时立绘消失
     returnHome() {
-        const scene = document.getElementById('scene-intro');
-        const charImg = document.getElementById('intro-character'); // ✨
+        const scene = document.getElementById('scene-city');
+        const charImg = document.getElementById('city-character'); // ✨
         const room = document.getElementById('scene-room');
-        const box = document.getElementById('intro-dialogue-box');
+        const box = document.getElementById('city-dialogue-box');
 
         scene.style.display = 'none';
         

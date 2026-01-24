@@ -90,11 +90,11 @@ export const CityEvent = {
         );
 
         // 概率掉落碎片 (保持不变)
-        if (Math.random() > 0.7) {
-            setTimeout(() => {
-                StoryManager.unlockFragment('frag_pineapple_03'); 
-            }, 1000);
-        }
+        // if (Math.random() > 0.7) {
+        //     setTimeout(() => {
+        //         StoryManager.unlockFragment('frag_pineapple_03'); 
+        //     }, 1000);
+        // }
     },
     // 生成随机文本 (保持不变)
     generateEventText(loc) {
