@@ -89,7 +89,7 @@ export const WorkbenchRenderer = {
         if (!selectEl) return;
 
         const currentVal = selectEl.value;
-        selectEl.innerHTML = `<option value="ALL">📂 所有记忆</option><option value="INBOX_VIRTUAL_ID">📥 收件箱</option>`;
+        selectEl.innerHTML = `<option value="ALL">所有记忆</option><option value="INBOX_VIRTUAL_ID">收件箱</option>`;
         
         UserData.state.notebooks.forEach(nb => {
             const option = document.createElement('option');
