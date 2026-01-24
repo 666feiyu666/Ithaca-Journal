@@ -98,7 +98,7 @@
 .pixel-furniture:hover {
     /* ✨ 必须保留 var(--dir)，否则悬浮时会瞬间转回去 */
     /* 同时加上 !important 确保它浮在最上层 */
-    transform: scaleX(var(--dir)) scale(1.05) translateY(-5px);
+    transform: scaleX(var(--dir)) scale(1.01);
     z-index: 9999 !important; 
     
     filter: drop-shadow(0 10px 10px rgba(0,0,0,0.3));

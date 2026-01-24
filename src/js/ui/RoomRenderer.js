@@ -16,15 +16,15 @@ const ITEM_DB = {
     'item_chair_default':     { src: 'assets/images/room/chair.png',     type: 'chair' }, 
     'item_bed_default':       { src: 'assets/images/room/bed.png',       type: 'bed' },
     'item_shelf_default':     { src: 'assets/images/room/shelf.png',     type: 'shelf'},
-    'item_trash_bin':      { src: 'assets/images/room/trashbin.png',  type: 'bin' },
+    'item_trash_bin':         { src: 'assets/images/room/trashbin.png',  type: 'bin' },
     'item_plant_01':          { src: 'assets/images/room/plant.png',      type: 'plant' },
     'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' },
-    'item_cat_house':      { src: 'assets/images/room/cathouse.png', type: 'cathouse' },
-    'item_bulletin_board':     { src: 'assets/images/room/bulletinboard.png', type: 'board' },
-    'item_bed_shelf':     { src: 'assets/images/room/bedshelf.png', type: 'bedshelf' },
-    'item_sofa':          { src: 'assets/images/room/sofa.png',      type: 'sofa' },
-    'item_clothing':      { src: 'assets/images/room/clothing.png', type: 'clothing' },
-    'item_box':         { src: 'assets/images/room/box.png',      type: 'box' },
+    'item_cat_house':         { src: 'assets/images/room/cathouse.png', type: 'cathouse' },
+    'item_bulletin_board':    { src: 'assets/images/room/bulletinboard.png', type: 'board' },
+    'item_bed_shelf':         { src: 'assets/images/room/bedshelf.png', type: 'bedshelf' },
+    'item_sofa':              { src: 'assets/images/room/sofa.png',      type: 'sofa' },
+    'item_clothing':          { src: 'assets/images/room/clothing.png', type: 'clothing' },
+    'item_box':               { src: 'assets/images/room/box.png',      type: 'box' },
 };
 
 // 定义哪些 type 属于墙面装饰
@@ -51,7 +51,8 @@ export const RoomRenderer = {
         // 1. 清理旧家具
         container.querySelectorAll('.pixel-furniture').forEach(el => el.remove());
 
-        // 2. 获取布局数据并排序 (简单的 Z-Index 处理)
+        // 2. 获取布局数据并排序
+        // 虽然 CSS z-index 会处理遮挡，但 DOM 顺序也很重要，保持 Y 轴排序是个好习惯
         const layout = UserData.state.layout || [];
         const sortedLayout = [...layout].sort((a, b) => a.y - b.y);
 
@@ -76,43 +77,49 @@ export const RoomRenderer = {
         img.className = 'pixel-furniture';
         img.id = `furniture-${itemData.uid}`;
 
-        // 设置位置样式
         img.style.left = itemData.x + '%';
         img.style.top = itemData.y + '%';
-        img.style.zIndex = Math.floor(itemData.y); 
 
-        // 设置朝向
+        // ============================================================
+        // ✨ 核心修复：Z-Index 基于“脚底”位置计算
+        // ============================================================
+        
+        // 1. 获取高度修正值 (将 Z 轴锚点下移到物品底部)
+        const heightOffset = this.getZHeightOffset(config.type);
+        
+        // 2. 基础 Z 值 = Y 坐标 + 高度修正
+        // 这样“高个子”椅子(HeightOffset大) 的 Z 值会比“矮个子”垃圾桶(HeightOffset小) 更大
+        let baseZ = Math.floor(itemData.y + heightOffset);
+
+        // 3. 特殊覆盖逻辑
+        if (config.type === 'rug') {
+            baseZ = 10; 
+        }
+        else if (isWallType(config.type)) {
+             baseZ -= 10; 
+        }
+        else if (config.type === 'cat') {
+            baseZ += 200; // 保持猫的高优先级
+        }
+
+        img.style.zIndex = baseZ;
+        // ============================================================
+
         const dir = itemData.direction || 1;
         img.style.setProperty('--dir', dir);
-
-        // 设置宽度
         img.style.width = this.getFurnitureWidth(config.type);
 
-        // --- 事件绑定 ---
-        // 1. 拖拽开始 (MouseDown)
         img.onmousedown = (e) => {
             if (DragManager.isDecorating) {
                 e.stopPropagation();
-                
-                // ✨✨✨ 判断是否为墙面物品
                 const isWallItem = isWallType(config.type);
-
-                // 🔧 传入 isWallItem 参数 (对应 DragManager 上一步的修改)
-                DragManager.startDragExisting(
-                    e, 
-                    itemData.uid, 
-                    config.src, 
-                    itemData.direction || 1, 
-                    isWallItem // <--- 新增参数
-                );
+                DragManager.startDragExisting(e, itemData.uid, config.src, itemData.direction || 1, isWallItem);
             }
         };
 
-        // 2. 点击交互 (Click)
         img.onclick = (e) => {
             e.stopPropagation();
             if (DragManager.isDecorating) return;
-
             ModalManager.closeAll();
             this.handleFurnitureInteraction(config.type);
         };
@@ -120,8 +127,24 @@ export const RoomRenderer = {
         container.appendChild(img);
     },
 
+    // ✨ 新增辅助方法：定义不同物品的“视觉高度”修正值
+    getZHeightOffset(type) {
+        switch (type) {
+            case 'bookshelf': return 25; // 高柜子，修正值最大
+            case 'bed':       return 20; 
+            case 'desk':      return 18; // 书桌较高
+            case 'chair':     return 15; // 椅子中等
+            case 'sofa':      return 15;
+            case 'cathouse':  return 12;
+            case 'plant':     return 8;  
+            case 'box':       return 5;
+            case 'bin':       return 2;  // 垃圾桶很矮，修正值很小 -> Z值较小 -> 容易被遮挡 (符合预期)
+            case 'clothing':  return 20;
+            default:          return 5;
+        }
+    },
     /**
-     * 渲染底部物品栏 (Inventory Bar) - 补全了此处逻辑
+     * 渲染底部物品栏 (Inventory Bar)
      */
     renderInventoryBar() {
         const listEl = document.getElementById('inventory-bar');
@@ -178,16 +201,14 @@ export const RoomRenderer = {
                         
                     const targetWidth = roomWidth * widthPercent;
                         
-                    // ✨✨✨ 判断是否为墙面物品
                     const isWallItem = isWallType(config.type);
 
-                    // 🔧 传入 isWallItem 参数 (对应 DragManager 上一步的修改)
                     DragManager.startDragNew(
                         e, 
                         itemId, 
                         config.src, 
                         targetWidth, 
-                        isWallItem // <--- 新增参数
+                        isWallItem 
                      );
                 };
             } else {
@@ -229,17 +250,13 @@ export const RoomRenderer = {
             case 'bed':
             case 'bedshelf':
                 if (confirm("是否要退出伊萨卡手记？\n(退出前会自动保存进度)")) {
-                    UserData.save(); // 退出前保存
-                    // 尝试关闭窗口 (Electron 环境下通常有效)
+                    UserData.save(); 
                     window.close(); 
                 }
                 break;
 
             case 'cat': 
-                // 播放一个简单的文字反馈
                 HUDRenderer.log("你摸了摸你的橘猫。它舒服地呼噜了两声。");
-                
-                // 可选：稍微让猫跳一下（复用房间震动动画类，或者只让图片动）
                 const catEl = document.querySelector('.pixel-furniture[src*="cat.png"]');
                 if(catEl) {
                     catEl.style.transform = "scaleX(var(--dir)) translateY(-10px)";
@@ -250,43 +267,31 @@ export const RoomRenderer = {
                 break;
             
             case 'shelf':
-                // 1. 打开背包弹窗
                 ModalManager.open('modal-backpack');
-                
-                // 2. 渲染背包内容
-                // 假设逻辑在 HUDRenderer 中 (根据你的项目习惯)
-                // 如果你有单独的 BackpackRenderer，请替换为 BackpackRenderer.render()
                 if (HUDRenderer && HUDRenderer.renderBackpack) {
                     HUDRenderer.renderBackpack();
                 } else {
                     console.warn("未找到 HUDRenderer.renderBackpack 方法，背包可能为空");
                 }
                 break;
-            // ✨✨✨ 修改部分结束
-
 
             case 'cathouse':  
-                // 播放一个简单的文字反馈
                 HUDRenderer.log("你发呆地看着猫窝，为什么它不喜欢待在猫窝里呢？");
                 break;
 
             case 'box': 
-                // 播放一个简单的文字反馈
                 HUDRenderer.log("你整理了一下房间，心情也变好了一点。");
                 break;
 
             case 'plant': 
-                // 播放一个简单的文字反馈
                 HUDRenderer.log("你给你的绿植浇了一些水。它看起来更精神了。");
                 break;
 
             case 'sofa': 
-                // 播放一个简单的文字反馈
                 HUDRenderer.log("你坐在沙发上，感到一阵放松。");
                 break;
 
             case 'clothing': 
-                // 播放一个简单的文字反馈
                 HUDRenderer.log("你整理了一下衣物，感觉整洁多了。");
                 break;
 
@@ -306,8 +311,8 @@ export const RoomRenderer = {
             case 'cathouse':  return '12%';
             case 'bed':       return '32%';
             case 'board':     return '15%';
-            case 'bin':      return '6%';
-            case 'bedshelf': return '15%';
+            case 'bin':       return '6%';
+            case 'bedshelf':  return '15%';
             case 'sofa':      return '15%';
             case 'clothing':  return '6%';
             case 'plant':     return '8%';
