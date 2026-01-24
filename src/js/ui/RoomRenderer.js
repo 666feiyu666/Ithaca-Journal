@@ -17,7 +17,7 @@ const ITEM_DB = {
     'item_bed_default':       { src: 'assets/images/room/bed.png',       type: 'bed' },
     'item_shelf_default':     { src: 'assets/images/room/shelf.png',     type: 'shelf'},
     'item_trash_bin':      { src: 'assets/images/room/trashbin.png',  type: 'bin' },
-    'item_plant_01':          { src: 'assets/images/room/plant.png',      type: 'deco' },
+    'item_plant_01':          { src: 'assets/images/room/plant.png',      type: 'plant' },
     'item_cat_orange':        { src: 'assets/images/room/cat.png',       type: 'cat' },
     'item_cat_house':      { src: 'assets/images/room/cathouse.png', type: 'cathouse' },
     'item_bulletin_board':     { src: 'assets/images/room/bulletinboard.png', type: 'board' },
@@ -206,7 +206,9 @@ export const RoomRenderer = {
     handleFurnitureInteraction(type) {
         switch (type) {
             case 'desk':
-            case 'chair': // 👈 1. 新增：点击椅子也打开写字台
+            case 'chair':
+            case 'board':
+            case 'bin': 
                 ModalManager.open('modal-desk');
                 SidebarRenderer.render(); 
                 break;
@@ -224,7 +226,8 @@ export const RoomRenderer = {
                 CityEvent.renderSelectionMenu();
                 break;
 
-            case 'bed': // 👈 2. 新增：点击床铺
+            case 'bed':
+            case 'bedshelf':
                 if (confirm("是否要退出伊萨卡手记？\n(退出前会自动保存进度)")) {
                     UserData.save(); // 退出前保存
                     // 尝试关闭窗口 (Electron 环境下通常有效)
@@ -232,9 +235,9 @@ export const RoomRenderer = {
                 }
                 break;
 
-            case 'cat': // 👈 3. 新增：点击猫咪
+            case 'cat': 
                 // 播放一个简单的文字反馈
-                HUDRenderer.log("🐈 你摸了摸你的橘猫。它舒服地呼噜了两声。");
+                HUDRenderer.log("你摸了摸你的橘猫。它舒服地呼噜了两声。");
                 
                 // 可选：稍微让猫跳一下（复用房间震动动画类，或者只让图片动）
                 const catEl = document.querySelector('.pixel-furniture[src*="cat.png"]');
@@ -246,7 +249,6 @@ export const RoomRenderer = {
                 }
                 break;
             
-            // ✨✨✨ 修改部分开始：添加 shelf 的点击事件
             case 'shelf':
                 // 1. 打开背包弹窗
                 ModalManager.open('modal-backpack');
@@ -261,6 +263,32 @@ export const RoomRenderer = {
                 }
                 break;
             // ✨✨✨ 修改部分结束
+
+
+            case 'cathouse':  
+                // 播放一个简单的文字反馈
+                HUDRenderer.log("你发呆地看着猫窝，为什么它不喜欢待在猫窝里呢？");
+                break;
+
+            case 'box': 
+                // 播放一个简单的文字反馈
+                HUDRenderer.log("你整理了一下房间，心情也变好了一点。");
+                break;
+
+            case 'plant': 
+                // 播放一个简单的文字反馈
+                HUDRenderer.log("你给你的绿植浇了一些水。它看起来更精神了。");
+                break;
+
+            case 'sofa': 
+                // 播放一个简单的文字反馈
+                HUDRenderer.log("你坐在沙发上，感到一阵放松。");
+                break;
+
+            case 'clothing': 
+                // 播放一个简单的文字反馈
+                HUDRenderer.log("你整理了一下衣物，感觉整洁多了。");
+                break;
 
             default:
                 break;
@@ -282,6 +310,7 @@ export const RoomRenderer = {
             case 'bedshelf': return '15%';
             case 'sofa':      return '15%';
             case 'clothing':  return '6%';
+            case 'plant':     return '8%';
             default:          return '8%';
         }
     }
