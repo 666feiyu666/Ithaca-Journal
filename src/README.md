@@ -1,4 +1,4 @@
-# 🍍 The Ithaca Journal | 伊萨卡手记
+# 🍍 伊萨卡手记 | The Ithaca Journal 
 ![Version](https://img.shields.io/badge/version-1.0-blueviolet) ![Status](https://img.shields.io/badge/status-In%20Development-orange) ![Electron](https://img.shields.io/badge/Electron-28.0-9cf) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -118,10 +118,10 @@ npm start
 《伊萨卡手记》的设计灵感起初源于荷马的《奥德赛》与西格尔对《奥德赛》的解读，之后也参阅了一些对叙事自我、伦理与现代性认同的书籍。
 以下是我们主要的参考书目：
 
-* **张容南** - 《叙事的自我：我们如何以叙事的方式理解自身》
-* **宋薇** - 《麦金太尔伦理叙事研究》
 * **荷马** - 《奥德赛》
 * **查尔斯·西格尔** - 《奥德赛中的歌手、英雄与诸神》
+* **张容南** - 《叙事的自我：我们如何以叙事的方式理解自身》
+* **宋薇** - 《麦金太尔伦理叙事研究》
 * **安东尼·吉登斯** - 《现代性与自我认同：晚期现代中的自我与社会》
 * **查尔斯·泰勒** - 《自我的根源：现代认同的形成》
 * **阿拉斯戴尔·麦金太尔** - 《追寻美德》
