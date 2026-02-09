@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('ithacaSystem', {
     loadData: (filename) => ipcRenderer.invoke('read-file', filename),
     saveData: (filename, content) => ipcRenderer.invoke('write-file', filename, content),
 
-    // ✨ 新增：导出接口
+    // ✨ 新增：导入导出接口
+    importData: () => ipcRenderer.invoke('import-file'),
     exportFile: (defaultName, content) => ipcRenderer.invoke('export-file', defaultName, content)
 });

@@ -118,6 +118,31 @@ app.whenReady().then(() => {
         }
     });
 
+    // ✨ D. 导入文件接口
+    ipcMain.handle('import-file', async (event) => {
+        try {
+            const { canceled, filePaths } = await dialog.showOpenDialog({
+                title: '选择旧版日记数据 (journal_data.json)',
+                properties: ['openFile'],
+                filters: [
+                    { name: 'JSON 数据', extensions: ['json'] }
+                ]
+            });
+
+            if (canceled || filePaths.length === 0) {
+                return { success: false, message: '取消操作' };
+            }
+
+            // 读取文件内容并返回
+            const content = fs.readFileSync(filePaths[0], 'utf-8');
+            return { success: true, data: content };
+
+        } catch (err) {
+            console.error("导入失败:", err);
+            return { success: false, message: err.message };
+        }
+    });
+
     createWindow();
 
     app.on('activate', () => {

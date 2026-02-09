@@ -173,5 +173,55 @@ export const Journal = {
             return true;
         }
         return false;
+    },
+
+    // ✨ 新增：导入旧版日记功能
+    async importFromLegacy() {
+        // 1. 调用后端接口选择文件
+        const result = await window.ithacaSystem.importData();
+        
+        if (!result.success) return; // 用户取消或出错
+
+        try {
+            const oldEntries = JSON.parse(result.data);
+
+            if (!Array.isArray(oldEntries)) {
+                alert("文件格式错误：请选择 journal_data.json");
+                return;
+            }
+
+            let importCount = 0;
+            
+            // 2. 遍历旧日记，进行“去重合并”
+            oldEntries.forEach(oldEntry => {
+                // 检查当前日记列表里是否已经有这个 ID
+                const exists = this.entries.some(current => current.id === oldEntry.id);
+                
+                // 如果没有，才添加进来
+                if (!exists) {
+                    // 兼容性处理：如果旧数据缺字段，可以在这里补全
+                    if (!oldEntry.notebookIds) oldEntry.notebookIds = [];
+                    
+                    this.entries.push(oldEntry);
+                    importCount++;
+                }
+            });
+
+            if (importCount > 0) {
+                // 3. 重新排序：按时间倒序
+                this.entries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                
+                // 4. 保存并刷新
+                this.save();
+                alert(`成功导入 ${importCount} 篇旧日记！页面即将刷新。`);
+                window.location.reload(); // 刷新页面以显示新数据
+            } else {
+                alert("没有发现新日记，数据可能已存在。");
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("导入失败：数据解析错误");
+        }
     }
 };

@@ -151,11 +151,6 @@ export const StoryManager = {
 
             // 提示文案
             UIRenderer.log("📖 你发现了《伊萨卡手记 I》");
-
-            // 延迟刷新书架
-            setTimeout(() => {
-                UIRenderer.renderBookshelf();
-            }, 50);
         };
 
         return true;
