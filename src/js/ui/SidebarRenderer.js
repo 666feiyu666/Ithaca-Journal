@@ -21,6 +21,7 @@ export const SidebarRenderer = {
     currentNotebookId: 'REPO_ALL_ID', 
     activeEntryId: null,              
     expandedFolders: new Set(['REPO_ALL_ID', 'nb_daily']), 
+    currentTag: null, // 🌟 新增：当前选中的标签
 
     init() {
         const addBtn = document.getElementById('btn-new-entry');
@@ -45,6 +46,10 @@ export const SidebarRenderer = {
                     clearTimeout(this._saveTimer);
                     this._saveTimer = setTimeout(() => {
                         this.updateSaveStatus("已自动保存", "#999");
+                        // 🌟 如果此时恰好展开了标签面板，输入停止时重新渲染侧边栏以更新标签
+                        if (this.expandedFolders.has('TAG_ROOT')) {
+                            this.render();
+                        }
                     }, 800);
                 }
             };
@@ -115,6 +120,7 @@ export const SidebarRenderer = {
     },
 
     getEntriesForFolder(folderId) {
+        if (!folderId) return []; // 当选择了标签时，目录不激活
         const all = Journal.getAll();
         if (folderId === 'REPO_ALL_ID') return all;
         if (folderId === 'INBOX_VIRTUAL_ID') return all.filter(e => !e.notebookIds || e.notebookIds.length === 0);
@@ -140,7 +146,9 @@ export const SidebarRenderer = {
         });
 
         this.renderCreateFolderBtn(listEl);
-        this.renderTagsPlaceholder(listEl);
+        
+        // 🌟 渲染真正的标签面板
+        this.renderTagsSection(listEl);
         
         const trashEntries = [
             ...Journal.getTrash().map(j => ({ ...j, type: 'journal' })),
@@ -245,7 +253,8 @@ export const SidebarRenderer = {
 
                 if (sourceNbId === folderId) return; // 原地放下，无事发生
 
-                Journal.moveEntry(entryId, sourceNbId, folderId);
+                // ✅ 修复点：调用更新后的方法名
+                Journal.moveToNotebook(entryId, folderId);
 
                 if (folderId === 'TRASH_BIN_ID') {
                     HUDRenderer.log("🗑️ 日记已丢入废纸篓");
@@ -253,7 +262,7 @@ export const SidebarRenderer = {
                     this.expandedFolders.add(folderId); // 自动展开接纳日记的文件夹
                 }
 
-                if (this.activeEntryId === entryId) this.loadActiveEntry(); // 刷新标签栏状态
+                if (this.activeEntryId === entryId) this.loadActiveEntry(); // 刷新状态
                 this.render();
                 return;
             }
@@ -319,6 +328,7 @@ export const SidebarRenderer = {
         }
 
         header.onclick = () => {
+            this.currentTag = null; // 点击目录时清空标签筛选
             this.currentNotebookId = folderId; 
             if (this.expandedFolders.has(folderId)) this.expandedFolders.delete(folderId); 
             else this.expandedFolders.add(folderId);    
@@ -379,6 +389,35 @@ export const SidebarRenderer = {
         };
         item.ondragend = () => { item.style.opacity = '1'; };
 
+        // 🌟 修复点：添加接收拖拽排序的事件
+        item.ondragover = (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡到外层的文件夹
+            item.style.borderTop = "2px solid #5d4037"; 
+        };
+        
+        item.ondragleave = () => {
+            item.style.borderTop = ""; 
+        };
+        
+        item.ondrop = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            item.style.borderTop = ""; 
+
+            const dragData = e.dataTransfer.getData('text/plain');
+            if (dragData && dragData.startsWith('entry|')) {
+                const draggedEntryId = dragData.split('|')[1];
+                
+                if (draggedEntryId !== entry.id) {
+                    if (Journal.reorderEntry) {
+                        Journal.reorderEntry(draggedEntryId, entry.id);
+                        this.render(); 
+                    }
+                }
+            }
+        };
+
         item.onclick = (e) => {
             e.stopPropagation();
             this.activeEntryId = entry.id;
@@ -386,6 +425,84 @@ export const SidebarRenderer = {
             this.loadActiveEntry();
         };
         container.appendChild(item);
+    },
+
+    // 🌟 全新重写的标签面板渲染逻辑
+    renderTagsSection(container) {
+        // 防止数据层暂未更新导致报错
+        const tags = typeof Journal.getAllTags === 'function' ? Journal.getAllTags() : [];
+        const isExpanded = this.expandedFolders.has('TAG_ROOT');
+        
+        const sectionDiv = document.createElement('div');
+        sectionDiv.style.marginTop = "15px";
+        sectionDiv.style.borderTop = "1px solid #eaeaea";
+        sectionDiv.style.paddingTop = "5px";
+        
+        // --- 1. 标签大类 Header ---
+        const header = document.createElement('div');
+        header.className = `accordion-header ${this.currentTag ? 'active-folder' : ''}`;
+        header.innerHTML = `
+            <span class="folder-arrow ${isExpanded ? 'expanded' : ''}">${Icons.arrowRight}</span>
+            <span class="folder-icon">${Icons.tags}</span>
+            <span class="folder-title">我的标签</span>
+            <span class="folder-count">${tags.length}</span>
+        `;
+        header.onclick = () => {
+            if (this.expandedFolders.has('TAG_ROOT')) this.expandedFolders.delete('TAG_ROOT');
+            else this.expandedFolders.add('TAG_ROOT');
+            this.render();
+        };
+        sectionDiv.appendChild(header);
+
+        // --- 2. 标签群 (药丸形状) ---
+        const body = document.createElement('div');
+        body.className = 'accordion-body';
+        body.style.display = isExpanded ? 'block' : 'none';
+        
+        const pillsContainer = document.createElement('div');
+        pillsContainer.className = 'flomo-tags-container';
+        
+        if (tags.length === 0) {
+            pillsContainer.innerHTML = `<div style="font-size:12px; color:#ccc; padding:4px 0;">在手记中输入 #标签 自动提取</div>`;
+        } else {
+            tags.forEach(tag => {
+                const pill = document.createElement('span');
+                pill.className = `flomo-tag ${this.currentTag === tag ? 'active' : ''}`;
+                pill.innerText = `#${tag}`;
+                pill.onclick = (e) => {
+                    e.stopPropagation();
+                    if (this.currentTag === tag) {
+                        this.currentTag = null; // 取消筛选
+                        this.currentNotebookId = 'REPO_ALL_ID'; 
+                    } else {
+                        this.currentTag = tag;
+                        this.currentNotebookId = null; // 屏蔽目录选中状态
+                    }
+                    this.render();
+                };
+                pillsContainer.appendChild(pill);
+            });
+        }
+        body.appendChild(pillsContainer);
+
+        // --- 3. 标签筛选结果呈现 ---
+        if (this.currentTag) {
+            const entries = Journal.getAll().filter(e => e.tags && e.tags.includes(this.currentTag));
+            const entriesContainer = document.createElement('div');
+            entriesContainer.style.marginTop = "10px";
+            entriesContainer.style.borderTop = "1px dashed #eee";
+            entriesContainer.style.paddingTop = "8px";
+            
+            if (entries.length === 0) {
+                entriesContainer.innerHTML = `<div style="font-size:12px; color:#ccc;">没有找到该标签相关的日记</div>`;
+            } else {
+                entries.forEach(entry => this.renderEntryItem(entriesContainer, entry));
+            }
+            body.appendChild(entriesContainer);
+        }
+
+        sectionDiv.appendChild(body);
+        container.appendChild(sectionDiv);
     },
 
     renderTrashItem(container, itemData) {
@@ -439,25 +556,11 @@ export const SidebarRenderer = {
         container.appendChild(btn);
     },
 
-    renderTagsPlaceholder(container) {
-        const div = document.createElement('div');
-        div.style.marginTop = "15px";
-        div.style.borderTop = "1px solid #eaeaea";
-        div.style.paddingTop = "5px";
-        div.innerHTML = `
-            <div class="accordion-header" style="opacity: 0.6; cursor: not-allowed;">
-                <span class="folder-arrow">${Icons.arrowRight}</span>
-                <span class="folder-icon">${Icons.tags}</span>
-                <span class="folder-title">我的标签 (开发中)</span>
-            </div>
-        `;
-        container.appendChild(div);
-    },
-
     handleNewEntry() {
         const newEntry = Journal.createNewEntry();
         this.activeEntryId = newEntry.id;
 
+        // 如果在某个目录下新建，默认归属该目录
         if (this.currentNotebookId && !['REPO_ALL_ID', 'INBOX_VIRTUAL_ID', 'TRASH_BIN_ID'].includes(this.currentNotebookId)) {
             Journal.toggleNotebook(newEntry.id, this.currentNotebookId);
             this.expandedFolders.add(this.currentNotebookId); 
@@ -468,6 +571,8 @@ export const SidebarRenderer = {
             }
         } else {
             this.expandedFolders.add('REPO_ALL_ID');
+            this.currentNotebookId = 'REPO_ALL_ID'; // 新建时切回“所有记忆”以保证能看到
+            this.currentTag = null; // 新建时清空标签筛选
         }
 
         this.render();
@@ -497,7 +602,6 @@ export const SidebarRenderer = {
         if (entry) {
             if (editor) editor.value = entry.content;
             this.updateConfirmButtonState(entry);
-            // ✂️ 这里已经删除了 this.renderTagBar(entry);
         } else {
             if (editor) editor.value = "";
         }
