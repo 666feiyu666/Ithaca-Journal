@@ -44,10 +44,11 @@ export const Journal = {
     },
 
     getAll() {
-        return this.entries.filter(e => !e.isDeleted).sort((a, b) => {
-            // 按创建时间倒序（最新在最前）
-            return (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0);
-        });
+        // return this.entries.filter(e => !e.isDeleted).sort((a, b) => {
+        //     // 按创建时间倒序（最新在最前）
+        //     return (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0);
+        // });
+        return this.entries.filter(e => !e.isDeleted);
     },
 
     getTrash() {
@@ -152,34 +153,54 @@ export const Journal = {
         this.save();
     },
 
-    // 🌟 替换上一次骤写的 moveEntry 方法
-    moveEntry(id, sourceNotebookId, targetNotebookId) {
-        const entry = this.entries.find(e => e.id === id);
+    // 💡 1. 移动笔记到指定文件夹 (配合左侧风琴目录拖入)
+    moveToNotebook(entryId, notebookId) {
+        const entry = this.entries.find(e => e.id === entryId);
         if (!entry) return false;
+        
         if (!entry.notebookIds) entry.notebookIds = [];
-
+        
         // 如果拖入废纸篓，直接执行删除逻辑
-        if (targetNotebookId === 'TRASH_BIN_ID') {
-            return this.deleteEntry(id);
+        if (notebookId === 'TRASH_BIN_ID') {
+            return this.deleteEntry(entryId);
         }
 
         const isDaily = entry.notebookIds.includes('nb_daily');
 
-        if (targetNotebookId === 'REPO_ALL_ID') {
-            // 拖回“所有记忆”大厅：清空所属文件夹（移出子目录）
+        if (notebookId === 'REPO_ALL_ID' || notebookId === 'INBOX_VIRTUAL_ID') {
+            // 归入收件箱/仓库：清空自定义文件夹
             entry.notebookIds = isDaily ? ['nb_daily'] : [];
-        } else if (targetNotebookId === 'nb_daily') {
-            // 拖入日常碎片
+        } else if (notebookId === 'nb_daily') {
+            // 附加日常碎片标签（它作为特殊平行状态存在）
             if (!isDaily) entry.notebookIds.push('nb_daily');
         } else {
-            // 🌟 核心修改：强制覆盖！彻底切断与原文件夹的联系，变成绝对的“物理移动”
-            entry.notebookIds = isDaily ? ['nb_daily', targetNotebookId] : [targetNotebookId];
+            // 目录互斥：强制分配到新本子，切断与其他自定义本子的联系
+            entry.notebookIds = isDaily ? ['nb_daily', notebookId] : [notebookId]; 
         }
-
+        
         this.save();
         return true;
     },
 
+    // 💡 2. 新增：笔记之间的拖拽重排序逻辑 (物理改变数组顺序)
+    reorderEntry(draggedEntryId, targetEntryId) {
+        const dragIndex = this.entries.findIndex(e => e.id === draggedEntryId);
+        const targetIndex = this.entries.findIndex(e => e.id === targetEntryId);
+
+        if (dragIndex > -1 && targetIndex > -1 && dragIndex !== targetIndex) {
+            // 从原位置抽离被拖拽的笔记
+            const [draggedItem] = this.entries.splice(dragIndex, 1);
+            
+            // 插入到目标笔记的位置
+            // 因为使用的是数组原生的 splice，这样能永久保存用户自定义的上下顺序
+            this.entries.splice(targetIndex, 0, draggedItem);
+            
+            this.save();
+            return true;
+        }
+        return false;
+    },
+    
     deleteEntry(id) {
         const entry = this.entries.find(e => e.id === id);
         if (entry) {
