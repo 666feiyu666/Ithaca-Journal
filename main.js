@@ -119,27 +119,26 @@ app.whenReady().then(() => {
     });
 
     // ✨ D. 导入文件接口
-    ipcMain.handle('import-file', async (event) => {
-        try {
-            const { canceled, filePaths } = await dialog.showOpenDialog({
-                title: '选择旧版日记数据 (journal_data.json)',
-                properties: ['openFile'],
-                filters: [
-                    { name: 'JSON 数据', extensions: ['json'] }
-                ]
-            });
+    ipcMain.handle('dialog:import-json', async () => {
+        // 1. 打开原生文件选择框
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+            title: '选择备份文件 (journal_data.json)',
+            properties: ['openFile'], // 只允许选文件
+            filters: [
+                { name: 'JSON Data', extensions: ['json'] } // 只显示 json 文件
+            ]
+        });
 
-            if (canceled || filePaths.length === 0) {
-                return { success: false, message: '取消操作' };
+        if (canceled) {
+            return { success: false, msg: '用户取消' };
+        } else {
+            try {
+                // 2. 读取选中文件的内容
+                const content = fs.readFileSync(filePaths[0], 'utf8');
+                return { success: true, data: content };
+            } catch (err) {
+                return { success: false, msg: '读取文件失败: ' + err.message };
             }
-
-            // 读取文件内容并返回
-            const content = fs.readFileSync(filePaths[0], 'utf-8');
-            return { success: true, data: content };
-
-        } catch (err) {
-            console.error("导入失败:", err);
-            return { success: false, message: err.message };
         }
     });
 

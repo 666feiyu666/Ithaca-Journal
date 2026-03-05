@@ -2,54 +2,46 @@
 import { Journal } from '../data/Journal.js';
 import { Library } from '../data/Library.js';
 import { UserData } from '../data/UserData.js';
-import { HUDRenderer } from './HUDRenderer.js'; // 引入 HUD 以刷新墨水
-import { marked } from '../libs/marked.esm.js';   // 引入 marked 以支持预览
+import { HUDRenderer } from './HUDRenderer.js';
+import { marked } from '../libs/marked.esm.js';
+
+const Icons = {
+    arrowRight: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
+    allMemory: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`,
+    daily: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+    folder: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
+    fileText: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`,
+    trash: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+    tags: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>`,
+    edit: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
+    deleteItem: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+};
 
 export const SidebarRenderer = {
-    currentNotebookId: null, // 当前选中的手记本ID (null 代表顶层目录)
-    activeEntryId: null,     // 当前正在编辑/查看的日记ID
+    currentNotebookId: 'REPO_ALL_ID', 
+    activeEntryId: null,              
+    expandedFolders: new Set(['REPO_ALL_ID', 'nb_daily']), 
 
     init() {
-        // 1. 绑定 + 号按钮事件
         const addBtn = document.getElementById('btn-new-entry');
-        if (addBtn) {
-            addBtn.onclick = () => this.handleNewEntry();
-        }
-
-        // 2. 绑定编辑器内部的所有交互事件 (关键修复：之前缺失的部分)
+        if (addBtn) addBtn.onclick = () => this.handleNewEntry();
         this.bindEditorEvents();
-        
-        // 3. 初始化时如果有数据，默认选中第一条
         const all = Journal.getAll();
         if (all.length > 0 && !this.activeEntryId) {
             this.activeEntryId = all[0].id;
         }
-
-        // 4. 初始渲染编辑器内容
         this.loadActiveEntry();
     },
 
-    /**
-     * 绑定编辑器区域的事件 (保存、确认、删除、预览)
-     */
     bindEditorEvents() {
-        // A. 输入框自动保存
         const editor = document.getElementById('editor-area');
         if (editor) {
             editor.oninput = () => {
                 if (this.activeEntryId) {
-                    // 1. 更新数据层 (Journal.js 会计算字数变化并更新 UserData)
                     Journal.updateEntry(this.activeEntryId, editor.value);
-                    
-                    // ✨ 修复：实时刷新 HUD 字数显示
-                    // 因为 Journal.updateEntry 可能已经修改了 UserData.totalWords，
-                    // 这里必须手动通知 HUD 重新渲染数字。
                     HUDRenderer.updateAll(); 
-
-                    // 2. 更新保存状态提示
                     this.updateSaveStatus("正在保存...", "#666");
-                    
-                    // 防抖模拟保存完成提示
+                    this.updateSidebarItemPreview(this.activeEntryId, editor.value);
                     clearTimeout(this._saveTimer);
                     this._saveTimer = setTimeout(() => {
                         this.updateSaveStatus("已自动保存", "#999");
@@ -57,111 +49,64 @@ export const SidebarRenderer = {
                 }
             };
         }
-
-        // B. 确认记录按钮
         const btnConfirm = document.getElementById('btn-confirm-entry');
-        if (btnConfirm) {
-            btnConfirm.onclick = () => this.handleConfirmEntry();
-        }
-
-        // C. 删除日记按钮
+        if (btnConfirm) btnConfirm.onclick = () => this.handleConfirmEntry();
         const btnDelete = document.getElementById('btn-delete-entry');
-        if (btnDelete) {
-            btnDelete.onclick = () => this.handleDeleteEntry();
-        }
-
-        // D. 预览按钮
+        if (btnDelete) btnDelete.onclick = () => this.handleDeleteEntry();
         const btnPreview = document.getElementById('btn-toggle-journal-preview');
-        if (btnPreview) {
-            btnPreview.onclick = () => this.togglePreview();
-        }
+        if (btnPreview) btnPreview.onclick = () => this.togglePreview();
     },
 
     updateSaveStatus(msg, color) {
         const el = document.getElementById('save-status');
-        if(el) {
-            el.innerText = msg;
-            el.style.color = color;
+        if(el) { el.innerText = msg; el.style.color = color; }
+    },
+
+    updateSidebarItemPreview(id, content) {
+        const previewEl = document.getElementById(`entry-preview-${id}`);
+        if (previewEl) {
+            previewEl.innerText = content.slice(0, 15).replace(/\n/g, ' ') || '新篇章...';
         }
     },
 
-    /**
-     * 处理确认日记 (获得墨水)
-     */
     handleConfirmEntry() {
         if (!this.activeEntryId) return;
-
-        // 调用数据层进行确认
-        const isSuccess = Journal.confirmEntry(this.activeEntryId);
-        
-        if (isSuccess) {
-            // 1. 发放奖励
+        if (Journal.confirmEntry(this.activeEntryId)) {
             UserData.addInk(10);
-            
-            // 🏆【新增埋点】成就：写日记 (First Diary)
-            // 只要确认成功，就尝试解锁
             UserData.unlockAchievement('ach_diary');
-
-            // 2. 刷新顶部 HUD (墨水/字数)
             HUDRenderer.updateAll();
-            
-            // 3. 刷新侧边栏 (更新图标状态)
             this.render(); 
-            
-            // 4. 刷新按钮状态 (变为不可点)
             const currentEntry = Journal.getAll().find(e => e.id === this.activeEntryId);
             this.updateConfirmButtonState(currentEntry);
-            
             HUDRenderer.log("✅ 记忆已确认。墨水 +10ml。");
-        } else {
-            HUDRenderer.log("这条记忆已经确认过了。");
         }
     },
-    /**
-     * 处理删除日记
-     */
+
     handleDeleteEntry() {
         if (!this.activeEntryId) return;
-
         if (confirm("确定要撕毁这一页日记吗？此操作无法撤销。")) {
-            // 1. 执行删除
             Journal.deleteEntry(this.activeEntryId);
             HUDRenderer.log("🗑️ 撕毁了一页记忆。");
-
-            // 2. 尝试选中下一条，或者置空
-            const remaining = Journal.getAll();
+            const remaining = this.getEntriesForFolder(this.currentNotebookId);
             this.activeEntryId = remaining.length > 0 ? remaining[0].id : null;
-
-            // 3. 刷新界面
             this.render();
             this.loadActiveEntry();
-            HUDRenderer.updateAll(); // 字数可能变化
+            HUDRenderer.updateAll();
         }
     },
 
-    /**
-     * 切换 Markdown 预览模式
-     */
     togglePreview() {
         const editor = document.getElementById('editor-area');
         const preview = document.getElementById('editor-preview');
         const btn = document.getElementById('btn-toggle-journal-preview');
-
         if (!editor || !preview || !btn) return;
 
         if (preview.style.display === 'none') {
-            // 切换到预览
-            const rawText = editor.value;
-            preview.innerHTML = marked.parse(rawText, { breaks: true });
+            preview.innerHTML = marked.parse(editor.value, { breaks: true });
             preview.style.display = 'block';
-            // 隐藏输入框或覆盖它，这里选择覆盖显示的样式
-            // 但为了简单，我们通常让 preview 盖在 textarea 上，或者隐藏 textarea
-            // css 中 markdown-preview 通常定位在 absolute
-            
             btn.innerText = "✏️ 继续编辑";
             btn.style.background = "#333";
         } else {
-            // 切换回编辑
             preview.style.display = 'none';
             btn.innerText = "👁️ 预览";
             btn.style.background = "#666";
@@ -169,308 +114,373 @@ export const SidebarRenderer = {
         }
     },
 
-    /**
-     * 主渲染入口
-     */
-    render() {
-        if (!this.currentNotebookId) {
-            this.renderNotebookList();
-        } else if (this.currentNotebookId === 'TRASH_BIN_ID') {
-            this.renderTrashList(); // ✨ 进入回收站视图
-        } else {
-            this.renderEntryList(this.currentNotebookId);
-        }
+    getEntriesForFolder(folderId) {
+        const all = Journal.getAll();
+        if (folderId === 'REPO_ALL_ID') return all;
+        if (folderId === 'INBOX_VIRTUAL_ID') return all.filter(e => !e.notebookIds || e.notebookIds.length === 0);
+        return all.filter(e => e.notebookId === folderId || (e.notebookIds && e.notebookIds.includes(folderId)));
     },
 
-    // ✨ 修复：渲染回收站列表
-    renderTrashList() {
+    render() {
         const listEl = document.getElementById('journal-list');
         const headerEl = document.querySelector('.sidebar-header h4');
-        const addBtn = document.getElementById('btn-new-entry');
-        
         if (!listEl) return;
         listEl.innerHTML = "";
-
-        if (headerEl) {
-            headerEl.innerHTML = `<span id="btn-back-level" class="nav-back-btn" style="cursor:pointer; margin-right:5px;">⬅️</span> 🗑️ 废纸篓`;
-            const backBtn = document.getElementById('btn-back-level');
-            if(backBtn) {
-                backBtn.onclick = (e) => { e.stopPropagation(); this.currentNotebookId = null; this.render(); };
-            }
-        }
         
-        if (addBtn) addBtn.style.display = 'none';
+        if (headerEl) headerEl.innerText = "手记目录";
 
-        const trashJournals = Journal.getTrash().map(j => ({ ...j, type: 'journal' }));
-        const trashBooks = Library.getTrash().map(b => ({ ...b, type: 'book' }));
-        
-        const allTrash = [...trashJournals, ...trashBooks].sort((a, b) => {
-            const timeA = a.deletedAt || 0;
-            const timeB = b.deletedAt || 0;
-            return timeB - timeA;
+        this.renderAccordionSection(listEl, 'REPO_ALL_ID', '所有记忆', Icons.allMemory, this.getEntriesForFolder('REPO_ALL_ID'));
+        this.renderAccordionSection(listEl, 'nb_daily', '日常碎片', Icons.daily, this.getEntriesForFolder('nb_daily'));
+
+        const topLevelNotebooks = UserData.state.notebooks.filter(nb => 
+            (nb.id !== 'nb_inbox' && nb.id !== 'nb_daily') && !nb.parentId
+        );
+        topLevelNotebooks.forEach(nb => {
+            this.renderAccordionSection(listEl, nb.id, nb.name, Icons.folder, this.getEntriesForFolder(nb.id), nb);
         });
 
-        if (allTrash.length === 0) {
-            listEl.innerHTML = `<div style="text-align:center; color:#999; margin-top:50px; font-size:12px;">这里很干净<br>没有废纸</div>`;
-            return;
-        }
+        this.renderCreateFolderBtn(listEl);
+        this.renderTagsPlaceholder(listEl);
+        
+        const trashEntries = [
+            ...Journal.getTrash().map(j => ({ ...j, type: 'journal' })),
+            ...Library.getTrash().map(b => ({ ...b, type: 'book' }))
+        ];
+        this.renderAccordionSection(listEl, 'TRASH_BIN_ID', '废纸篓', Icons.trash, trashEntries, null, true);
+    },
 
-        allTrash.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'list-item';
-            div.style.cssText = "border-left: 3px solid #ddd; padding: 10px; margin-bottom: 8px; background: #fafafa;";
-            
-            const isJournal = item.type === 'journal';
-            const icon = isJournal ? '📝' : '📕';
-            const title = isJournal ? (item.content.substring(0, 15).replace(/\n/g,' ') + '...') : `《${item.title}》`;
-            const dateStr = isJournal ? item.date : (item.date || '未知日期');
+    renderAccordionSection(container, folderId, title, iconSvg, entries, customNbData = null, isTrash = false) {
+        const isExpanded = this.expandedFolders.has(folderId);
+        const isActive = this.currentNotebookId === folderId;
 
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px; font-weight:bold; color:#666;">
-                    <span>${icon} ${isJournal ? '日记残页' : '废弃手稿'}</span>
-                    <span style="font-size:11px; font-weight:normal;">${dateStr}</span>
-                </div>
-                <div style="font-size:12px; color:#888; margin-bottom:8px;">${title}</div>
-                <div style="display:flex; gap:10px; justify-content:flex-end;">
-                    <button class="btn-restore" style="font-size:11px; padding:2px 8px; cursor:pointer; background:#e8f5e9; border:1px solid #c8e6c9; color:#2e7d32; border-radius:4px;">♻️ 还原</button>
-                    <button class="btn-burn" style="font-size:11px; padding:2px 8px; cursor:pointer; background:#ffebee; border:1px solid #ffcdd2; color:#c62828; border-radius:4px;">🔥 焚毁</button>
+        const header = document.createElement('div');
+        header.className = `accordion-header ${isActive ? 'active-folder' : ''}`;
+        
+        let actionsHtml = '';
+        if (customNbData) {
+            actionsHtml = `
+                <div class="folder-actions">
+                    <span class="folder-action-btn btn-edit" title="重命名">${Icons.edit}</span>
+                    <span class="folder-action-btn btn-del" title="删除">${Icons.deleteItem}</span>
                 </div>
             `;
+        }
 
-            const btnRestore = div.querySelector('.btn-restore');
-            const btnBurn = div.querySelector('.btn-burn');
+        header.innerHTML = `
+            <span class="folder-arrow ${isExpanded ? 'expanded' : ''}">${Icons.arrowRight}</span>
+            <span class="folder-icon">${iconSvg}</span>
+            <span class="folder-title">${title}</span>
+            <span class="folder-count">${entries.length}</span>
+            ${actionsHtml}
+        `;
 
-            // ♻️ 还原按钮
-            btnRestore.onclick = (e) => {
-                e.stopPropagation();
-                if (isJournal) Journal.restoreEntry(item.id);
-                else Library.restoreBook(item.id);
-                
-                this.renderTrashList(); 
-                
-                // ✨【关键修复】刷新 HUD，以防还原操作影响字数显示（取决于逻辑）
-                HUDRenderer.updateAll(); 
+        // ==========================================
+        // 🌟 目录与日记的双向拖拽接收逻辑
+        // ==========================================
+        if (customNbData) {
+            header.setAttribute('draggable', 'true');
+            header.ondragstart = (e) => {
+                // 前缀区分：nb_ 代表手记本目录
+                e.dataTransfer.setData('text/plain', folderId);
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => header.style.opacity = '0.4', 0); 
             };
+            header.ondragend = () => { header.style.opacity = '1'; };
+        }
 
-            // 🔥 焚毁按钮
-            btnBurn.onclick = (e) => {
-                e.stopPropagation();
-                if (confirm(`确定要彻底焚毁${isJournal ? '这页日记' : '这本书'}吗？\n此操作就像燃烧后的灰烬，永远无法复原。`)) {
-                    if (isJournal) {
-                        Journal.hardDeleteEntry(item.id); // Journal.js 里这个操作会 UserData.updateWordCount(-x)
-                    } else {
-                        Library.hardDeleteBook(item.id);
+        header.ondragover = (e) => {
+            e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move';
+            
+            header.classList.remove('drag-over-inside', 'drag-over-before', 'drag-over-after', 'drag-over-root');
+
+            if (folderId === 'REPO_ALL_ID') {
+                header.classList.add('drag-over-root');
+                return;
+            }
+
+            // 废纸篓和日常碎片，强制只能作为容器接收 (inside)
+            if (folderId === 'TRASH_BIN_ID' || folderId === 'nb_daily') {
+                header.classList.add('drag-over-inside');
+                header.dataset.dropAction = 'inside';
+                return;
+            }
+
+            const rect = header.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            const height = rect.height;
+
+            if (y < height * 0.25) {
+                header.classList.add('drag-over-before');
+                header.dataset.dropAction = 'before';
+            } else if (y > height * 0.75) {
+                header.classList.add('drag-over-after');
+                header.dataset.dropAction = 'after';
+            } else {
+                header.classList.add('drag-over-inside');
+                header.dataset.dropAction = 'inside';
+            }
+        };
+
+        header.ondragleave = (e) => {
+            header.classList.remove('drag-over-inside', 'drag-over-before', 'drag-over-after', 'drag-over-root');
+            delete header.dataset.dropAction;
+        };
+
+        header.ondrop = (e) => {
+            e.preventDefault();
+            const dropAction = header.dataset.dropAction || 'inside';
+            header.classList.remove('drag-over-inside', 'drag-over-before', 'drag-over-after', 'drag-over-root');
+            delete header.dataset.dropAction;
+            
+            const dragData = e.dataTransfer.getData('text/plain');
+            
+            // ----------------------------------------
+            // 场景A：拖拽的是【日记条目】 (以 entry| 开头)
+            // ----------------------------------------
+            if (dragData && dragData.startsWith('entry|')) {
+                const parts = dragData.split('|');
+                const entryId = parts[1];
+                const sourceNbId = parts[2];
+
+                if (sourceNbId === folderId) return; // 原地放下，无事发生
+
+                Journal.moveEntry(entryId, sourceNbId, folderId);
+
+                if (folderId === 'TRASH_BIN_ID') {
+                    HUDRenderer.log("🗑️ 日记已丢入废纸篓");
+                } else if (folderId !== 'REPO_ALL_ID') {
+                    this.expandedFolders.add(folderId); // 自动展开接纳日记的文件夹
+                }
+
+                if (this.activeEntryId === entryId) this.loadActiveEntry(); // 刷新标签栏状态
+                this.render();
+                return;
+            }
+
+            // ----------------------------------------
+            // 场景B：拖拽的是【手记本目录】 (以 nb_ 开头)
+            // ----------------------------------------
+            if (dragData && dragData.startsWith('nb_') && dragData !== folderId) {
+                
+                if (folderId === 'REPO_ALL_ID') {
+                    if(typeof UserData.moveNotebook === 'function') UserData.moveNotebook(dragData, null);
+                    else UserData.reorderNotebook(dragData, dragData, 'after'); 
+                    this.render();
+                    return;
+                }
+
+                if (folderId === 'TRASH_BIN_ID') {
+                    if (confirm("确定要删除这个手记本吗？")) {
+                        UserData.deleteNotebook(dragData);
+                        this.render();
                     }
-                    
-                    this.renderTrashList();
+                    return;
+                }
 
-                    // ✨【关键修复】这里必须调用 updateAll，否则扣除的字数不会立刻显示
-                    HUDRenderer.updateAll(); 
-                    
-                    HUDRenderer.log("🔥 彻底焚毁了记忆。");
+                if (folderId === 'nb_daily' || folderId === 'nb_inbox') {
+                    HUDRenderer.log("⚠️ 无法移动到系统专属目录中");
+                    return;
+                }
+
+                if (typeof UserData.getAllDescendantIds === 'function') {
+                    const descendantIds = UserData.getAllDescendantIds(dragData);
+                    if (descendantIds.includes(folderId)) {
+                        HUDRenderer.log("⚠️ 无法将父目录拖入其子目录中");
+                        return;
+                    }
+                }
+
+                if (typeof UserData.reorderNotebook === 'function') {
+                    UserData.reorderNotebook(dragData, folderId, dropAction);
+                }
+
+                if (dropAction === 'inside') {
+                    this.expandedFolders.add(folderId); 
+                }
+                this.render();
+            }
+        };
+
+        // ================= 拖拽逻辑结束 =================
+
+        if (customNbData) {
+            header.querySelector('.btn-edit').onclick = (e) => {
+                e.stopPropagation();
+                this.showNotebookInputModal('rename', folderId, title);
+            };
+            header.querySelector('.btn-del').onclick = (e) => {
+                e.stopPropagation();
+                if (confirm(`确定要删除《${title}》吗？\n（如果是父级目录，其子目录将被移出。日记仍保留在“所有记忆”中。）`)) {
+                    UserData.deleteNotebook(folderId);
+                    this.render();
                 }
             };
-
-            listEl.appendChild(div);
-        });
-    },
-    /**
-     * Level 1: 渲染手记本目录
-     */
-    renderNotebookList() {
-        const listEl = document.getElementById('journal-list');
-        const headerEl = document.querySelector('.sidebar-header h4');
-        const addBtn = document.getElementById('btn-new-entry');
-        
-        if (!listEl) return;
-        listEl.innerHTML = "";
-        
-        if (headerEl) headerEl.innerText = "📂 归档系统";
-        
-        // ✨ 关键修复：确保按钮是可见的
-        if (addBtn) {
-            addBtn.style.display = 'block';
-            addBtn.title = "新建日记";
-            addBtn.onclick = () => this.handleNewEntry();
         }
 
-        const allEntries = Journal.getAll();
-
-        // 1. 仓库
-        const totalCount = allEntries.length;
-        this._createFolderItem(listEl, {
-            name: "仓库",
-            icon: "💾",
-            count: totalCount,
-            color: "#4e342e",
-            onClick: () => {
-                this.currentNotebookId = 'REPO_ALL_ID';
-                this.render();
-            }
-        });
-
-        // 2. 日常碎片
-        const dailyCount = allEntries.filter(e => {
-            return (e.notebookIds && e.notebookIds.includes('nb_daily')) || e.notebookId === 'nb_daily';
-        }).length;
-        this._createFolderItem(listEl, {
-            name: "日常碎片",
-            icon: "🧩",
-            count: dailyCount,
-            color: "#ffa000",
-            onClick: () => {
-                this.currentNotebookId = 'nb_daily';
-                this.render();
-            }
-        });
-
-        // 3. 用户自定义手记本
-        UserData.state.notebooks.forEach(nb => {
-            if (nb.id === 'nb_inbox' || nb.id === 'nb_daily') return;
-            const count = allEntries.filter(e => {
-                return (e.notebookIds && e.notebookIds.includes(nb.id)) || e.notebookId === nb.id;
-            }).length;
-            this._createCustomNotebookItem(listEl, nb, count);
-        });
-
-        // 4. 新建按钮 (保持不变)
-        const createBtn = document.createElement('div');
-        createBtn.className = 'list-item';
-        createBtn.style.cssText = 'text-align:center; color:#888; margin-top:10px; border:1px dashed #ccc; cursor:pointer;';
-        createBtn.innerText = "+ 新建手记本";
-        createBtn.onclick = () => this.showNotebookInputModal('create');
-        listEl.appendChild(createBtn);
-
-        // ============================================================
-        // ✨ 新增：回收站入口 (放在最底部)
-        // ============================================================
-        const trashJournalCount = Journal.getTrash().length;
-        const trashBookCount = Library.getTrash().length;
-        const totalTrash = trashJournalCount + trashBookCount;
-
-        const trashBtn = document.createElement('div');
-        trashBtn.className = 'list-item';
-        trashBtn.style.cssText = "margin-top: 20px; border-top: 1px solid #eee; padding-top:10px; color:#d32f2f;";
-        
-        trashBtn.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span>🗑️ 废纸篓</span>
-                <span style="font-size:12px; background:#ffebee; padding:2px 6px; border-radius:10px;">${totalTrash}</span>
-            </div>
-        `;
-        trashBtn.onclick = () => {
-            this.currentNotebookId = 'TRASH_BIN_ID'; // 特殊 ID
-            this.render();
+        header.onclick = () => {
+            this.currentNotebookId = folderId; 
+            if (this.expandedFolders.has(folderId)) this.expandedFolders.delete(folderId); 
+            else this.expandedFolders.add(folderId);    
+            this.render(); 
         };
-        listEl.appendChild(trashBtn);
-    },
 
-    /**
-     * Level 2: 渲染日记列表
-     */
-    renderEntryList(notebookId) {
-        const listEl = document.getElementById('journal-list');
-        const headerEl = document.querySelector('.sidebar-header h4');
-        const addBtn = document.getElementById('btn-new-entry');
-        
-        if (!listEl) return;
-        listEl.innerHTML = "";
+        container.appendChild(header);
 
-        // ✨ 关键修复：确保按钮是可见的 (从废纸篓回来后可能会被隐藏)
-        if (addBtn) {
-            addBtn.style.display = 'block'; 
-            addBtn.title = "在此手记本中新建";
-            addBtn.onclick = () => this.handleNewEntry();
-        }
+        // Body 容器
+        const body = document.createElement('div');
+        body.className = 'accordion-body';
+        body.style.display = isExpanded ? 'block' : 'none';
 
-        let entries = [];
-        let title = "";
-
-        if (notebookId === 'REPO_ALL_ID') {
-            title = "💾 所有记忆";
-            entries = Journal.getAll();
-        } else if (notebookId === 'INBOX_VIRTUAL_ID') {
-            title = "📥 收件箱";
-            entries = Journal.getAll().filter(e => !e.notebookIds || e.notebookIds.length === 0);
-        } else {
-            const nb = UserData.state.notebooks.find(n => n.id === notebookId);
-            title = nb ? nb.name : "未知手记";
-            entries = Journal.getAll().filter(e => {
-                return (e.notebookIds && e.notebookIds.includes(notebookId)) || e.notebookId === notebookId;
+        if (customNbData) {
+            const childNotebooks = UserData.state.notebooks.filter(nb => nb.parentId === folderId);
+            childNotebooks.forEach(childNb => {
+                this.renderAccordionSection(body, childNb.id, childNb.name, Icons.folder, this.getEntriesForFolder(childNb.id), childNb);
             });
         }
 
-        if (headerEl) {
-            headerEl.innerHTML = `<span id="btn-back-level" class="nav-back-btn" style="cursor:pointer; margin-right:5px;">⬅️</span> ${title}`;
-            const backBtn = document.getElementById('btn-back-level');
-            if(backBtn) {
-                backBtn.onclick = (e) => {
-                    e.stopPropagation(); 
-                    this.currentNotebookId = null;
-                    this.render();
-                };
-            }
-        }
-
-        if (addBtn) {
-            addBtn.title = "在此手记本中新建";
-            addBtn.onclick = () => this.handleNewEntry();
-        }
-
-        if (entries.length === 0) {
-            listEl.innerHTML = `<div style="text-align:center; color:#999; margin-top:20px; font-size:12px;">这里是空的<br>点击右上角 + 添加想法</div>`;
+        if (entries.length === 0 && (!customNbData || UserData.state.notebooks.filter(nb => nb.parentId === folderId).length === 0)) {
+            body.innerHTML += `<div style="font-size:12px; color:#ccc; padding:4px 0;">空空如也...</div>`;
         } else {
             entries.forEach(entry => {
-                const btn = document.createElement('div');
-                btn.className = 'list-item';
-                if (entry.id === this.activeEntryId) btn.classList.add('active');
-                
-                const statusIcon = entry.isConfirmed ? "✅" : "📝";
-                const preview = (entry.content || "").slice(0, 15).replace(/\n/g, ' ') || '新篇章...';
-                
-                btn.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:#444;">
-                        <span>${statusIcon} ${entry.date}</span>
-                        <span style="font-size:11px; font-weight:normal; color:#888;">${entry.time || ""}</span>
-                    </div>
-                    <div style="font-size:12px; color:#666; margin-top:4px; line-height:1.4;">${preview}</div>
-                `;
-                
-                btn.onclick = () => {
-                    this.activeEntryId = entry.id;
-                    listEl.querySelectorAll('.list-item').forEach(i => i.classList.remove('active'));
-                    btn.classList.add('active');
-                    this.loadActiveEntry();   
-                };
-                listEl.appendChild(btn);
+                if (isTrash) this.renderTrashItem(body, entry);
+                else this.renderEntryItem(body, entry);
             });
         }
+        container.appendChild(body);
+    },
+
+    renderEntryItem(container, entry) {
+        const item = document.createElement('div');
+        item.className = `list-item ${entry.id === this.activeEntryId ? 'active' : ''}`;
+        const previewText = (entry.content || "").slice(0, 15).replace(/\n/g, ' ') || '新篇章...';
+        const statusDot = entry.isConfirmed ? `<span style="color:#4caf50;font-size:10px;margin-right:4px;">●</span>` : '';
+
+        item.innerHTML = `
+            <span class="file-icon">${Icons.fileText}</span>
+            <div style="flex:1; overflow:hidden;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#777; margin-bottom:2px;">
+                    <span>${statusDot}${entry.date}</span>
+                    <span style="font-size:10px; color:#aaa;">${entry.time || ""}</span>
+                </div>
+                <div id="entry-preview-${entry.id}" style="font-size:13px; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${previewText}
+                </div>
+            </div>
+        `;
+
+        // 🌟 新增：日记条目变为可拖拽
+        item.setAttribute('draggable', 'true');
+        item.ondragstart = (e) => {
+            // 传递 特殊前缀 | 日记ID | 源目录ID
+            e.dataTransfer.setData('text/plain', `entry|${entry.id}|${this.currentNotebookId}`);
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => item.style.opacity = '0.4', 0);
+        };
+        item.ondragend = () => { item.style.opacity = '1'; };
+
+        item.onclick = (e) => {
+            e.stopPropagation();
+            this.activeEntryId = entry.id;
+            this.render(); 
+            this.loadActiveEntry();
+        };
+        container.appendChild(item);
+    },
+
+    renderTrashItem(container, itemData) {
+        const item = document.createElement('div');
+        item.className = 'list-item trash-item';
+        const isJournal = itemData.type === 'journal';
+        const title = isJournal ? (itemData.content.substring(0, 15).replace(/\n/g,' ') + '...') : `《${itemData.title}》`;
+        
+        item.innerHTML = `
+            <span class="file-icon">${Icons.fileText}</span>
+            <div style="flex:1; overflow:hidden;">
+                <div style="font-size:12px; color:#999; margin-bottom:4px;">${itemData.date || '未知'}</div>
+                <div class="trash-item-title" style="font-size:13px; margin-bottom:6px;">${title}</div>
+                <div style="display:flex; gap:8px;">
+                    <span class="btn-restore" style="font-size:11px; color:#2e7d32; cursor:pointer; background:#e8f5e9; padding:2px 6px; border-radius:4px;">♻️ 还原</span>
+                    <span class="btn-burn" style="font-size:11px; color:#c62828; cursor:pointer; background:#ffebee; padding:2px 6px; border-radius:4px;">彻底焚毁</span>
+                </div>
+            </div>
+        `;
+
+        item.querySelector('.btn-restore').onclick = (e) => {
+            e.stopPropagation();
+            if (isJournal) Journal.restoreEntry(itemData.id);
+            else Library.restoreBook(itemData.id);
+            this.render(); 
+            HUDRenderer.updateAll(); 
+        };
+
+        item.querySelector('.btn-burn').onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`彻底焚毁将永远无法复原，确定吗？`)) {
+                if (isJournal) Journal.hardDeleteEntry(itemData.id);
+                else Library.hardDeleteBook(itemData.id);
+                this.render();
+                HUDRenderer.updateAll(); 
+            }
+        };
+        container.appendChild(item);
+    },
+
+    renderCreateFolderBtn(container) {
+        const btn = document.createElement('div');
+        btn.className = 'accordion-header';
+        btn.style.color = '#888';
+        btn.innerHTML = `
+            <span class="folder-arrow" style="visibility:hidden;"></span>
+            <span class="folder-icon" style="font-size:16px;">+</span>
+            <span class="folder-title">新建大类手记...</span>
+        `;
+        btn.onclick = () => this.showNotebookInputModal('create');
+        container.appendChild(btn);
+    },
+
+    renderTagsPlaceholder(container) {
+        const div = document.createElement('div');
+        div.style.marginTop = "15px";
+        div.style.borderTop = "1px solid #eaeaea";
+        div.style.paddingTop = "5px";
+        div.innerHTML = `
+            <div class="accordion-header" style="opacity: 0.6; cursor: not-allowed;">
+                <span class="folder-arrow">${Icons.arrowRight}</span>
+                <span class="folder-icon">${Icons.tags}</span>
+                <span class="folder-title">我的标签 (开发中)</span>
+            </div>
+        `;
+        container.appendChild(div);
     },
 
     handleNewEntry() {
         const newEntry = Journal.createNewEntry();
         this.activeEntryId = newEntry.id;
 
-        if (this.currentNotebookId && !['REPO_ALL_ID', 'INBOX_VIRTUAL_ID'].includes(this.currentNotebookId)) {
+        if (this.currentNotebookId && !['REPO_ALL_ID', 'INBOX_VIRTUAL_ID', 'TRASH_BIN_ID'].includes(this.currentNotebookId)) {
             Journal.toggleNotebook(newEntry.id, this.currentNotebookId);
-        } else {
-            if (!this.currentNotebookId || this.currentNotebookId === 'REPO_ALL_ID') {
-                 this.currentNotebookId = 'INBOX_VIRTUAL_ID';
+            this.expandedFolders.add(this.currentNotebookId); 
+            
+            const currentNb = UserData.state.notebooks.find(n => n.id === this.currentNotebookId);
+            if (currentNb && currentNb.parentId) {
+                this.expandedFolders.add(currentNb.parentId);
             }
+        } else {
+            this.expandedFolders.add('REPO_ALL_ID');
         }
 
         this.render();
         this.loadActiveEntry();
+        
         const editor = document.getElementById('editor-area');
         if(editor) editor.focus();
     },
 
     loadActiveEntry() {
         const editor = document.getElementById('editor-area');
-        const tagBar = document.getElementById('entry-tag-bar');
         const preview = document.getElementById('editor-preview');
 
-        // 切换日记时，重置预览状态
         if (preview) preview.style.display = 'none';
         const btnPreview = document.getElementById('btn-toggle-journal-preview');
         if (btnPreview) {
@@ -480,7 +490,6 @@ export const SidebarRenderer = {
 
         if (!this.activeEntryId) {
             if (editor) editor.value = "";
-            if (tagBar) tagBar.innerHTML = "";
             return;
         }
 
@@ -488,107 +497,15 @@ export const SidebarRenderer = {
         if (entry) {
             if (editor) editor.value = entry.content;
             this.updateConfirmButtonState(entry);
-            this.renderTagBar(entry);
+            // ✂️ 这里已经删除了 this.renderTagBar(entry);
         } else {
             if (editor) editor.value = "";
         }
     },
 
-   renderTagBar(entry) {
-        let tagContainer = document.getElementById('entry-tag-bar');
-        
-        if (!tagContainer) {
-            tagContainer = document.createElement('div');
-            tagContainer.id = 'entry-tag-bar';
-            tagContainer.style.cssText = "padding:10px 15px; border-top:1px solid #eee; background:#f9f9f9; display:flex; flex-wrap:wrap; gap:8px; align-items:center;";
-            
-            const footer = document.querySelector('.editor-footer');
-            if (footer && footer.parentNode) {
-                footer.parentNode.insertBefore(tagContainer, footer);
-            } else {
-                const container = document.querySelector('.editor-container');
-                if(container) container.appendChild(tagContainer);
-            }
-        }
-
-        tagContainer.innerHTML = `<span style="font-size:12px; color:#999; margin-right:5px;">归档至：</span>`;
-
-        // ============================================================
-        // 1. 手动添加【日常碎片】系统标签 (修复点)
-        // ============================================================
-        const dailyId = 'nb_daily';
-        const isDaily = entry.notebookIds && entry.notebookIds.includes(dailyId);
-        
-        const dailyTag = document.createElement('span');
-        dailyTag.innerHTML = `🧩 日常碎片`; // 使用固定图标和名称
-        dailyTag.style.cssText = "display:inline-flex; align-items:center; font-size:12px; padding:4px 10px; border-radius:15px; cursor:pointer; user-select:none; transition:all 0.2s;";
-        
-        // 选中状态样式
-        if (isDaily) {
-            dailyTag.style.border = "1px solid #ffa000"; // 使用日常碎片的专属橙色
-            dailyTag.style.background = "#ffa000";
-            dailyTag.style.color = "#fff";
-        } else {
-            dailyTag.style.border = "1px solid #ddd";
-            dailyTag.style.background = "#fff";
-            dailyTag.style.color = "#666";
-        }
-
-        dailyTag.onclick = () => {
-            Journal.toggleNotebook(entry.id, dailyId);
-            this.renderTagBar(entry);
-            // 如果当前正处于“日常碎片”视图或“收件箱”视图，刷新整个列表
-            if (this.currentNotebookId === dailyId || this.currentNotebookId === 'INBOX_VIRTUAL_ID') {
-                    this.render(); 
-            }
-        };
-        tagContainer.appendChild(dailyTag);
-
-        // ============================================================
-        // 2. 遍历渲染【用户自定义】标签
-        // ============================================================
-        UserData.state.notebooks.forEach(nb => {
-            // 关键：跳过 nb_daily，防止重复（如果它也存在于自定义列表中的话）
-            // 同时也跳过 nb_inbox，因为收件箱通常意味着“无标签”
-            if (nb.id === 'nb_daily' || nb.id === 'nb_inbox') return;
-
-            const isSelected = entry.notebookIds && entry.notebookIds.includes(nb.id);
-            const tag = document.createElement('span');
-            
-            let iconHtml = nb.icon || '📔';
-            if (nb.icon && nb.icon.includes('/')) {
-                iconHtml = `<img src="${nb.icon}" style="width:16px; height:16px; object-fit:contain; margin-right:4px;">`;
-            }
-
-            tag.innerHTML = `${iconHtml}${nb.name}`;
-            tag.style.cssText = "display:inline-flex; align-items:center; font-size:12px; padding:4px 10px; border-radius:15px; cursor:pointer; user-select:none; transition:all 0.2s;";
-            
-            if (isSelected) {
-                tag.style.border = "1px solid #5d4037";
-                tag.style.background = "#5d4037";
-                tag.style.color = "#fff";
-            } else {
-                tag.style.border = "1px solid #ddd";
-                tag.style.background = "#fff";
-                tag.style.color = "#666";
-            }
-            
-            tag.onclick = () => {
-                Journal.toggleNotebook(entry.id, nb.id);
-                this.renderTagBar(entry);
-                if (this.currentNotebookId === nb.id || this.currentNotebookId === 'INBOX_VIRTUAL_ID') {
-                     this.render(); 
-                }
-            };
-            
-            tagContainer.appendChild(tag);
-        });
-    },
-
     updateConfirmButtonState(entry) {
         const btn = document.getElementById('btn-confirm-entry');
         if (!btn) return;
-
         if (entry.isConfirmed) {
             btn.innerText = "已归档 (墨水已领)";
             btn.style.background = "#ccc";
@@ -602,110 +519,13 @@ export const SidebarRenderer = {
         }
     },
 
-    _createFolderItem(container, { name, icon, count, color, onClick }) {
-        const div = document.createElement('div');
-        div.className = 'list-item notebook-folder';
-        div.style.borderLeft = `4px solid ${color}`;
-        div.style.display = "flex"; 
-        div.style.justifyContent = "space-between";
-        div.style.alignItems = "center";
-
-        div.innerHTML = `
-            <div style="display:flex; align-items:center; overflow:hidden;">
-                <span class="nb-icon-emoji">${icon}</span>
-                <span class="nb-name">${name}</span>
-            </div>
-            <span class="nb-count">${count}</span>
-        `;
-        div.onclick = onClick;
-        container.appendChild(div);
-    },
-
-    _createCustomNotebookItem(container, nb, count) {
-        const div = document.createElement('div');
-        div.className = 'list-item notebook-folder'; 
-        div.style.cssText = 'position:relative; display:flex; justify-content:space-between; align-items:center;';
-        
-        let iconHtml = '';
-        if (nb.icon && nb.icon.includes('/')) {
-            iconHtml = `<img src="${nb.icon}" class="nb-icon-img">`;
-        } else {
-            iconHtml = `<span class="nb-icon-emoji">${nb.icon || '📔'}</span>`;
-        }
-
-        const leftContent = document.createElement('div');
-        leftContent.style.cssText = "display:flex; align-items:center; flex:1; overflow:hidden; margin-right:10px;";
-        leftContent.innerHTML = `${iconHtml}<span class="nb-name">${nb.name}</span>`;
-        
-        const countSpan = document.createElement('span');
-        countSpan.className = 'nb-count';
-        countSpan.innerText = count;
-
-        const actionsDiv = document.createElement('div');
-        actionsDiv.style.cssText = "display:none; gap:5px;";
-        
-        const btnRename = this._createActionBtn("✏️", "重命名", (e) => {
-            this.showNotebookInputModal('rename', nb.id, nb.name);
-        });
-        const btnDelete = this._createActionBtn("🗑️", "删除手记本", (e) => {
-            if (confirm(`确定要删除《${nb.name}》吗？\n\n注意：里面的日记不会被删除，它们仍会保留在“所有记忆”中。`)) {
-                if (UserData.deleteNotebook(nb.id)) {
-                    this.render(); 
-                } else {
-                    alert("无法删除此手记本。");
-                }
-            }
-        });
-
-        actionsDiv.appendChild(btnRename);
-        actionsDiv.appendChild(btnDelete);
-
-        div.appendChild(leftContent);
-        div.appendChild(countSpan);
-        div.appendChild(actionsDiv);
-        
-        div.onmouseenter = () => {
-            countSpan.style.display = 'none';
-            actionsDiv.style.display = 'flex';
-            div.style.background = '#fff8e1';
-        };
-        div.onmouseleave = () => {
-            countSpan.style.display = 'inline-block';
-            actionsDiv.style.display = 'none';
-            div.style.background = '';
-        };
-
-        div.onclick = () => {
-            this.currentNotebookId = nb.id; 
-            this.render();
-        };
-        
-        container.appendChild(div);
-    },
-
-    _createActionBtn(icon, title, onClick) {
-        const btn = document.createElement('span');
-        btn.innerText = icon;
-        btn.title = title;
-        btn.style.cssText = "cursor:pointer; font-size:14px; opacity:0.7;";
-        btn.onmouseover = () => btn.style.opacity = 1;
-        btn.onmouseout = () => btn.style.opacity = 0.7;
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            onClick(e);
-        };
-        return btn;
-    },
-
     showNotebookInputModal(mode = 'create', targetId = null, currentName = '') {
         const existing = document.getElementById('dynamic-modal-input');
         if (existing) existing.remove();
 
         const isRename = (mode === 'rename');
-        const titleText = isRename ? "重命名手记本" : "新建手记本";
-        const btnText = isRename ? "保存修改" : "创建";
-        const inputValue = isRename ? currentName : "";
-        
+        let titleText = isRename ? "重命名" : "新建大类手记";
+
         const overlay = document.createElement('div');
         overlay.id = 'dynamic-modal-input';
         overlay.className = 'modal-overlay'; 
@@ -713,15 +533,15 @@ export const SidebarRenderer = {
         
         const content = document.createElement('div');
         content.className = 'modal-content';
-        content.style.cssText = 'width:320px; text-align:center; background:#fff; padding:20px; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:2px solid #5d4037;';
+        content.style.cssText = 'width:320px; text-align:center; background:#fff; padding:20px; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.3);';
 
         content.innerHTML = `
-            <h3 style="margin-top:0; color:#5d4037;">${titleText}</h3>
-            <input type="text" id="notebook-input-field" value="${inputValue}" placeholder="请输入名称..." 
-                   style="width:100%; padding:10px; margin-bottom:20px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:14px;">
+            <h3 style="margin-top:0; color:#333;">${titleText}</h3>
+            <input type="text" id="notebook-input-field" value="${isRename ? currentName : ""}" placeholder="请输入名称..." 
+                   style="width:100%; padding:10px; margin-bottom:20px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; outline:none;">
             <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button id="btn-cancel-input" style="padding:6px 12px; cursor:pointer; background:#fff; border:1px solid #ccc; border-radius:4px;">取消</button>
-                <button id="btn-confirm-input" style="padding:6px 12px; cursor:pointer; background:#5d4037; color:white; border:none; border-radius:4px;">${btnText}</button>
+                <button id="btn-cancel-input" class="btn-cancel">取消</button>
+                <button id="btn-confirm-input" class="btn-primary">${isRename ? "保存" : "创建"}</button>
             </div>
         `;
 
@@ -729,38 +549,29 @@ export const SidebarRenderer = {
         document.body.appendChild(overlay);
 
         const input = content.querySelector('#notebook-input-field');
-        const btnCancel = content.querySelector('#btn-cancel-input');
-        const btnConfirm = content.querySelector('#btn-confirm-input');
-
         const close = () => overlay.remove();
         
         const confirmAction = () => {
             const name = input.value.trim();
-            if (!name) {
-                alert("名称不能为空");
-                return;
-            }
+            if (!name) return alert("名称不能为空");
 
             if (isRename) {
                 UserData.renameNotebook(targetId, name);
             } else {
                 UserData.createNotebook(name);
             }
+            
             this.render();
             close();
         };
 
-        btnCancel.onclick = close;
-        btnConfirm.onclick = confirmAction;
-        
+        content.querySelector('#btn-cancel-input').onclick = close;
+        content.querySelector('#btn-confirm-input').onclick = confirmAction;
         input.onkeydown = (e) => {
             if (e.key === 'Enter') confirmAction();
             if (e.key === 'Escape') close();
         };
 
-        setTimeout(() => {
-            input.focus();
-            if(isRename) input.select();
-        }, 50);
+        setTimeout(() => { input.focus(); if(isRename) input.select(); }, 50);
     }
 };

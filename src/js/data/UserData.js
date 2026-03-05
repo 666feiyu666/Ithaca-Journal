@@ -196,15 +196,15 @@ export const UserData = {
     // ✨ 核心新增：手记本 (Notebook) 管理
     // ============================================================
 
-    // 1. 创建新本子
-    createNotebook(name) {
+    // 1. 创建新本子 (支持传入 parentId 成为子手记本)
+    createNotebook(name, parentId = null) {
         const newNotebook = {
             id: 'nb_' + Date.now(),
             name: name || '未命名手记',
-            // ✨ 新建本子默认使用该图标
             icon: 'assets/images/booksheet/notebook.png', 
             createdAt: Date.now(),
-            isDefault: false
+            isDefault: false,
+            parentId: parentId // ✨ 新增：记录父级ID
         };
         this.state.notebooks.push(newNotebook);
         this.save();
@@ -229,6 +229,13 @@ export const UserData = {
         
         const index = this.state.notebooks.findIndex(n => n.id === id);
         if (index !== -1) {
+            // ✨ 新增保护机制：如果被删除的是父文件夹，把它的子文件夹移出到根目录，防止子文件夹跟着丢失
+            this.state.notebooks.forEach(n => {
+                if (n.parentId === id) {
+                    n.parentId = null; 
+                }
+            });
+
             this.state.notebooks.splice(index, 1);
             this.save();
             return true;
@@ -236,7 +243,70 @@ export const UserData = {
         return false;
     },
 
-    // 4. 获取本子信息
+    // 4. 🌟 新增：移动手记本 (支持拖拽层级)
+    moveNotebook(id, newParentId) {
+        if (id === newParentId) return false; // 不能移动到自己内部
+        
+        const nb = this.state.notebooks.find(n => n.id === id);
+        if (nb) {
+            nb.parentId = newParentId;
+            this.save();
+            return true;
+        }
+        return false;
+    },
+
+    // 🌟 新增：移动并排序手记本 (支持同级排序和嵌套)
+    reorderNotebook(draggedId, targetId, position) {
+        if (draggedId === targetId) return false;
+
+        const draggedIndex = this.state.notebooks.findIndex(n => n.id === draggedId);
+        const targetIndex = this.state.notebooks.findIndex(n => n.id === targetId);
+
+        if (draggedIndex === -1 || targetIndex === -1) return false;
+
+        const draggedItem = this.state.notebooks[draggedIndex];
+        const targetItem = this.state.notebooks[targetIndex];
+
+        // 1. 先把被拖拽的元素从原位置抽出
+        this.state.notebooks.splice(draggedIndex, 1);
+
+        // 2. 重新获取目标元素的最新索引 (因为上一步 splice 可能会让索引减 1)
+        const newTargetIndex = this.state.notebooks.findIndex(n => n.id === targetId);
+
+        // 3. 根据鼠标释放的位置进行插入
+        if (position === 'inside') {
+            // 嵌套为子目录
+            draggedItem.parentId = targetId;
+            // 塞在父目录后面的位置，渲染时会自然跟在它下面
+            this.state.notebooks.splice(newTargetIndex + 1, 0, draggedItem);
+        } else {
+            // 平级移动：继承目标文件夹的层级 (都在外层，或都在同一个父文件夹里)
+            draggedItem.parentId = targetItem.parentId;
+            
+            if (position === 'before') {
+                this.state.notebooks.splice(newTargetIndex, 0, draggedItem);
+            } else if (position === 'after') {
+                this.state.notebooks.splice(newTargetIndex + 1, 0, draggedItem);
+            }
+        }
+        
+        this.save();
+        return true;
+    },
+
+    // 🌟 新增：获取某个手记本的所有子手记本ID (用于防止循环嵌套)
+    getAllDescendantIds(parentId) {
+        let descendants = [];
+        const children = this.state.notebooks.filter(n => n.parentId === parentId);
+        children.forEach(child => {
+            descendants.push(child.id);
+            descendants = descendants.concat(this.getAllDescendantIds(child.id));
+        });
+        return descendants;
+    },
+
+    // 5. 获取本子信息
     getNotebook(id) {
         return this.state.notebooks.find(n => n.id === id) || null;
     },

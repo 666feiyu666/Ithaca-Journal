@@ -192,12 +192,16 @@ header {
     margin-bottom: 30px;
 }
 
-/* 侧边栏 */
+/* =========================================
+   侧边栏与风琴目录 (Accordion Sidebar) 样式
+   ========================================= */
+
 .sidebar {
-    width: 220px;
-    background: #fafafa;
-    border: 1px solid #eee;
-    padding: 10px;
+    width: 260px; /* 加宽以容纳风琴层级和右侧数字 */
+    background: #fbfbfc; /* 极浅灰背景，更现代 */
+    border: 1px solid #eaeaea;
+    border-radius: 8px 0 0 8px; 
+    padding: 15px 10px;
     display: flex;
     flex-direction: column;
 }
@@ -222,17 +226,143 @@ header {
     overflow-y: auto;
 }
 
-.list-item {
-    padding: 10px;
-    margin-bottom: 5px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 13px;
-    line-height: 1.4;
-    border: 1px solid transparent;
+/* 隐藏浏览器原生滚动条，保持侧边栏清爽 */
+#journal-list::-webkit-scrollbar {
+    width: 4px;
 }
-.list-item:hover { background: #eee; }
-.list-item.active { background: #e8ded4; border-color: #d7ccc0; font-weight: bold; }
+#journal-list::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 4px;
+}
+
+/* --- 风琴目录 Header (文件夹层) --- */
+.accordion-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    cursor: pointer;
+    border-radius: 6px;
+    color: #555;
+    font-size: 14px;
+    user-select: none;
+    transition: background 0.2s, color 0.2s;
+    position: relative;
+}
+
+.accordion-header:hover {
+    background: #f0f0f0;
+}
+
+.accordion-header.active-folder {
+    background: #e8ded4;
+    color: #5d4037;
+    font-weight: bold;
+}
+
+.folder-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    color: #999;
+    transition: transform 0.2s ease;
+}
+.folder-arrow.expanded {
+    transform: rotate(90deg); /* 展开时箭头向下 */
+}
+
+.folder-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    color: inherit;
+    opacity: 0.8;
+}
+
+.folder-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: #999;
+    background: #ebebeb;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-family: monospace;
+}
+.accordion-header.active-folder .folder-count {
+    background: #d7ccc0;
+    color: #5d4037;
+}
+
+.folder-actions {
+    display: none;
+    gap: 6px;
+    margin-left: 10px;
+    position: absolute;
+    right: 10px;
+    background: inherit; 
+    padding-left: 5px;
+}
+.accordion-header:hover .folder-actions { display: flex; }
+.accordion-header:hover .folder-count { display: none; }
+
+.folder-action-btn {
+    color: #888;
+    padding: 2px;
+    border-radius: 4px;
+}
+.folder-action-btn:hover {
+    color: #333;
+    background: rgba(0,0,0,0.05);
+}
+
+/* --- 风琴目录 Body (日记列表层) --- */
+.accordion-body {
+    padding-left: 24px; /* 缩进 */
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+/* 单条日记 Item 重塑 */
+.accordion-body .list-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    transition: background 0.1s;
+    cursor: pointer;
+}
+
+.accordion-body .list-item:hover {
+    background: #f5f5f5;
+}
+
+.accordion-body .list-item.active {
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    border-left: 3px solid #5d4037;
+    border-radius: 0 6px 6px 0;
+}
+
+.file-icon {
+    margin-right: 8px;
+    margin-top: 2px;
+    color: #aaa;
+    flex-shrink: 0;
+}
+.accordion-body .list-item.active .file-icon {
+    color: #5d4037;
+}
+
+/* 废纸篓里的特殊样式 */
+.trash-item .file-icon { color: #d32f2f; opacity: 0.6; }
+.trash-item-title { text-decoration: line-through; color: #999; }
 
 /* 主编辑器 */
 .main-editor {
@@ -916,4 +1046,82 @@ body.interaction-locked .dialogue-box-container {
 
 #review-list-container::-webkit-scrollbar-thumb:hover {
     background-color: #a1887f; /* 悬停加深 */
+}
+
+/* =========================================
+   子手记本 (二级目录) 特定样式
+   ========================================= */
+.accordion-body .accordion-header {
+    /* 在展开的容器内部再次渲染的 header，就是子目录 */
+    padding-left: 20px; /* 增加左侧缩进，体现层级 */
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 13px; /* 字体稍微缩小一点 */
+    background: transparent;
+}
+
+.accordion-body .accordion-header.active-folder {
+    background: #f0e9e1; /* 选中的子目录颜色稍微柔和一点 */
+    border-radius: 6px;
+}
+
+/* 子目录的日记列表进一步缩进 */
+.accordion-body .accordion-body {
+    padding-left: 15px;
+    border-left: 1px dashed #ddd; /* 加一条虚线引导线 */
+    margin-left: 15px;
+}
+
+/* =========================================
+   拖拽交互 (Drag & Drop) 样式 —— 支持排序版
+   ========================================= */
+
+.accordion-header[draggable="true"] { cursor: grab; }
+.accordion-header[draggable="true"]:active { cursor: grabbing; }
+
+/* 1. 停留在中间：嵌套进去 (虚线框收缩) */
+.accordion-header.drag-over-inside {
+    background: #e8ded4 !important;
+    border: 1px dashed #5d4037 !important;
+    box-sizing: border-box;
+    transform: scale(0.98);
+    transition: all 0.1s;
+}
+
+/* 2. 停留在上半部：排序到前面 (顶部实线) */
+.accordion-header.drag-over-before {
+    border-top: 2px solid #5d4037 !important;
+    border-radius: 0 !important; /* 去掉圆角让线更直 */
+}
+
+/* 3. 停留在下半部：排序到后面 (底部实线) */
+.accordion-header.drag-over-after {
+    border-bottom: 2px solid #5d4037 !important;
+    border-radius: 0 !important;
+}
+
+/* 4. 拖回根目录的特殊样式 */
+.accordion-header.drag-over-root {
+    background: #e0f2f1 !important;
+    border: 1px dashed #00796b !important;
+}
+
+/* 防止拖拽时内部的图标文字闪烁触发 dragleave */
+.accordion-header * {
+    pointer-events: none;
+}
+.folder-actions {
+    pointer-events: auto !important; /* 保证操作按钮依然可点 */
+}
+
+/* =========================================
+   日记条目 (Entry) 拖拽样式
+   ========================================= */
+
+.accordion-body .list-item[draggable="true"] {
+    cursor: grab;
+}
+
+.accordion-body .list-item[draggable="true"]:active {
+    cursor: grabbing;
 }
