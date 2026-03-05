@@ -7,9 +7,12 @@ export const Journal = {
     async init() {
         await this.load();
         
-        // 数据迁移与修复
         let hasChanges = false;
         this.entries.forEach(e => {
+            if (typeof e.id !== 'string') {
+                e.id = String(e.id);
+                hasChanges = true;
+            }
             if (e.isDeleted === undefined) {
                 e.isDeleted = false;
                 hasChanges = true;
@@ -18,17 +21,28 @@ export const Journal = {
                 e.notebookIds = [];
                 hasChanges = true;
             }
+            if (!e.tags) {
+                e.tags = [];
+                hasChanges = true;
+            }
+            
+            if (e.notebookId !== undefined) {
+                if (e.notebookId && !e.notebookIds.includes(e.notebookId)) {
+                    e.notebookIds.push(e.notebookId);
+                }
+                delete e.notebookId; 
+                hasChanges = true;
+            }
         });
+        
         if(hasChanges) this.save();
     },
 
     async load() {
-        // ✨ 优先尝试系统读取，保持与 UserData 一致
         if (window.ithacaSystem && window.ithacaSystem.loadData) {
             const data = await window.ithacaSystem.loadData('journal_data.json');
             if (data) this.entries = JSON.parse(data);
         } else {
-            // 降级兼容 localStorage
             const data = localStorage.getItem('ithaca_journal_entries');
             if (data) this.entries = JSON.parse(data);
         }
@@ -44,10 +58,6 @@ export const Journal = {
     },
 
     getAll() {
-        // return this.entries.filter(e => !e.isDeleted).sort((a, b) => {
-        //     // 按创建时间倒序（最新在最前）
-        //     return (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0);
-        // });
         return this.entries.filter(e => !e.isDeleted);
     },
 
@@ -58,14 +68,12 @@ export const Journal = {
     },
 
     createNewEntry() {
-        // 移除对 UserData.state.day 的依赖
         const now = new Date();
-        // 获取本地格式化的系统日期，例如 "2026/1/17"
         const dateString = now.toLocaleDateString(); 
         
         const entry = {
             id: 'entry_' + Date.now(),
-            date: dateString, // ✨ 修改此处：由 "Day X" 改为系统日期
+            date: dateString,
             time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
             timestamp: Date.now(),
             createdAt: Date.now(),
@@ -83,19 +91,19 @@ export const Journal = {
     },
 
     updateEntry(id, content) {
-        const entry = this.entries.find(e => e.id === id);
+        const entry = this.entries.find(e => String(e.id) === String(id));
         if (entry) {
             entry.content = content;
             
-            // ✨ 修复：只有在日记【已确认/归档】后，输入才会计入生涯总字数
-            // 如果你希望实时计入，请保留下方逻辑，但要注意 UserData 方法名
+            const matches = content.match(/[#＃]([^\s#\.,?!，。？！\n\r]+)/g) || [];
+            entry.tags = [...new Set(matches.map(t => t.substring(1)))];
+            
             if (entry.isConfirmed) {
                 const currentCount = (content || "").replace(/\s/g, '').length;
                 const lastCount = entry.savedWordCount || 0;
                 const diff = currentCount - lastCount;
                 
                 if (diff !== 0) {
-                    // ✅ 修复：调用 updateWordCount 而不是 addWords
                     UserData.updateWordCount(diff);
                     entry.savedWordCount = currentCount;
                 }
@@ -105,18 +113,24 @@ export const Journal = {
         }
     },
 
+    getAllTags() {
+        const tagSet = new Set();
+        this.getAll().forEach(e => {
+            if (e.tags && Array.isArray(e.tags)) {
+                e.tags.forEach(t => tagSet.add(t));
+            }
+        });
+        return Array.from(tagSet);
+    },
+
     confirmEntry(id) {
-        const entry = this.entries.find(e => e.id === id);
+        const entry = this.entries.find(e => String(e.id) === String(id));
         if (entry && !entry.isConfirmed) {
             entry.isConfirmed = true;
-            
-            // 确认时，结算字数
             const wordCount = (entry.content || "").replace(/\s/g, '').length;
             entry.savedWordCount = wordCount;
-            // ✅ 修复：调用 updateWordCount
             UserData.updateWordCount(wordCount);
-            UserData.unlockAchievement('ach_diary'); // 尝试解锁成就
-
+            UserData.unlockAchievement('ach_diary');
             this.save();
             return true;
         }
@@ -124,77 +138,50 @@ export const Journal = {
     },
 
     toggleNotebook(entryId, notebookId) {
-        const entry = this.entries.find(e => e.id === entryId);
+        const entry = this.entries.find(e => String(e.id) === String(entryId));
         if (!entry) return;
-
         if (!entry.notebookIds) entry.notebookIds = [];
 
-        // 🌟 核心修改：将“标签多选”模式改为“文件夹唯一归属”模式
-        if (notebookId === 'nb_daily') {
-            // “日常碎片”依然可以作为一个特殊的平行状态叠加
-            const idx = entry.notebookIds.indexOf(notebookId);
-            if (idx > -1) {
-                entry.notebookIds.splice(idx, 1);
-            } else {
-                entry.notebookIds.push(notebookId);
-            }
+        // 🌟 核心修改1：取消原本的“日常碎片”叠加逻辑，改为完全互斥。
+        const idx = entry.notebookIds.indexOf(notebookId);
+        if (idx > -1) {
+            // 如果再次点击它所在的目录，取消归档，变成游离状态（所有记忆）
+            entry.notebookIds = []; 
         } else {
-            // 对于自定义的层级手记本：只能属于一个！排他性覆盖！
-            const idx = entry.notebookIds.indexOf(notebookId);
-            if (idx > -1) {
-                // 如果再次点击已归档的目录，则取消归档（移出到最外层）
-                entry.notebookIds = entry.notebookIds.filter(id => id === 'nb_daily'); 
-            } else {
-                // 如果是归档到新目录，直接清除其他所有自定义目录的关联！
-                const isDaily = entry.notebookIds.includes('nb_daily');
-                entry.notebookIds = isDaily ? ['nb_daily', notebookId] : [notebookId];
-            }
+            // 只要放入目录，就斩断它与其他目录（包括日常碎片）的所有联系
+            entry.notebookIds = [notebookId];
         }
+        
         this.save();
     },
 
-    // 💡 1. 移动笔记到指定文件夹 (配合左侧风琴目录拖入)
     moveToNotebook(entryId, notebookId) {
-        const entry = this.entries.find(e => e.id === entryId);
+        const entry = this.entries.find(e => String(e.id) === String(entryId));
         if (!entry) return false;
         
         if (!entry.notebookIds) entry.notebookIds = [];
         
-        // 如果拖入废纸篓，直接执行删除逻辑
-        if (notebookId === 'TRASH_BIN_ID') {
-            return this.deleteEntry(entryId);
-        }
+        if (notebookId === 'TRASH_BIN_ID') return this.deleteEntry(entryId);
 
-        const isDaily = entry.notebookIds.includes('nb_daily');
-
+        // 🌟 核心修改2：取消 isDaily 判断，执行强制转移
         if (notebookId === 'REPO_ALL_ID' || notebookId === 'INBOX_VIRTUAL_ID') {
-            // 归入收件箱/仓库：清空自定义文件夹
-            entry.notebookIds = isDaily ? ['nb_daily'] : [];
-        } else if (notebookId === 'nb_daily') {
-            // 附加日常碎片标签（它作为特殊平行状态存在）
-            if (!isDaily) entry.notebookIds.push('nb_daily');
+            entry.notebookIds = []; // 回到大厅
         } else {
-            // 目录互斥：强制分配到新本子，切断与其他自定义本子的联系
-            entry.notebookIds = isDaily ? ['nb_daily', notebookId] : [notebookId]; 
+            // 不管是从哪里拖过来的，放进新目录就只属于这个新目录
+            entry.notebookIds = [notebookId]; 
         }
         
         this.save();
         return true;
     },
 
-    // 💡 2. 新增：笔记之间的拖拽重排序逻辑 (物理改变数组顺序)
     reorderEntry(draggedEntryId, targetEntryId) {
-        const dragIndex = this.entries.findIndex(e => e.id === draggedEntryId);
-        const targetIndex = this.entries.findIndex(e => e.id === targetEntryId);
+        const dragIndex = this.entries.findIndex(e => String(e.id) === String(draggedEntryId));
+        const targetIndex = this.entries.findIndex(e => String(e.id) === String(targetEntryId));
 
         if (dragIndex > -1 && targetIndex > -1 && dragIndex !== targetIndex) {
-            // 从原位置抽离被拖拽的笔记
             const [draggedItem] = this.entries.splice(dragIndex, 1);
-            
-            // 插入到目标笔记的位置
-            // 因为使用的是数组原生的 splice，这样能永久保存用户自定义的上下顺序
             this.entries.splice(targetIndex, 0, draggedItem);
-            
             this.save();
             return true;
         }
@@ -202,7 +189,7 @@ export const Journal = {
     },
     
     deleteEntry(id) {
-        const entry = this.entries.find(e => e.id === id);
+        const entry = this.entries.find(e => String(e.id) === String(id));
         if (entry) {
             entry.isDeleted = true;
             entry.deletedAt = Date.now();
@@ -213,7 +200,7 @@ export const Journal = {
     },
 
     restoreEntry(id) {
-        const entry = this.entries.find(e => e.id === id);
+        const entry = this.entries.find(e => String(e.id) === String(id));
         if (entry) {
             entry.isDeleted = false;
             delete entry.deletedAt;
@@ -224,10 +211,9 @@ export const Journal = {
     },
 
     hardDeleteEntry(id) {
-        const index = this.entries.findIndex(e => e.id === id);
+        const index = this.entries.findIndex(e => String(e.id) === String(id));
         if (index !== -1) {
             const entry = this.entries[index];
-            // 如果已确认，扣除字数
             if (entry.isConfirmed && entry.savedWordCount > 0) {
                 UserData.updateWordCount(-entry.savedWordCount);
             }
@@ -239,28 +225,19 @@ export const Journal = {
     },
 
     async importData(importedEntries) {
-        if (!Array.isArray(importedEntries)) {
-            alert("导入失败：文件格式不正确，需要是数组格式的 journal_data.json");
-            return;
-        }
+        if (!Array.isArray(importedEntries)) return alert("导入失败：文件格式不正确");
 
         let importCount = 0;
         let addedWords = 0;
 
-        // 遍历导入的日记，避免 ID 重复
         importedEntries.forEach(newEntry => {
-            // 检查 ID 是否已存在
             const exists = this.entries.some(current => String(current.id) === String(newEntry.id));
-            
             if (!exists) {
-                // 补全缺失字段
                 if (!newEntry.notebookIds) newEntry.notebookIds = [];
                 if (newEntry.isConfirmed === undefined) newEntry.isConfirmed = true; 
-
                 this.entries.push(newEntry);
                 importCount++;
 
-                // 如果是已确认的日记，补加字数
                 if (newEntry.isConfirmed) {
                     const count = newEntry.savedWordCount || (newEntry.content || "").replace(/\s/g, '').length;
                     newEntry.savedWordCount = count;
@@ -270,24 +247,12 @@ export const Journal = {
         });
 
         if (importCount > 0) {
-            // 重新排序：按时间倒序
-            this.entries.sort((a, b) => {
-                const tA = a.timestamp || 0;
-                const tB = b.timestamp || 0;
-                return tB - tA;
-            });
-
-            // 更新总字数
+            this.entries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             if (addedWords > 0) UserData.updateWordCount(addedWords);
-            
-            // 保存并刷新
             this.save();
             alert(`成功导入 ${importCount} 篇日记！`);
-            
-            // 如果需要刷新界面，可以在这里调用，或者由 UI 层决定
-            // location.reload(); 
         } else {
             alert("未发现新的日记数据。");
         }
-    },
+    }
 };
