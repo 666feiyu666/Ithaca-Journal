@@ -1,6 +1,29 @@
 /* src/js/data/Journal.js */
 import { UserData } from './UserData.js';
 
+function cloneEntries(entries) {
+    return JSON.parse(JSON.stringify(entries));
+}
+
+function normalizeEntry(entry) {
+    const normalized = { ...entry };
+    if (typeof normalized.id !== 'string') normalized.id = String(normalized.id);
+    if (normalized.isDeleted === undefined) normalized.isDeleted = false;
+    if (!Array.isArray(normalized.notebookIds)) normalized.notebookIds = [];
+    if (!Array.isArray(normalized.tags)) normalized.tags = [];
+
+    if (normalized.notebookId !== undefined) {
+        if (normalized.notebookId && !normalized.notebookIds.includes(normalized.notebookId)) {
+            normalized.notebookIds.push(normalized.notebookId);
+        }
+        delete normalized.notebookId;
+    }
+
+    if (normalized.isConfirmed === undefined) normalized.isConfirmed = false;
+    if (typeof normalized.savedWordCount === 'undefined') normalized.savedWordCount = 0;
+    return normalized;
+}
+
 export const Journal = {
     entries: [],
 
@@ -8,29 +31,10 @@ export const Journal = {
         await this.load();
         
         let hasChanges = false;
-        this.entries.forEach(e => {
-            if (typeof e.id !== 'string') {
-                e.id = String(e.id);
-                hasChanges = true;
-            }
-            if (e.isDeleted === undefined) {
-                e.isDeleted = false;
-                hasChanges = true;
-            }
-            if (!e.notebookIds) {
-                e.notebookIds = [];
-                hasChanges = true;
-            }
-            if (!e.tags) {
-                e.tags = [];
-                hasChanges = true;
-            }
-            
-            if (e.notebookId !== undefined) {
-                if (e.notebookId && !e.notebookIds.includes(e.notebookId)) {
-                    e.notebookIds.push(e.notebookId);
-                }
-                delete e.notebookId; 
+        this.entries.forEach((e, index) => {
+            const normalized = normalizeEntry(e);
+            if (JSON.stringify(normalized) !== JSON.stringify(e)) {
+                this.entries[index] = normalized;
                 hasChanges = true;
             }
         });
@@ -41,7 +45,14 @@ export const Journal = {
     async load() {
         if (window.ithacaSystem && window.ithacaSystem.loadData) {
             const data = await window.ithacaSystem.loadData('journal_data.json');
-            if (data) this.entries = JSON.parse(data);
+            if (data) {
+                try {
+                    this.entries = JSON.parse(data);
+                } catch (err) {
+                    console.error('日记存档解析失败，回退为空列表:', err);
+                    this.entries = [];
+                }
+            }
         } else {
             const data = localStorage.getItem('ithaca_journal_entries');
             if (data) this.entries = JSON.parse(data);
@@ -51,10 +62,20 @@ export const Journal = {
     save() {
         const json = JSON.stringify(this.entries);
         if (window.ithacaSystem && window.ithacaSystem.saveData) {
-            window.ithacaSystem.saveData('journal_data.json', json);
+            return window.ithacaSystem.saveData('journal_data.json', json);
         } else {
             localStorage.setItem('ithaca_journal_entries', json);
         }
+    },
+
+    getExportData() {
+        return cloneEntries(this.entries);
+    },
+
+    replaceEntries(entries, { save = true } = {}) {
+        this.entries = Array.isArray(entries) ? cloneEntries(entries).map(normalizeEntry) : [];
+        if (save) this.save();
+        return this.entries;
     },
 
     getAll() {
@@ -233,14 +254,13 @@ export const Journal = {
         importedEntries.forEach(newEntry => {
             const exists = this.entries.some(current => String(current.id) === String(newEntry.id));
             if (!exists) {
-                if (!newEntry.notebookIds) newEntry.notebookIds = [];
-                if (newEntry.isConfirmed === undefined) newEntry.isConfirmed = true; 
-                this.entries.push(newEntry);
+                const normalized = normalizeEntry(newEntry);
+                this.entries.push(normalized);
                 importCount++;
 
-                if (newEntry.isConfirmed) {
-                    const count = newEntry.savedWordCount || (newEntry.content || "").replace(/\s/g, '').length;
-                    newEntry.savedWordCount = count;
+                if (normalized.isConfirmed) {
+                    const count = normalized.savedWordCount || (normalized.content || "").replace(/\s/g, '').length;
+                    normalized.savedWordCount = count;
                     addedWords += count;
                 }
             }

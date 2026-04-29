@@ -1,6 +1,19 @@
 /* src/js/data/Library.js */
 import { UserData } from './UserData.js'; // <--- 引入 UserData 以解锁成就
 
+function cloneBooks(books) {
+    return JSON.parse(JSON.stringify(books));
+}
+
+function normalizeBook(book) {
+    const normalized = { ...book };
+    if (!normalized.id) normalized.id = 'book_' + Date.now();
+    if (normalized.isDeleted === undefined) normalized.isDeleted = false;
+    if (!normalized.createdAt) normalized.createdAt = Date.now();
+    if (normalized.content === undefined) normalized.content = "";
+    return normalized;
+}
+
 // 定义系统书籍内容
 const GUIDE_BOOK_I = {
     id: "guide_book_part1",
@@ -450,8 +463,8 @@ const GUIDE_BOOK_IV = {
 export const Library = {
     books: [],
 
-    init() {
-        this.load();
+    async init() {
+        await this.load();
         
         // 确保初始化时至少有一本默认的书 (可选，防止书架完全为空)
         if (this.books.length === 0) {
@@ -460,24 +473,58 @@ export const Library = {
         
         // 数据迁移：确保 isDeleted 字段存在
         let hasChanges = false;
-        this.books.forEach(b => {
-            if(b.isDeleted === undefined) {
-                b.isDeleted = false;
+        this.books.forEach((b, index) => {
+            const normalized = normalizeBook(b);
+            if (JSON.stringify(normalized) !== JSON.stringify(b)) {
+                this.books[index] = normalized;
                 hasChanges = true;
             }
         });
         if(hasChanges) this.save();
     },
 
-    load() {
-        const data = localStorage.getItem('ithaca_library_books');
-        if (data) {
-            this.books = JSON.parse(data);
+    async load() {
+        if (window.ithacaSystem && window.ithacaSystem.loadData) {
+            const data = await window.ithacaSystem.loadData('library_data.json');
+            if (data) {
+                try {
+                    this.books = JSON.parse(data);
+                } catch (err) {
+                    console.error('书架存档解析失败，回退到旧版 localStorage:', err);
+                }
+            }
+        }
+
+        if (this.books.length === 0) {
+            const legacyData = localStorage.getItem('ithaca_library_books');
+            if (legacyData) {
+                try {
+                    this.books = JSON.parse(legacyData);
+                    this.save();
+                } catch (err) {
+                    console.error('旧版书架 localStorage 解析失败:', err);
+                    this.books = [];
+                }
+            }
         }
     },
 
     save() {
-        localStorage.setItem('ithaca_library_books', JSON.stringify(this.books));
+        const json = JSON.stringify(this.books);
+        localStorage.setItem('ithaca_library_books', json);
+        if (window.ithacaSystem && window.ithacaSystem.saveData) {
+            return window.ithacaSystem.saveData('library_data.json', json);
+        }
+    },
+
+    getExportData() {
+        return cloneBooks(this.books);
+    },
+
+    replaceBooks(books, { save = true } = {}) {
+        this.books = Array.isArray(books) ? cloneBooks(books).map(normalizeBook) : [];
+        if (save) this.save();
+        return this.books;
     },
 
     getAll() {
@@ -555,15 +602,7 @@ export const Library = {
 
         // 情况 A：Binder 传过来的是一个打包好的对象
         if (typeof bookOrTitle === 'object' && bookOrTitle !== null) {
-            newBook = bookOrTitle;
-            
-            // 补全可能缺失的系统字段
-            if (!newBook.id) newBook.id = 'book_' + Date.now();
-            if (newBook.isDeleted === undefined) newBook.isDeleted = false;
-            if (!newBook.createdAt) newBook.createdAt = Date.now();
-            
-            // 确保内容字段存在 (防止 undefined)
-            if (newBook.content === undefined) newBook.content = "";
+            newBook = normalizeBook(bookOrTitle);
         } 
         // 情况 B：传过来的是标题、内容、封面 (散装参数)
         else {
@@ -578,17 +617,26 @@ export const Library = {
                  finalContent = "";
             }
 
-            newBook = {
+            newBook = normalizeBook({
                 id: 'book_' + Date.now(),
                 title: bookOrTitle,
                 content: finalContent || "",
                 cover: finalCover || "assets/images/booksheet/booksheet1.png",
                 createdAt: Date.now(),
                 isDeleted: false
-            };
+            });
         }
 
-        this.books.push(newBook);
+        const existingIndex = this.books.findIndex(b => String(b.id) === String(newBook.id));
+        if (existingIndex !== -1) {
+            this.books[existingIndex] = {
+                ...this.books[existingIndex],
+                ...newBook,
+                isDeleted: false
+            };
+        } else {
+            this.books.push(newBook);
+        }
         this.save();
         
         console.log(`[Library] Added book: ${newBook.title}`, newBook); // 方便调试

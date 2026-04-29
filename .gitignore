@@ -6,6 +6,9 @@ node_modules/
 user_data.json
 journal_data.json
 library_data.json
+!src/data/user_data.json
+!src/data/journal_data.json
+!src/data/library_data.json
 
 # 3. 系统生成文件
 .DS_Store
@@ -20,6 +23,7 @@ dist/
 build/
 out/
 release/
+docs
 
 # 6. 日志文件
 npm-debug.log*

@@ -1,6 +1,36 @@
 /* src/js/data/UserData.js */
 import { Journal } from './Journal.js';
 
+const CURRENT_SCHEMA_VERSION = 1;
+
+function cloneData(data) {
+    return JSON.parse(JSON.stringify(data));
+}
+
+function createDefaultState() {
+    return {
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        startDate: null,
+        lastLoginDate: null,
+        day: 1,
+        ink: 0,
+        draft: "",
+        inventory: [],
+        layout: [],
+        hasFoundMysteryBook: false,
+        hasFoundMysteryEntry: false,
+        hasWatchedIntro: false,
+        totalWords: 0,
+        fragments: [],
+        notebooks: [],
+        readMails: [],
+        achievements: [],
+        mailReplies: {},
+        hasReceivedEasterEggBook: false,
+        unlockedScripts: []
+    };
+}
+
 export const ACHIEVEMENTS = {
     'ach_home': { title: '安家', desc: '第一次装修房间', icon: '🏠' },
     'ach_diary': { title: '写日记', desc: '第一次记下思绪', icon: '✍️' },
@@ -21,49 +51,44 @@ export const ACHIEVEMENTS = {
 };
 
 export const UserData = {
-    state: {
-        startDate: null, // 记录存档创建的时间戳
-        day: 1,
-        ink: 0,
-        draft: "",
-        inventory: [], // 背包：记录拥有哪些物品ID
-        layout: [],    // 房间布局：记录摆出来的物品位置
-        hasFoundMysteryBook: false, // 是否已获得神秘书籍
-        totalWords: 0,   // 生涯总字数
-        fragments: [],   // 已收集的碎片ID列表
-        
-        // ✨ 新增：手记本列表
-        // 结构: { id: 'nb_xxx', name: '我的小说', icon: 'path/to/img', isDefault: boolean, createdAt: timestamp }
-        notebooks: [], 
-        readMails: [],   // 已读邮件ID列表
-        achievements: [], // 已解锁成就ID列表
-
-        // ✨ 新增：存储玩家对每日信件的回复/感想
-        // 结构: { "1": "今天天气真好...", "2": "原来他是这个意思..." }
-        mailReplies: {}, 
-        
-        // ✨ 新增：标记彩蛋书是否已领取
-        hasReceivedEasterEggBook: false,
-        unlockedScripts: [], // 已解锁的特殊剧情ID列表
-    },
+    state: createDefaultState(),
 
     // 初始化
     async init() {
         const saved = await window.ithacaSystem.loadData('user_data.json');
+        let needsLayoutInit = false;
         
         // 标记是否为纯新用户（根据是否读取到存档来判断）
         let isNewUser = false;
 
         if (saved) {
-            this.state = JSON.parse(saved);
-            console.log("存档加载成功！内容：", this.state);
+            try {
+                this.state = { ...createDefaultState(), ...JSON.parse(saved) };
+                console.log("存档加载成功！内容：", this.state);
+            } catch (err) {
+                console.error("用户存档解析失败，回退默认状态:", err);
+                this.state = createDefaultState();
+                isNewUser = true;
+            }
         } else {
             console.log("未找到存档，使用默认初始状态");
+            this.state = createDefaultState();
             isNewUser = true; // <--- 标记为新用户
         }
 
         // --- 1. 基础数据兼容性修补 ---
+        this.state.schemaVersion = CURRENT_SCHEMA_VERSION;
+        if (!this.state.startDate) this.state.startDate = Date.now();
         if (!this.state.inventory) this.state.inventory = [];
+        if (!Array.isArray(this.state.layout)) {
+            this.state.layout = [];
+            needsLayoutInit = true;
+        }
+        if (!this.state.fragments) this.state.fragments = [];
+        if (!this.state.readMails) this.state.readMails = [];
+        if (!this.state.achievements) this.state.achievements = [];
+        if (!this.state.mailReplies) this.state.mailReplies = {};
+        if (!this.state.notebooks || !Array.isArray(this.state.notebooks)) this.state.notebooks = [];
 
         // 🛡️【新增修复】防止老玩家重复触发开场剧情
         // 逻辑：如果已经不是第一天了，或者已经有墨水积累了，说明肯定看过剧情了
@@ -99,9 +124,8 @@ export const UserData = {
         this.save();
         
         // 新手礼包/房间重置检测
-        if (!this.state.layout) {
+        if (needsLayoutInit || isNewUser) {
             console.log("检测到新用户/重置状态，发放新手礼包...");
-            this.state.layout = []; 
             const starterPack = ['item_desk_default', 'item_bookshelf_default', 'item_rug_default', 'item_chair_default', 'item_bed_default','item_shelf_default'];
             starterPack.forEach(id => {
                 if (!this.state.inventory.includes(id)) this.state.inventory.push(id);
@@ -111,7 +135,6 @@ export const UserData = {
 
         if (typeof this.state.ink === 'undefined') this.state.ink = 0;
         if (typeof this.state.totalWords === 'undefined') this.state.totalWords = 0;
-        if (!this.state.fragments) this.state.fragments = [];
         
         // --- 2. ✨ 手记本系统初始化 ---
         // 如果没有 notebook 数据（旧存档或新用户），初始化一个默认的“日常碎片”
@@ -151,6 +174,51 @@ export const UserData = {
                  Journal.save();
              }
         }
+    },
+
+    createDefaultState() {
+        return createDefaultState();
+    },
+
+    replaceState(nextState, { save = true } = {}) {
+        this.state = { ...createDefaultState(), ...(nextState || {}) };
+        this.state.schemaVersion = CURRENT_SCHEMA_VERSION;
+        if (!this.state.startDate) this.state.startDate = Date.now();
+        if (!this.state.inventory) this.state.inventory = [];
+        if (!this.state.layout) this.state.layout = [];
+        if (!this.state.fragments) this.state.fragments = [];
+        if (!this.state.notebooks) this.state.notebooks = [];
+        if (!this.state.readMails) this.state.readMails = [];
+        if (!this.state.achievements) this.state.achievements = [];
+        if (!this.state.mailReplies) this.state.mailReplies = {};
+        if (!this.state.unlockedScripts) this.state.unlockedScripts = [];
+        if (save) this.save();
+        return this.state;
+    },
+
+    createResetState() {
+        return {
+            ...createDefaultState(),
+            schemaVersion: CURRENT_SCHEMA_VERSION,
+            startDate: this.state.startDate || Date.now(),
+            lastLoginDate: this.state.lastLoginDate || null,
+            day: this.state.day || 1,
+            totalWords: this.state.totalWords || 0,
+            notebooks: cloneData(this.state.notebooks || []),
+            fragments: cloneData(this.state.fragments || []),
+            readMails: cloneData(this.state.readMails || []),
+            achievements: cloneData(this.state.achievements || []),
+            mailReplies: cloneData(this.state.mailReplies || {}),
+            hasFoundMysteryBook: !!this.state.hasFoundMysteryBook,
+            hasFoundMysteryEntry: !!this.state.hasFoundMysteryEntry,
+            hasWatchedIntro: !!this.state.hasWatchedIntro,
+            hasReceivedEasterEggBook: !!this.state.hasReceivedEasterEggBook,
+            unlockedScripts: cloneData(this.state.unlockedScripts || [])
+        };
+    },
+
+    getExportData() {
+        return cloneData(this.state);
     },
 
     // ✨ 新增：信箱相关方法
@@ -346,7 +414,7 @@ export const UserData = {
     },
 
     save() {
-        window.ithacaSystem.saveData('user_data.json', JSON.stringify(this.state));
+        return window.ithacaSystem.saveData('user_data.json', JSON.stringify(this.state));
     },
 
     // ============================================================

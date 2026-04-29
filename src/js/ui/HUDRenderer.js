@@ -8,6 +8,7 @@ import { ModalManager } from './ModalManager.js';
 import { WorkbenchRenderer } from './WorkbenchRenderer.js'; 
 import { SidebarRenderer } from './SidebarRenderer.js'; // 修复：引入 SidebarRenderer
 import { Library } from '../data/Library.js';
+import { ArchiveManager } from '../data/ArchiveManager.js';
 
 export const HUDRenderer = {
     init() {
@@ -111,6 +112,35 @@ export const HUDRenderer = {
 
         // 7. 重置
         this._bindClick('btn-icon-reset', () => this.handleReset());
+
+        // 8. 恢复完整存档
+        this._bindClick('btn-icon-import', async () => {
+            const shouldRestore = confirm("⚠️ 这会用备份文件覆盖当前应用状态。\n\n建议你先导出一次当前完整存档作为保险。\n\n是否继续恢复？");
+            if (!shouldRestore) return;
+
+            try {
+                const result = await ArchiveManager.promptAndRestoreArchive();
+                if (result?.success) {
+                    alert("✅ 存档恢复完成，应用将重新加载。");
+                    window.location.reload();
+                } else if (result?.message && result.message !== '用户取消') {
+                    alert(`恢复失败：${result.message}`);
+                }
+            } catch (err) {
+                console.error('完整存档恢复失败:', err);
+                alert(`恢复失败：${err.message}`);
+            }
+        });
+
+        // 9. 导出完整存档
+        this._bindClick('btn-icon-export', async () => {
+            const result = await ArchiveManager.exportArchive();
+            if (result?.success) {
+                this.log(`📦 完整存档已导出至：${result.path}`);
+            } else if (result?.message && result.message !== '用户取消') {
+                alert(`导出失败：${result.message}`);
+            }
+        });
     },
 
     // --- 信箱逻辑 ---
@@ -225,27 +255,38 @@ export const HUDRenderer = {
     },
 
     // 🔄 修改：重置逻辑 (Game Reset)
-    handleReset() {
-        // 更新提示文案，让玩家放心书籍和日记是安全的
-        if (confirm("⚠️ 确定要重置【房间布置】和【游戏进度】吗？\n\n（注意：您的【书籍收藏】和【日记内容】会保留，不会被删除。）")) {
-             // 1. 重置内存中的状态
-             UserData.state = { 
-                 day: 1, 
-                 ink: 0, 
-                 totalWords: 0, // 进度重置
-                 draft: "", 
-                 inventory: [], 
-                 layout: undefined, 
-                 readMails: [], 
-                 notebooks: [] 
-             };
-             
-             // 2. 保存 UserData
-             UserData.save(); 
+    async handleReset() {
+        const shouldHardReset = confirm(
+            "⚠️ 是否要【彻底清空本地数据】？\n\n这会删除当前设备上的：\n- 日记\n- 书籍\n- 手记本\n- 导入的存档状态\n- 本地缓存\n\n这相当于把这台设备上的伊萨卡手记恢复到全新安装状态。"
+        );
 
-             alert("♻️ 世界已重建。");
-             window.location.reload();
+        if (shouldHardReset) {
+            const confirmAgain = confirm("此操作不可恢复。\n\n是否确认彻底清空这台设备上的所有本地数据？");
+            if (!confirmAgain) return;
+
+            if (!window.ithacaSystem || !window.ithacaSystem.clearAllData) {
+                alert("当前环境不支持彻底清空本地数据。");
+                return;
+            }
+
+            const result = await window.ithacaSystem.clearAllData();
+            if (result?.success) {
+                alert("🧹 本地数据已彻底清空，应用将重新加载。");
+                window.location.reload();
+            } else {
+                alert(`清空失败：${result?.message || '未知错误'}`);
+            }
+            return;
         }
+
+        const shouldSoftReset = confirm(
+            "是否只重置【房间布置】和【可消耗进度】？\n\n这会保留：\n- 日记\n- 手记本\n- 书籍\n- 信件记录"
+        );
+        if (!shouldSoftReset) return;
+
+        UserData.replaceState(UserData.createResetState());
+        alert("♻️ 世界已重建。");
+        window.location.reload();
     },
 
     _bindClick(id, handler) {

@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.ithaca.journal.dist.test",
-    "productName": "伊萨卡手记-测试版",
+    "productName": "伊萨卡手记",
     "directories": {
       "output": "dist"
     },

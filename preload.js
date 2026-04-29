@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('ithacaSystem', {
     saveData: (filename, content) => ipcRenderer.invoke('write-file', filename, content),
 
     // ✨ 新增：导入导出接口
-    importData: () => ipcRenderer.invoke('import-file'),
-    exportFile: (defaultName, content) => ipcRenderer.invoke('export-file', defaultName, content)
+    importData: () => ipcRenderer.invoke('import-json'),
+    exportFile: (defaultName, content) => ipcRenderer.invoke('export-file', defaultName, content),
+    exportArchive: (archiveJson) => ipcRenderer.invoke('export-archive', archiveJson),
+    clearAllData: () => ipcRenderer.invoke('delete-all-data')
 });

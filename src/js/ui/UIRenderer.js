@@ -71,7 +71,7 @@ export const UIRenderer = {
         // 2. 处理场景切换
         const cityScene = document.getElementById('scene-city');
         
-        if (cityScene !== 'none') {
+        if (cityScene && window.getComputedStyle(cityScene).display !== 'none') {
             StoryManager.returnHome(); // 从地图回房间
         } else {
             this.log("已经在房间里了。");

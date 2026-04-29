@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "startDate": null,
+  "lastLoginDate": null,
+  "day": 1,
+  "ink": 0,
+  "draft": "",
+  "inventory": [],
+  "layout": [],
+  "hasFoundMysteryBook": false,
+  "hasFoundMysteryEntry": false,
+  "hasWatchedIntro": false,
+  "totalWords": 0,
+  "fragments": [],
+  "notebooks": [],
+  "readMails": [],
+  "achievements": [],
+  "mailReplies": {},
+  "hasReceivedEasterEggBook": false,
+  "unlockedScripts": []
+}

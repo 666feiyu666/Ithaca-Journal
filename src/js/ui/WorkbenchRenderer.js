@@ -6,6 +6,7 @@ import { ModalManager } from './ModalManager.js';
 import { BookshelfRenderer } from './BookshelfRenderer.js';
 import { HUDRenderer } from './HUDRenderer.js';
 import { marked } from '../libs/marked.esm.js';
+import { ArchiveManager } from '../data/ArchiveManager.js';
 
 export const WorkbenchRenderer = {
     init() {
@@ -37,6 +38,11 @@ export const WorkbenchRenderer = {
         const btnPreview = document.getElementById('btn-toggle-manuscript-preview');
         if (btnPreview) {
             btnPreview.onclick = () => this.togglePreview();
+        }
+
+        const btnImport = document.getElementById('btn-import-journal');
+        if (btnImport) {
+            btnImport.onclick = () => this.handleImportJournal();
         }
 
         const notebookSelect = document.getElementById('workbench-filter-notebook');
@@ -185,6 +191,48 @@ export const WorkbenchRenderer = {
             ModalManager.close('workbench-modal');
         } else {
             alert("出版失败：" + result.msg);
+        }
+    },
+
+    async handleImportJournal() {
+        if (!window.ithacaSystem || !window.ithacaSystem.importData) {
+            alert('当前环境不支持导入备份。');
+            return;
+        }
+
+        const result = await window.ithacaSystem.importData();
+        if (!result || !result.success) {
+            if (result?.msg && result.msg !== '用户取消') {
+                alert(result.msg);
+            }
+            return;
+        }
+
+        try {
+            const importedPayload = JSON.parse(result.data);
+            const archiveData = ArchiveManager.extractArchiveData(importedPayload);
+            if (archiveData?.userData && archiveData?.journalEntries && archiveData?.libraryBooks) {
+                const shouldRestoreAll = confirm("检测到这是一个完整存档备份。\n\n确定要恢复整个应用状态吗？\n点击“取消”则只导入其中的日记内容。");
+                if (shouldRestoreAll) {
+                    await ArchiveManager.restoreArchivePayload(importedPayload);
+                    alert('✅ 完整存档恢复完成，应用将重新加载。');
+                    window.location.reload();
+                    return;
+                }
+            }
+
+            const importedEntries = ArchiveManager.extractJournalEntries(importedPayload);
+            if (!Array.isArray(importedEntries)) {
+                alert('导入失败：未找到可识别的日记数据。');
+                return;
+            }
+
+            await Journal.importData(importedEntries);
+            this.renderList();
+            HUDRenderer.updateAll();
+        } catch (err) {
+            console.error('导入备份失败:', err);
+            alert(`导入失败：${err.message}`);
         }
     },
 
