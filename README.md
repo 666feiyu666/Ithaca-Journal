@@ -1,9 +1,23 @@
-# 🍍 伊萨卡手记 | The Ithaca Journal 
-![Version](https://img.shields.io/badge/version-1.0-blueviolet) ![Status](https://img.shields.io/badge/status-In%20Development-orange) ![Electron](https://img.shields.io/badge/Electron-28.0-9cf) ![License](https://img.shields.io/badge/license-MIT-green)
+# 🍍 伊萨卡手记 | The Ithaca Journal
+![Stage](https://img.shields.io/badge/stage-C0%20cloud%20foundation-8c4334) ![Platform](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-f38020) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
-## 📖 关于本项目 (About)
+## 当前开发主线（2026-08）
+
+项目正在从已冻结的 Electron 桌面原型转向小范围邀请测试的 Web 版本。新的 C0 纵切片位于 [`cloud/`](cloud/)，采用 **Cloudflare Workers Static Assets + Worker API + D1**，当前目标是完成邀请登录、手记持久化、重新打开、导出与删除的完整路径。
+
+> C0 明确采用服务器可读的数据模型；正文不会进入应用日志，客户端加密将在后续隐私阶段重新评估。当前只部署了使用合成内容验证的 Cloudflare staging，production 尚未创建。
+
+- [云端 C0 开发说明](cloud/README.md)
+- [Cloudflare staging](https://ithaca-journal-cloud-staging.feiyut666.workers.dev)
+- [论文对应的冻结 macOS Release](https://github.com/666feiyu666/Ithaca-Journal/releases/tag/paper-2026-beyond-psychological-reductionism)
+- [ResearchGate 论文](https://www.researchgate.net/publication/412164002_Beyond_Psychological_Reductionism_A_Dramatistic_Critique_of_Gamification_and_the_Design_Practice_of_Ithaca_Journal)
+- [Itch.io 冻结原型](https://frank-don.itch.io/ithaca-journal)
+
+---
+
+## 📖 已冻结桌面原型 (Paper Artifact)
 ![Ithaca Room](src/assets/images/room/room_goal.png)
 
 **《伊萨卡手记》** 是一款融合了**叙事理论**与**游戏化机制**的桌面端日记应用。
@@ -69,11 +83,11 @@
 
 ---
 
-## 🚀 开发运行 (Development)
+## 🚀 冻结桌面版本运行 (Frozen Desktop Development)
 
 ### 🛠️ 技术栈 (Tech Stack)
 
-本项目基于 **Electron** 框架构建。
+以下说明只适用于论文对应的 **Electron 冻结版本**；新的云端主线请使用 [`cloud/README.md`](cloud/README.md)。
 
 * **Core**: Electron (Main/Renderer Process)
 * **Frontend**: HTML5, CSS3 (Grid/Flexbox), Vanilla JavaScript (ES6+)
@@ -101,17 +115,7 @@ npm install
 npm start
 ```
 
-目前项目仍在开发中，主要正在完善以下模块：
-
-[ ] 写作体验的改善
-
-[ ] 故事主线的打磨
-
-[ ] 故事支线的撰写
-
-[ ] 城市探索
-
-如果你对叙事理论或独立游戏开发感兴趣，欢迎提交 Issue 或 PR！
+桌面版已经由 `paper-2026-beyond-psychological-reductionism` 标签冻结，不再在该技术路线继续功能开发。
 
 ---
 

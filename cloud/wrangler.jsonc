@@ -1,0 +1,70 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "ithaca-journal-cloud",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-08-20",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "ithaca-journal-local",
+			"migrations_dir": "./migrations"
+		}
+	],
+	"vars": {
+		"APP_ENV": "local",
+		"COOKIE_SECURE": "false"
+	},
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 0.05
+		}
+	},
+	"env": {
+		"staging": {
+			"name": "ithaca-journal-cloud-staging",
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "ithaca-journal-staging",
+					"migrations_dir": "./migrations",
+					"database_id": "8a9ac314-3d98-4efd-b263-eb1529887cf9"
+				}
+			],
+			"vars": {
+				"APP_ENV": "staging",
+				"COOKIE_SECURE": "true"
+			}
+		},
+		"production": {
+			"name": "ithaca-journal-cloud-production",
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "ithaca-journal-production",
+					"migrations_dir": "./migrations"
+				}
+			],
+			"vars": {
+				"APP_ENV": "production",
+				"COOKIE_SECURE": "true"
+			}
+		}
+	}
+}

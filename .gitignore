@@ -1,5 +1,6 @@
 # 1. 依赖包 (最重要，通常那 1K+ 文件都在这里)
 node_modules/
+.codex-tmp/
 
 # 2. 本地存档数据 (保护隐私，不要上传你的日记和存档！)
 # 根据你的代码，这些文件是存储用户数据的
@@ -24,6 +25,11 @@ build/
 out/
 release/
 docs
+cloud/.wrangler/
+cloud/.dev.vars
+cloud/.dev.vars.*
+!cloud/.dev.vars.example
+cloud/worker-configuration.d.ts
 
 # 6. 日志文件
 npm-debug.log*

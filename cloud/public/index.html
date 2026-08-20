@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#172231" />
+    <meta
+      name="description"
+      content="《伊萨卡手记》小范围邀请测试版：一个安静、可持续书写的云端手记空间。"
+    />
+    <title>伊萨卡手记｜邀请测试</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <main id="auth-view" class="auth-shell" aria-labelledby="auth-title" hidden>
+      <section class="auth-brand" aria-label="伊萨卡手记介绍">
+        <div class="brand-mark" aria-hidden="true">IJ</div>
+        <p class="eyebrow">ITHACA JOURNAL · C0</p>
+        <h1 id="auth-title">给尚未抵达的地方，<br />留下一页手记。</h1>
+        <p class="auth-brand__copy">
+          这是《伊萨卡手记》的小范围云端测试。它保存书写，也保存一次设计如何被使用、被质疑、再被改变的过程。
+        </p>
+        <p class="auth-brand__edition">Invite-only research prototype · 2026</p>
+      </section>
+
+      <section class="auth-entry" aria-labelledby="invite-title">
+        <div class="auth-entry__inner">
+          <p class="section-index">01 / 进入书房</p>
+          <h2 id="invite-title">使用测试邀请</h2>
+          <p class="section-lede">输入邀请绑定的邮箱和一次性邀请码。</p>
+
+          <aside class="privacy-note" aria-labelledby="privacy-title">
+            <p id="privacy-title" class="privacy-note__title">当前隐私边界</p>
+            <p>
+              C0 测试版将正文以<strong>服务器可读</strong>的方式存储。项目不会把正文写入日志；你可以随时导出或删除全部数据。客户端加密将在后续阶段评估。
+            </p>
+          </aside>
+
+          <form id="invite-form" class="invite-form" novalidate>
+            <label for="email">邀请邮箱</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              required
+              placeholder="name@example.com"
+            />
+
+            <label for="invite-code">一次性邀请码</label>
+            <input
+              id="invite-code"
+              name="code"
+              type="text"
+              autocomplete="one-time-code"
+              spellcheck="false"
+              required
+              placeholder="由项目维护者提供"
+            />
+
+            <p id="invite-error" class="form-error" role="alert" hidden></p>
+            <button id="invite-submit" class="button button--primary button--wide" type="submit">
+              进入伊萨卡
+            </button>
+          </form>
+
+          <p class="auth-links">
+            <a
+              href="https://www.researchgate.net/publication/412164002_Beyond_Psychological_Reductionism_A_Dramatistic_Critique_of_Gamification_and_the_Design_Practice_of_Ithaca_Journal"
+              target="_blank"
+              rel="noreferrer"
+            >阅读既有研究</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://frank-don.itch.io/ithaca-journal" target="_blank" rel="noreferrer">查看冻结原型</a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <div id="app-view" class="app-shell" hidden>
+      <header class="app-header">
+        <a class="app-brand" href="/" aria-label="伊萨卡手记首页">
+          <span class="app-brand__mark" aria-hidden="true">IJ</span>
+          <span>
+            <strong>伊萨卡手记</strong>
+            <small>云端测试 · C0</small>
+          </span>
+        </a>
+
+        <div class="app-header__status">
+          <span id="connection-dot" class="connection-dot" aria-hidden="true"></span>
+          <span id="connection-label">正在连接</span>
+          <span class="server-readable-label">服务器可读</span>
+        </div>
+
+        <div class="app-header__actions">
+          <button id="export-button" class="text-button" type="button">导出</button>
+          <button id="account-button" class="text-button" type="button">删除数据</button>
+          <button id="logout-button" class="text-button" type="button">退出</button>
+        </div>
+      </header>
+
+      <aside class="journal-nav" aria-labelledby="journal-list-title">
+        <div class="journal-nav__heading">
+          <div>
+            <p class="section-index">02 / 手记</p>
+            <h2 id="journal-list-title">我的书页</h2>
+          </div>
+          <button id="new-entry-button" class="new-entry-button" type="button">
+            <span aria-hidden="true">＋</span>
+            <span>新手记</span>
+          </button>
+        </div>
+        <p id="signed-in-email" class="signed-in-email"></p>
+        <p class="nav-privacy-boundary">C0 隐私边界：正文在服务器端可读</p>
+        <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
+        <p id="list-empty" class="list-empty" hidden>还没有保存的手记。</p>
+      </aside>
+
+      <main class="editor-stage" aria-labelledby="editor-heading">
+        <section id="editor-empty" class="editor-empty">
+          <p class="editor-empty__number" aria-hidden="true">I</p>
+          <p class="section-index">从一页空白开始</p>
+          <h2>今天想留下什么？</h2>
+          <p>写下一个片段、一段路途，或某件还没有名字的事。</p>
+          <button id="empty-new-button" class="button button--primary" type="button">写一篇新手记</button>
+        </section>
+
+        <section id="editor-panel" class="editor-panel" hidden>
+          <header class="editor-toolbar">
+            <div>
+              <p class="section-index">03 / 当前书页</p>
+              <p id="entry-date" class="entry-date">尚未保存</p>
+            </div>
+            <div class="editor-toolbar__actions">
+              <span id="save-state" class="save-state" role="status" aria-live="polite">尚未保存</span>
+              <button id="delete-entry-button" class="button button--danger-quiet" type="button" disabled>
+                删除
+              </button>
+              <button id="save-button" class="button button--primary" type="button" disabled>保存手记</button>
+            </div>
+          </header>
+
+          <div class="paper-editor">
+            <label class="sr-only" for="entry-title">手记标题</label>
+            <input
+              id="entry-title"
+              class="entry-title"
+              type="text"
+              maxlength="120"
+              placeholder="未命名手记"
+            />
+            <div class="paper-rule" aria-hidden="true"></div>
+            <label class="sr-only" for="entry-body">手记正文</label>
+            <textarea
+              id="entry-body"
+              class="entry-body"
+              maxlength="100000"
+              placeholder="从这里开始写……"
+            ></textarea>
+            <footer class="editor-footer">
+              <span id="character-count">0 个字符</span>
+              <span>内容不会写入应用日志</span>
+            </footer>
+          </div>
+        </section>
+      </main>
+
+      <div id="app-message" class="app-message" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <dialog id="delete-entry-dialog" class="dialog">
+      <form method="dialog">
+        <p class="section-index">危险操作</p>
+        <h2>删除这篇手记？</h2>
+        <p>删除后无法从应用中恢复。你可以先导出全部数据。</p>
+        <div class="dialog__actions">
+          <button class="button button--quiet" value="cancel">取消</button>
+          <button id="confirm-delete-entry" class="button button--danger" value="confirm">确认删除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-account-dialog" class="dialog">
+      <form id="delete-account-form" method="dialog">
+        <p class="section-index">永久删除</p>
+        <h2>删除全部云端数据？</h2>
+        <p>这将删除账户、所有手记和全部会话。该操作无法撤销。</p>
+        <label for="delete-confirmation">输入 <strong>DELETE</strong> 以继续</label>
+        <input id="delete-confirmation" name="confirmation" type="text" autocomplete="off" />
+        <p id="delete-account-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog__actions">
+          <button id="cancel-delete-account" class="button button--quiet" type="button">取消</button>
+          <button class="button button--danger" type="submit">永久删除</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
