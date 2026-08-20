@@ -1,9 +1,6 @@
 import {
-  clearSessionCookie,
   deleteUserData,
-  redeemInvite,
-  requireSessionUser,
-  revokeCurrentSession,
+  requireAuthenticatedUser,
 } from "./auth";
 import {
   createEntry,
@@ -46,31 +43,19 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ status: "ok", environment: env.APP_ENV });
   }
 
-  if (url.pathname === "/api/auth/invite") {
-    if (request.method !== "POST") {
-      methodNotAllowed(["POST"]);
-    }
-    const session = await redeemInvite(env, await readJsonBody(request));
-    return jsonResponse(
-      { user: session.user },
-      201,
-      { "Set-Cookie": session.cookie },
-    );
-  }
-
   if (url.pathname === "/api/session") {
-    if (request.method === "GET") {
-      return jsonResponse({ user: await requireSessionUser(request, env) });
+    if (request.method !== "GET") {
+      methodNotAllowed(["GET"]);
     }
-    if (request.method === "DELETE") {
-      await revokeCurrentSession(request, env);
-      return emptyResponse(204, { "Set-Cookie": clearSessionCookie(env) });
-    }
-    methodNotAllowed(["GET", "DELETE"]);
+    const user = await requireAuthenticatedUser(request, env);
+    return jsonResponse({
+      user: { email: user.email, source: user.source },
+      environment: env.APP_ENV,
+    });
   }
 
   if (url.pathname === "/api/entries") {
-    const user = await requireSessionUser(request, env);
+    const user = await requireAuthenticatedUser(request, env);
     if (request.method === "GET") {
       return jsonResponse({ entries: await listEntries(env, user.id) });
     }
@@ -83,7 +68,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 
   const entryId = entryIdFromPath(url.pathname);
   if (entryId) {
-    const user = await requireSessionUser(request, env);
+    const user = await requireAuthenticatedUser(request, env);
     if (request.method === "GET") {
       return jsonResponse({ entry: await getEntry(env, user.id, entryId) });
     }
@@ -107,7 +92,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     if (request.method !== "GET") {
       methodNotAllowed(["GET"]);
     }
-    const user = await requireSessionUser(request, env);
+    const user = await requireAuthenticatedUser(request, env);
     const entries = await exportEntries(env, user.id);
     const filename = `ithaca-journal-${new Date().toISOString().slice(0, 10)}.json`;
     return jsonResponse(
@@ -127,13 +112,13 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     if (request.method !== "DELETE") {
       methodNotAllowed(["DELETE"]);
     }
-    const user = await requireSessionUser(request, env);
+    const user = await requireAuthenticatedUser(request, env);
     const payload = requireRecord(await readJsonBody(request));
     if (requireString(payload, "confirmation") !== "DELETE") {
       throw new ApiError(422, "confirmation_required", "请输入 DELETE 以确认删除。");
     }
-    await deleteUserData(env, user.id, user.email);
-    return emptyResponse(204, { "Set-Cookie": clearSessionCookie(env) });
+    await deleteUserData(env, user.id);
+    return emptyResponse(204);
   }
 
   throw new ApiError(404, "not_found", "没有找到这个接口。");

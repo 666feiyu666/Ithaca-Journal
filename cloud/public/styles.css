@@ -222,12 +222,11 @@ a {
   line-height: 1.7;
 }
 
-.invite-form {
+.access-actions {
   display: grid;
   gap: 0.65rem;
 }
 
-.invite-form label,
 .dialog label {
   margin-top: 0.45rem;
   color: var(--ink-700);
@@ -236,7 +235,6 @@ a {
   letter-spacing: 0.04em;
 }
 
-.invite-form input,
 .dialog input {
   width: 100%;
   min-height: 3.25rem;
@@ -247,7 +245,6 @@ a {
   transition: border-color var(--ease), box-shadow var(--ease);
 }
 
-.invite-form input:focus,
 .dialog input:focus {
   border-color: var(--rust-600);
   box-shadow: 0 0 0 3px rgba(167, 83, 63, 0.12);
@@ -269,8 +266,12 @@ a {
 }
 
 .button--wide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   margin-top: 0.8rem;
+  text-decoration: none;
 }
 
 .button--primary {

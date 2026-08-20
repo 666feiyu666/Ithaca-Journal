@@ -9,8 +9,6 @@ beforeAll(async () => {
 beforeEach(async () => {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM journal_entries"),
-    env.DB.prepare("DELETE FROM sessions"),
-    env.DB.prepare("DELETE FROM invites"),
     env.DB.prepare("DELETE FROM users"),
   ]);
 });

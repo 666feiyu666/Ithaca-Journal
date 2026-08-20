@@ -5,7 +5,7 @@
 
 ## 当前开发主线（2026-08）
 
-项目正在从已冻结的 Electron 桌面原型转向小范围邀请测试的 Web 版本。新的 C0 纵切片位于 [`cloud/`](cloud/)，采用 **Cloudflare Workers Static Assets + Worker API + D1**，当前目标是完成邀请登录、手记持久化、重新打开、导出与删除的完整路径。
+项目正在从已冻结的 Electron 桌面原型转向小范围邀请测试的 Web 版本。新的 C0 纵切片位于 [`cloud/`](cloud/)，采用 **Cloudflare Workers Static Assets + Worker API + Access + D1**：远程测试由邮箱允许名单和一次性验证码进入，本地使用 localhost 开发身份；当前目标是完成受邀登录、手记持久化、重新打开、导出与删除的完整路径。
 
 > C0 明确采用服务器可读的数据模型；正文不会进入应用日志，客户端加密将在后续隐私阶段重新评估。当前只部署了使用合成内容验证的 Cloudflare staging，production 尚未创建。
 

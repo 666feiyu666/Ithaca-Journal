@@ -12,9 +12,10 @@
     "db:migrate:local": "wrangler d1 migrations apply ithaca-journal-local --local",
     "db:migrate:staging": "wrangler d1 migrations apply ithaca-journal-staging --remote --env staging",
     "db:migrate:production": "wrangler d1 migrations apply ithaca-journal-production --remote --env production",
-    "invite": "node ./scripts/create-invite.mjs",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:production": "wrangler deploy --env production"
+    "validate:access:staging": "node ./scripts/validate-access-config.mjs staging",
+    "validate:access:production": "node ./scripts/validate-access-config.mjs production",
+    "deploy:staging": "npm run validate:access:staging && wrangler deploy --env staging",
+    "deploy:production": "npm run validate:access:production && wrangler deploy --env production"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.22.0",
@@ -22,5 +23,8 @@
     "typescript": "7.0.2",
     "vitest": "4.1.11",
     "wrangler": "4.124.0"
+  },
+  "dependencies": {
+    "jose": "6.2.9"
   }
 }

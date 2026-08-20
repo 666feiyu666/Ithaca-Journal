@@ -23,7 +23,9 @@
 	],
 	"vars": {
 		"APP_ENV": "local",
-		"COOKIE_SECURE": "false"
+		"AUTH_MODE": "development",
+		"TEAM_DOMAIN": "",
+		"POLICY_AUD": ""
 	},
 	"observability": {
 		"enabled": true,
@@ -49,7 +51,9 @@
 			],
 			"vars": {
 				"APP_ENV": "staging",
-				"COOKIE_SECURE": "true"
+				"AUTH_MODE": "access",
+				"TEAM_DOMAIN": "https://minerva-ranger-feiyut.cloudflareaccess.com",
+				"POLICY_AUD": "4d90f7b9c99235ec27465dbc25d5e1c5068e61737496c95f3fa65b605c6b13e3"
 			}
 		},
 		"production": {
@@ -63,7 +67,9 @@
 			],
 			"vars": {
 				"APP_ENV": "production",
-				"COOKIE_SECURE": "true"
+				"AUTH_MODE": "access",
+				"TEAM_DOMAIN": "",
+				"POLICY_AUD": ""
 			}
 		}
 	}

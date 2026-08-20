@@ -10,11 +10,11 @@ const state = {
 const refs = {
   authView: document.querySelector("#auth-view"),
   appView: document.querySelector("#app-view"),
-  inviteForm: document.querySelector("#invite-form"),
-  inviteSubmit: document.querySelector("#invite-submit"),
-  inviteError: document.querySelector("#invite-error"),
-  email: document.querySelector("#email"),
-  inviteCode: document.querySelector("#invite-code"),
+  accessTitle: document.querySelector("#access-title"),
+  accessStatus: document.querySelector("#access-status"),
+  accessError: document.querySelector("#access-error"),
+  accessRetry: document.querySelector("#access-retry"),
+  accessLogin: document.querySelector("#access-login"),
   connectionDot: document.querySelector("#connection-dot"),
   connectionLabel: document.querySelector("#connection-label"),
   signedInEmail: document.querySelector("#signed-in-email"),
@@ -114,9 +114,9 @@ function showMessage(message, type = "success") {
   }, 4_000);
 }
 
-function setInviteError(message = "") {
-  refs.inviteError.textContent = message;
-  refs.inviteError.hidden = !message;
+function setAccessError(message = "") {
+  refs.accessError.textContent = message;
+  refs.accessError.hidden = !message;
 }
 
 function setDeleteAccountError(message = "") {
@@ -124,21 +124,29 @@ function setDeleteAccountError(message = "") {
   refs.deleteAccountError.hidden = !message;
 }
 
-function showAuth() {
+function showAuth({
+  title = "正在确认访问身份",
+  status = "本地开发将使用隔离的开发身份；线上测试由 Cloudflare Access 验证受邀邮箱。",
+  error = "",
+  canLogin = false,
+} = {}) {
   state.user = null;
   state.entries = [];
   state.current = null;
   state.dirty = false;
   refs.appView.hidden = true;
   refs.authView.hidden = false;
-  setInviteError();
-  refs.inviteCode.value = "";
-  refs.email.focus();
+  refs.accessTitle.textContent = title;
+  refs.accessStatus.textContent = status;
+  refs.accessRetry.hidden = false;
+  refs.accessLogin.hidden = !canLogin;
+  setAccessError(error);
 }
 
 function showApp(user) {
   state.user = user;
   refs.signedInEmail.textContent = user.email;
+  refs.logoutButton.hidden = user.source !== "cloudflare-access";
   refs.authView.hidden = true;
   refs.appView.hidden = false;
   updateConnectivity();
@@ -146,7 +154,7 @@ function showApp(user) {
 
 function setBusy(busy) {
   state.busy = busy;
-  refs.inviteSubmit.disabled = busy;
+  refs.accessRetry.disabled = busy;
   updateEditorActions();
 }
 
@@ -347,17 +355,7 @@ async function logout() {
   if (!canLeaveCurrentDraft()) {
     return;
   }
-  setBusy(true);
-  try {
-    await api("/api/session", { method: "DELETE" });
-  } catch (error) {
-    if (!(error instanceof ApiClientError && error.status === 401)) {
-      handleAppError(error, "退出时发生问题。");
-    }
-  } finally {
-    setBusy(false);
-    showAuth();
-  }
+  window.location.assign("/cdn-cgi/access/logout");
 }
 
 async function deleteAccount(event) {
@@ -370,6 +368,7 @@ async function deleteAccount(event) {
   }
 
   setBusy(true);
+  const identitySource = state.user?.source;
   try {
     await api("/api/account", {
       method: "DELETE",
@@ -377,7 +376,14 @@ async function deleteAccount(event) {
     });
     refs.deleteAccountDialog.close();
     refs.deleteConfirmation.value = "";
-    showAuth();
+    if (identitySource === "cloudflare-access") {
+      window.location.assign("/cdn-cgi/access/logout");
+      return;
+    }
+    showAuth({
+      title: "本地数据已经删除",
+      status: "重新检查身份会建立一个新的空白开发账户。",
+    });
   } catch (error) {
     setDeleteAccountError(
       error instanceof Error ? error.message : "删除失败，请稍后重试。",
@@ -389,8 +395,12 @@ async function deleteAccount(event) {
 
 function handleAppError(error, fallbackMessage) {
   if (error instanceof ApiClientError && error.status === 401) {
-    showAuth();
-    setInviteError("会话已经失效，请重新使用邀请进入。");
+    showAuth({
+      title: "需要重新登录",
+      status: "Cloudflare Access 会话已经失效。重新登录不会删除已有手记。",
+      error: "请重新完成邮箱验证码登录。",
+      canLogin: true,
+    });
     return;
   }
   showMessage(error instanceof Error ? error.message : fallbackMessage, "error");
@@ -414,44 +424,30 @@ async function startApp(user) {
 }
 
 async function restoreSession() {
+  showAuth();
+  setBusy(true);
   try {
     const data = await api("/api/session");
     await startApp(data.user);
   } catch (error) {
     if (error instanceof ApiClientError && error.status === 401) {
-      showAuth();
+      showAuth({
+        title: "需要访问验证",
+        status: "只有管理员加入允许名单的邮箱可以接收验证码并进入测试。",
+        error: "当前访问身份无效或已经过期。",
+        canLogin: true,
+      });
       return;
     }
-    showAuth();
-    setInviteError("暂时无法连接服务，请稍后重试。");
-  }
-}
-
-refs.inviteForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setInviteError();
-  if (!refs.inviteForm.reportValidity()) {
-    return;
-  }
-
-  setBusy(true);
-  refs.inviteSubmit.textContent = "正在进入…";
-  try {
-    const data = await api("/api/auth/invite", {
-      method: "POST",
-      body: JSON.stringify({
-        email: refs.email.value,
-        code: refs.inviteCode.value,
-      }),
+    showAuth({
+      title: "暂时无法进入",
+      status: "应用没有建立本地替代存档，以免与云端数据分叉。",
+      error: error instanceof Error ? error.message : "暂时无法连接服务，请稍后重试。",
     });
-    await startApp(data.user);
-  } catch (error) {
-    setInviteError(error instanceof Error ? error.message : "无法使用这个邀请。");
   } finally {
-    refs.inviteSubmit.textContent = "进入伊萨卡";
     setBusy(false);
   }
-});
+}
 
 for (const input of [refs.entryTitle, refs.entryBody]) {
   input.addEventListener("input", () => {
@@ -472,6 +468,7 @@ refs.deleteEntryButton.addEventListener("click", () => refs.deleteEntryDialog.sh
 refs.confirmDeleteEntry.addEventListener("click", () => void removeCurrentEntry());
 refs.exportButton.addEventListener("click", () => void exportData());
 refs.logoutButton.addEventListener("click", () => void logout());
+refs.accessRetry.addEventListener("click", () => void restoreSession());
 refs.accountButton.addEventListener("click", () => {
   setDeleteAccountError();
   refs.deleteConfirmation.value = "";
@@ -488,4 +485,5 @@ window.addEventListener("beforeunload", (event) => {
   }
 });
 
+showAuth();
 void restoreSession();

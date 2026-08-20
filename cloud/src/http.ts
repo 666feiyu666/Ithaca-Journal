@@ -12,8 +12,9 @@ export class ApiError extends Error {
     code: string,
     message: string,
     headers: ErrorHeaders = {},
+    options: ErrorOptions = {},
   ) {
-    super(message);
+    super(message, options);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
@@ -68,7 +69,11 @@ export function assertSameOrigin(request: Request): void {
   }
 
   const origin = request.headers.get("Origin");
-  if (origin && origin !== new URL(request.url).origin) {
+  if (!origin || origin !== new URL(request.url).origin) {
+    throw new ApiError(403, "invalid_origin", "请求来源无效。");
+  }
+  const fetchSite = request.headers.get("Sec-Fetch-Site");
+  if (fetchSite && fetchSite !== "same-origin") {
     throw new ApiError(403, "invalid_origin", "请求来源无效。");
   }
 }

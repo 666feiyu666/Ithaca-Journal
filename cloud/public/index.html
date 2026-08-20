@@ -24,11 +24,13 @@
         <p class="auth-brand__edition">Invite-only research prototype · 2026</p>
       </section>
 
-      <section class="auth-entry" aria-labelledby="invite-title">
+      <section class="auth-entry" aria-labelledby="access-title">
         <div class="auth-entry__inner">
           <p class="section-index">01 / 进入书房</p>
-          <h2 id="invite-title">使用测试邀请</h2>
-          <p class="section-lede">输入邀请绑定的邮箱和一次性邀请码。</p>
+          <h2 id="access-title">正在确认访问身份</h2>
+          <p id="access-status" class="section-lede" role="status" aria-live="polite">
+            本地开发将使用隔离的开发身份；线上测试由 Cloudflare Access 验证受邀邮箱。
+          </p>
 
           <aside class="privacy-note" aria-labelledby="privacy-title">
             <p id="privacy-title" class="privacy-note__title">当前隐私边界</p>
@@ -37,34 +39,15 @@
             </p>
           </aside>
 
-          <form id="invite-form" class="invite-form" novalidate>
-            <label for="email">邀请邮箱</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              inputmode="email"
-              autocomplete="email"
-              required
-              placeholder="name@example.com"
-            />
-
-            <label for="invite-code">一次性邀请码</label>
-            <input
-              id="invite-code"
-              name="code"
-              type="text"
-              autocomplete="one-time-code"
-              spellcheck="false"
-              required
-              placeholder="由项目维护者提供"
-            />
-
-            <p id="invite-error" class="form-error" role="alert" hidden></p>
-            <button id="invite-submit" class="button button--primary button--wide" type="submit">
-              进入伊萨卡
+          <div class="access-actions">
+            <p id="access-error" class="form-error" role="alert" hidden></p>
+            <button id="access-retry" class="button button--primary button--wide" type="button">
+              重新检查身份
             </button>
-          </form>
+            <a id="access-login" class="button button--quiet button--wide" href="/cdn-cgi/access/logout" hidden>
+              重新登录
+            </a>
+          </div>
 
           <p class="auth-links">
             <a
@@ -187,7 +170,9 @@
       <form id="delete-account-form" method="dialog">
         <p class="section-index">永久删除</p>
         <h2>删除全部云端数据？</h2>
-        <p>这将删除账户、所有手记和全部会话。该操作无法撤销。</p>
+        <p>
+          这将删除当前应用账户和所有手记，但不会修改 Cloudflare Access 的邮箱允许名单。再次登录会建立一个空账户。该操作无法撤销。
+        </p>
         <label for="delete-confirmation">输入 <strong>DELETE</strong> 以继续</label>
         <input id="delete-confirmation" name="confirmation" type="text" autocomplete="off" />
         <p id="delete-account-error" class="form-error" role="alert" hidden></p>
