@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#172231" />
+    <meta
+      name="description"
+      content="《伊萨卡手记》0.1.0：从碎片笔记、主题整理到编纂成书的叙事书写空间。"
+    />
+    <title>伊萨卡手记｜0.1.0 开发版</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <main id="auth-view" class="auth-shell" aria-labelledby="auth-title" hidden>
+      <section class="auth-brand" aria-label="伊萨卡手记介绍">
+        <div class="brand-mark" aria-hidden="true">IJ</div>
+        <p class="eyebrow">ITHACA JOURNAL · 0.1.0</p>
+        <h1 id="auth-title">给尚未抵达的地方，<br />留下一页手记。</h1>
+        <p class="auth-brand__copy">
+          这是《伊萨卡手记》的小范围云端测试。它保存书写，也保存一次设计如何被使用、被质疑、再被改变的过程。
+        </p>
+        <p class="auth-brand__edition">Invite-only research prototype · 2026</p>
+      </section>
+
+      <section class="auth-entry" aria-labelledby="access-title">
+        <div class="auth-entry__inner">
+          <p class="section-index">01 / 进入书房</p>
+          <h2 id="access-title">正在确认访问身份</h2>
+          <p id="access-status" class="section-lede" role="status" aria-live="polite">
+            本地开发将使用隔离的开发身份；线上测试由 Cloudflare Access 验证受邀邮箱。
+          </p>
+
+          <aside class="privacy-note" aria-labelledby="privacy-title">
+            <p id="privacy-title" class="privacy-note__title">当前隐私边界</p>
+            <p>
+              0.1.0 开发版将正文以<strong>服务器可读</strong>的方式存储。项目不会把正文写入日志；你可以随时导出或删除全部数据。真实内容测试前会重新评估隐私模型。
+            </p>
+          </aside>
+
+          <div class="access-actions">
+            <p id="access-error" class="form-error" role="alert" hidden></p>
+            <button id="access-retry" class="button button--primary button--wide" type="button">
+              重新检查身份
+            </button>
+            <a id="access-login" class="button button--quiet button--wide" href="/cdn-cgi/access/logout" hidden>
+              重新登录
+            </a>
+          </div>
+
+          <p class="auth-links">
+            <a
+              href="https://www.researchgate.net/publication/412164002_Beyond_Psychological_Reductionism_A_Dramatistic_Critique_of_Gamification_and_the_Design_Practice_of_Ithaca_Journal"
+              target="_blank"
+              rel="noreferrer"
+            >阅读既有研究</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://frank-don.itch.io/ithaca-journal" target="_blank" rel="noreferrer">查看冻结原型</a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <main id="title-view" class="title-screen" aria-labelledby="title-heading" hidden>
+      <div class="title-screen__stars" aria-hidden="true"></div>
+      <section class="title-screen__content">
+        <p class="eyebrow">ITHACA JOURNAL · 0.1.0</p>
+        <h1 id="title-heading">伊萨卡手记</h1>
+        <p class="title-screen__tagline">在生活的碎片中，写下可以返回的地方。</p>
+        <div class="title-screen__actions">
+          <button id="journey-action" class="journey-action" type="button">
+            <span id="journey-action-label">开始旅程</span>
+            <small id="journey-meta">从陌生城市的第一夜开始</small>
+          </button>
+        </div>
+        <p id="title-email" class="title-screen__identity"></p>
+      </section>
+      <footer class="title-screen__footer">
+        <span>正文当前在服务器端可读</span>
+        <div>
+          <button id="title-account-button" class="title-link" type="button">删除数据</button>
+          <button id="title-logout-button" class="title-link" type="button">退出</button>
+        </div>
+      </footer>
+    </main>
+
+    <main id="intro-view" class="intro-screen" aria-labelledby="intro-title" hidden>
+      <div class="intro-screen__city" aria-hidden="true"></div>
+      <section class="intro-dialogue">
+        <p class="section-index">序章 / 初来乍到</p>
+        <h1 id="intro-title">陌生城市的第一夜</h1>
+        <p id="intro-speaker" class="intro-dialogue__speaker">我</p>
+        <p id="intro-line" class="intro-dialogue__line" aria-live="polite"></p>
+        <button id="intro-next" class="button button--primary" type="button">继续</button>
+      </section>
+    </main>
+
+    <div id="room-view" class="room-shell" hidden>
+      <header class="room-header">
+        <div class="room-header__brand">
+          <span class="app-brand__mark" aria-hidden="true">IJ</span>
+          <span>
+            <strong>伊萨卡手记</strong>
+            <small id="room-day">第 1 天</small>
+          </span>
+        </div>
+        <p id="room-email" class="room-header__identity"></p>
+        <div class="room-header__actions">
+          <button id="room-account-button" class="text-button text-button--night" type="button">删除数据</button>
+          <button id="room-logout-button" class="text-button text-button--night" type="button">退出</button>
+        </div>
+      </header>
+
+      <main class="room-stage" aria-labelledby="room-heading">
+        <div class="room-stage__heading">
+          <div>
+            <p class="section-index">你的房间</p>
+            <h1 id="room-heading">今夜想从哪里开始？</h1>
+          </div>
+          <p>选择房间中的物件。书桌保存书写，书架收藏成书，信件承载旅程。</p>
+        </div>
+
+        <div class="room-frame">
+          <img
+            src="/assets/room/room-placeholder-v01.png"
+            alt="正视房间：左侧是书架，中央窗前是亮着灯的书桌，右侧墙上有一封信，旁边是房门。"
+          />
+          <button id="bookshelf-hotspot" class="room-hotspot room-hotspot--bookshelf" type="button">
+            <span>打开书架</span>
+          </button>
+          <button id="desk-hotspot" class="room-hotspot room-hotspot--desk" type="button">
+            <span>前往书桌</span>
+          </button>
+          <button id="letter-hotspot" class="room-hotspot room-hotspot--letter" type="button">
+            <span>查看来信</span>
+          </button>
+        </div>
+
+        <noscript>
+          <p class="room-fallback">需要启用 JavaScript 才能进入书桌、书架和来信。</p>
+        </noscript>
+      </main>
+    </div>
+
+    <div id="app-view" class="app-shell" hidden>
+      <header class="app-header">
+        <button id="return-room-button" class="app-brand app-brand--button" type="button" aria-label="返回房间">
+          <span class="app-brand__mark" aria-hidden="true">IJ</span>
+          <span>
+            <strong>伊萨卡手记</strong>
+            <small>写作台 · 返回房间</small>
+          </span>
+        </button>
+
+        <div class="app-header__status">
+          <span id="connection-dot" class="connection-dot" aria-hidden="true"></span>
+          <span id="connection-label">正在连接</span>
+          <span class="server-readable-label">服务器可读</span>
+        </div>
+
+        <div class="app-header__actions">
+          <button id="export-button" class="text-button" type="button">导出</button>
+          <button id="account-button" class="text-button" type="button">删除数据</button>
+          <button id="logout-button" class="text-button" type="button">退出</button>
+        </div>
+      </header>
+
+      <aside class="journal-nav" aria-labelledby="journal-list-title">
+        <div class="journal-nav__heading">
+          <div>
+            <p class="section-index">02 / 写作台</p>
+            <h2 id="journal-list-title">素材与主题</h2>
+          </div>
+          <button id="new-entry-button" class="new-entry-button" type="button">
+            <span aria-hidden="true">＋</span>
+            <span>新碎片</span>
+          </button>
+          <button id="new-topic-button" class="new-entry-button" type="button" hidden>
+            <span aria-hidden="true">＋</span>
+            <span>新主题</span>
+          </button>
+        </div>
+        <div class="workbench-tabs" role="group" aria-label="笔记类型">
+          <button id="fragment-tab" type="button" aria-pressed="true">碎片笔记</button>
+          <button id="topic-tab" type="button" aria-pressed="false">主题笔记</button>
+        </div>
+        <p id="signed-in-email" class="signed-in-email"></p>
+        <p class="nav-privacy-boundary">0.1.0 隐私边界：正文在服务器端可读</p>
+        <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
+        <p id="list-empty" class="list-empty" hidden>还没有保存的手记。</p>
+      </aside>
+
+      <main class="editor-stage" aria-labelledby="editor-heading">
+        <section id="editor-empty" class="editor-empty">
+          <p class="editor-empty__number" aria-hidden="true">I</p>
+          <p id="editor-empty-index" class="section-index">从一则碎片开始</p>
+          <h2 id="editor-empty-title">今天想留下什么？</h2>
+          <p id="editor-empty-copy">写下一个片段、一段路途，或某件还没有名字的事。</p>
+          <button id="empty-new-button" class="button button--primary" type="button">写一则碎片</button>
+        </section>
+
+        <section id="editor-panel" class="editor-panel" hidden>
+          <header class="editor-toolbar">
+            <div>
+              <p class="section-index">03 / 碎片笔记</p>
+              <p id="entry-date" class="entry-date">尚未保存</p>
+            </div>
+            <div class="editor-toolbar__actions">
+              <span id="save-state" class="save-state" role="status" aria-live="polite">尚未保存</span>
+              <button id="delete-entry-button" class="button button--danger-quiet" type="button" disabled>
+                删除
+              </button>
+              <button id="save-button" class="button button--primary" type="button" disabled>保存手记</button>
+            </div>
+          </header>
+
+          <div class="paper-editor">
+            <label class="sr-only" for="entry-title">手记标题</label>
+            <input
+              id="entry-title"
+              class="entry-title"
+              type="text"
+              maxlength="120"
+                placeholder="未命名碎片"
+            />
+            <div class="paper-rule" aria-hidden="true"></div>
+            <label class="sr-only" for="entry-body">手记正文</label>
+            <textarea
+              id="entry-body"
+              class="entry-body"
+              maxlength="100000"
+              placeholder="从这里开始写……"
+            ></textarea>
+            <footer class="editor-footer">
+              <span id="character-count">0 个字符</span>
+              <span>内容不会写入应用日志</span>
+            </footer>
+          </div>
+        </section>
+
+        <section id="topic-panel" class="topic-panel" hidden>
+          <header class="editor-toolbar">
+            <div>
+              <p class="section-index">04 / 主题笔记</p>
+              <p id="topic-date" class="entry-date"></p>
+            </div>
+            <div class="editor-toolbar__actions">
+              <button id="edit-topic-button" class="button button--quiet" type="button">调整主题</button>
+              <button id="delete-topic-button" class="button button--danger-quiet" type="button">删除主题</button>
+            </div>
+          </header>
+          <article class="topic-paper">
+            <h2 id="topic-title"></h2>
+            <div class="paper-rule" aria-hidden="true"></div>
+            <p id="topic-body" class="topic-paper__body"></p>
+            <section class="topic-sources" aria-labelledby="topic-sources-title">
+              <p class="section-index">构成这个主题的碎片</p>
+              <h3 id="topic-sources-title">素材脉络</h3>
+              <div id="topic-source-list" class="topic-source-list"></div>
+            </section>
+          </article>
+        </section>
+      </main>
+
+    </div>
+
+    <div id="books-view" class="library-shell" hidden>
+      <header class="app-header library-header">
+        <button id="books-return-room-button" class="app-brand app-brand--button" type="button" aria-label="返回房间">
+          <span class="app-brand__mark" aria-hidden="true">IJ</span>
+          <span>
+            <strong>伊萨卡手记</strong>
+            <small>书架 · 返回房间</small>
+          </span>
+        </button>
+        <div class="library-header__title">
+          <span>把主题装订成可以返回的书</span>
+        </div>
+        <button id="compile-book-button" class="button button--gold" type="button">编纂新书</button>
+      </header>
+      <aside class="library-nav" aria-labelledby="book-list-title">
+        <p class="section-index">05 / 书架</p>
+        <h2 id="book-list-title">我的成书</h2>
+        <p id="books-email" class="signed-in-email"></p>
+        <div id="book-list" class="book-list" role="list"></div>
+        <p id="book-list-empty" class="list-empty">书架还空着。先去书桌整理出一则主题。</p>
+      </aside>
+      <main class="book-stage">
+        <section id="book-empty" class="editor-empty">
+          <p class="editor-empty__number" aria-hidden="true">II</p>
+          <p class="section-index">从素材到书</p>
+          <h2>为散落的笔记建立次序。</h2>
+          <p>选择一则或多则主题，编纂结果会保存为独立快照；之后修改素材，不会悄悄改写已经完成的书。</p>
+          <button id="empty-compile-book-button" class="button button--primary" type="button">编纂第一本书</button>
+        </section>
+        <section id="book-reader" class="book-reader" hidden>
+          <header class="book-reader__header">
+            <div>
+              <p class="section-index">完成于 <span id="book-date"></span></p>
+              <h1 id="book-title"></h1>
+            </div>
+            <button id="delete-book-button" class="button button--danger-quiet" type="button">从书架移除</button>
+          </header>
+          <article id="book-content" class="book-content"></article>
+        </section>
+      </main>
+    </div>
+
+    <div id="app-message" class="app-message" role="status" aria-live="polite" hidden></div>
+
+    <dialog id="topic-dialog" class="dialog dialog--wide">
+      <form id="topic-form">
+        <p class="section-index">整理主题</p>
+        <h2 id="topic-dialog-title">把碎片放在一起</h2>
+        <input id="topic-id" type="hidden" />
+        <label for="topic-title-input">主题名称</label>
+        <input id="topic-title-input" type="text" maxlength="120" placeholder="例如：抵达与离开" required />
+        <label for="topic-body-input">你从这些碎片中看见了什么？</label>
+        <textarea id="topic-body-input" rows="6" maxlength="100000" placeholder="写下关联、矛盾、重复出现的意象，或一个仍待回答的问题。"></textarea>
+        <fieldset class="source-picker">
+          <legend>选择构成主题的碎片</legend>
+          <div id="topic-fragment-options" class="source-picker__options"></div>
+        </fieldset>
+        <p id="topic-form-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog__actions">
+          <button id="cancel-topic" class="button button--quiet" type="button">取消</button>
+          <button id="save-topic" class="button button--primary" type="submit">保存主题</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="compile-book-dialog" class="dialog dialog--wide">
+      <form id="compile-book-form">
+        <p class="section-index">编纂成书</p>
+        <h2>为主题建立次序</h2>
+        <label for="book-title-input">书名</label>
+        <input id="book-title-input" type="text" maxlength="120" placeholder="例如：雨夜手记" required />
+        <label for="book-preface-input">序言（可选）</label>
+        <textarea id="book-preface-input" rows="4" maxlength="20000" placeholder="为什么要在此刻把这些主题收拢起来？"></textarea>
+        <fieldset class="source-picker">
+          <legend>选择要收录的主题（按列表顺序）</legend>
+          <div id="book-topic-options" class="source-picker__options"></div>
+        </fieldset>
+        <p id="compile-book-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog__actions">
+          <button id="cancel-compile-book" class="button button--quiet" type="button">取消</button>
+          <button id="confirm-compile-book" class="button button--primary" type="submit">完成编纂</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="letter-dialog" class="letter-dialog">
+      <form method="dialog">
+        <header class="letter-dialog__header">
+          <div>
+            <p id="letter-day" class="section-index">第 1 天来信</p>
+            <h2 id="letter-title"></h2>
+            <p id="letter-sender" class="letter-dialog__sender"></p>
+          </div>
+          <label for="letter-select">
+            往日来信
+            <select id="letter-select"></select>
+          </label>
+        </header>
+        <div id="letter-content" class="letter-dialog__content"></div>
+        <div class="dialog__actions">
+          <button class="button button--primary" value="close">收起信件</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-topic-dialog" class="dialog">
+      <form method="dialog">
+        <p class="section-index">危险操作</p>
+        <h2>删除这则主题笔记？</h2>
+        <p>碎片笔记会保留；已经编纂完成的书也会保留自己的内容快照。</p>
+        <div class="dialog__actions">
+          <button class="button button--quiet" value="cancel">取消</button>
+          <button id="confirm-delete-topic" class="button button--danger" value="confirm">确认删除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-book-dialog" class="dialog">
+      <form method="dialog">
+        <p class="section-index">危险操作</p>
+        <h2>从书架移除这本书？</h2>
+        <p>删除后无法恢复，但原始主题与碎片不会受到影响。</p>
+        <div class="dialog__actions">
+          <button class="button button--quiet" value="cancel">取消</button>
+          <button id="confirm-delete-book" class="button button--danger" value="confirm">确认移除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-entry-dialog" class="dialog">
+      <form method="dialog">
+        <p class="section-index">危险操作</p>
+        <h2>删除这则碎片？</h2>
+        <p>删除后无法从应用中恢复；引用它的主题会保留，但素材脉络中将不再包含这则碎片。你可以先导出全部数据。</p>
+        <div class="dialog__actions">
+          <button class="button button--quiet" value="cancel">取消</button>
+          <button id="confirm-delete-entry" class="button button--danger" value="confirm">确认删除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-account-dialog" class="dialog">
+      <form id="delete-account-form" method="dialog">
+        <p id="delete-account-index" class="section-index">永久删除</p>
+        <h2 id="delete-account-title">删除全部云端数据？</h2>
+        <p id="delete-account-copy">
+          这将删除当前应用账户、旅程、来信阅读状态、碎片、主题和成书，但不会修改 Cloudflare Access 的邮箱允许名单。再次登录会建立一个空账户。该操作无法撤销。
+        </p>
+        <label id="delete-account-label" for="delete-confirmation">输入 <strong>DELETE</strong> 以继续</label>
+        <input id="delete-confirmation" name="confirmation" type="text" autocomplete="off" />
+        <p id="delete-account-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog__actions">
+          <button id="cancel-delete-account" class="button button--quiet" type="button">取消</button>
+          <button id="confirm-delete-account" class="button button--danger" type="submit">永久删除</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

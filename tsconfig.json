@@ -11,5 +11,5 @@
     "useUnknownInCatchVariables": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "worker-configuration.d.ts"]
+  "include": ["src/server/**/*.ts", "worker-configuration.d.ts"]
 }

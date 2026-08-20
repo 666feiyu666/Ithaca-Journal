@@ -1,16 +1,16 @@
 # 🍍 伊萨卡手记 | The Ithaca Journal
-![Stage](https://img.shields.io/badge/stage-C0%20cloud%20foundation-8c4334) ![Platform](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-f38020) ![License](https://img.shields.io/badge/license-MIT-green)
+![Stage](https://img.shields.io/badge/version-0.1.0%20local%20complete-3f7d5b) ![Platform](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-f38020) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
 ## 当前开发主线（2026-08）
 
-项目正在从已冻结的 Electron 桌面原型转向小范围邀请测试的 Web 版本。新的 C0 纵切片位于 [`cloud/`](cloud/)，采用 **Cloudflare Workers Static Assets + Worker API + Access + D1**：远程测试由邮箱允许名单和一次性验证码进入，本地使用 localhost 开发身份；当前目标是完成受邀登录、手记持久化、重新打开、导出与删除的完整路径。
+项目已经完成 **0.1.0 核心闭环**的本地实现与产品验收。正式 Web 主线采用 **Cloudflare Workers Static Assets + Worker API + Access + D1**，源码统一位于根目录 [`src/`](src/)；旧 Electron 论文工件保留在 [`legacy/electron-paper/`](legacy/electron-paper/)。
 
-> C0 明确采用服务器可读的数据模型；正文不会进入应用日志，客户端加密将在后续隐私阶段重新评估。当前只部署了使用合成内容验证的 Cloudflare staging，production 尚未创建。
+0.1.0 的目标是让首次用户完成“开始旅程 → 进入正视房间 → 写下碎片 → 整理主题 → 编纂成书 → 在书架回看”，并在回访时恢复同一旅程和内容。地图、商店、装修、成就与社交不属于本版本。
 
-- [云端 C0 开发说明](cloud/README.md)
-- [Cloudflare staging](https://ithaca-journal-cloud-staging.feiyut666.workers.dev)
+- [0.0.0 Cloud Foundation 历史说明](legacy/cloud-foundation-0.0.0.md)
+- [0.0.0 Cloud Foundation staging（不是当前 0.1.0）](https://ithaca-journal-cloud-staging.feiyut666.workers.dev)
 - [论文对应的冻结 macOS Release](https://github.com/666feiyu666/Ithaca-Journal/releases/tag/paper-2026-beyond-psychological-reductionism)
 - [ResearchGate 论文](https://www.researchgate.net/publication/412164002_Beyond_Psychological_Reductionism_A_Dramatistic_Critique_of_Gamification_and_the_Design_Practice_of_Ithaca_Journal)
 - [Itch.io 冻结原型](https://frank-don.itch.io/ithaca-journal)
@@ -18,7 +18,7 @@
 ---
 
 ## 📖 已冻结桌面原型 (Paper Artifact)
-![Ithaca Room](src/assets/images/room/room_goal.png)
+![Ithaca Room](legacy/electron-paper/src/assets/images/room/room_goal.png)
 
 **《伊萨卡手记》** 是一款融合了**叙事理论**与**游戏化机制**的桌面端日记应用。
 
@@ -83,11 +83,53 @@
 
 ---
 
+## 🚀 0.1.0 Web 开发
+
+```powershell
+npm install
+npm run db:migrate:local
+npm run dev
+```
+
+### 重新验收首次流程
+
+本地开发身份已经存在旅程时，可以在标题界面点击“重新体验 0.1.0”（在房间或写作台中显示为“重置测试”），输入 `RESET` 后清除当前本地测试身份的数据。应用会自动回到“开始旅程”，用于重新手动验收序章和完整书写闭环。
+
+该入口只在 `AUTH_MODE=development` 的本地环境中使用；staging 和 production 仍显示正式的账户删除流程。
+
+本地开发使用 localhost 限定的隔离身份，不发送真实邮箱验证码。提交前运行：
+
+```powershell
+npm run check
+npm test
+npm run build
+```
+
+在 `npm run dev` 运行期间，可以另开终端执行完整浏览器闭环验收：
+
+```powershell
+npm run test:visual
+```
+
+它会使用本机无界面的 Chrome/Edge 验证标题界面、序章或继续旅程、正视房间、21 天来信、碎片保存、主题整理、编纂成书与返回房间，并覆盖 1024×720、1440×900、1920×1080 三个桌面视口。生成的截图保存在忽略提交的 `.artifacts/visual-review/`。
+
+活动代码目录：
+
+- `src/client/`：Web 界面与静态资产。
+- `src/server/`：Worker API、身份与 D1 存取。
+- `migrations/`：D1 迁移。
+- `tests/`：Worker 与集成测试。
+- `scripts/visual-smoke.mjs`：不依赖第三方自动化库的本地浏览器闭环验收。
+
+当前隐私边界：正文、主题与成书快照在服务器端可读；应用不把正文写入日志，用户可以导出或删除全部应用数据。面向真实用户测试前必须重新完成隐私评审。
+
+---
+
 ## 🚀 冻结桌面版本运行 (Frozen Desktop Development)
 
 ### 🛠️ 技术栈 (Tech Stack)
 
-以下说明只适用于论文对应的 **Electron 冻结版本**；新的云端主线请使用 [`cloud/README.md`](cloud/README.md)。
+以下说明只适用于论文对应的 **Electron 冻结版本**，目录为 [`legacy/electron-paper/`](legacy/electron-paper/)。
 
 * **Core**: Electron (Main/Renderer Process)
 * **Frontend**: HTML5, CSS3 (Grid/Flexbox), Vanilla JavaScript (ES6+)
@@ -107,12 +149,12 @@ cd ithaca-journal
 
 ### 3. 安装依赖
 ```bash
-npm install
+npm --prefix legacy/electron-paper install
 ```
 
 ### 4. 启动伊萨卡
 ```bash
-npm start
+npm --prefix legacy/electron-paper start
 ```
 
 桌面版已经由 `paper-2026-beyond-psychological-reductionism` 标签冻结，不再在该技术路线继续功能开发。

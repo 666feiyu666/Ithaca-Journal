@@ -17,13 +17,13 @@ function validateEntryPayload(payload: unknown): { title: string; body: string }
   const record = requireRecord(payload);
   const rawTitle = requireString(record, "title").trim();
   const body = requireString(record, "body");
-  const title = rawTitle || "未命名手记";
+  const title = rawTitle || "未命名碎片";
 
   if (title.length > 120) {
     throw new ApiError(422, "title_too_long", "标题不能超过 120 个字符。");
   }
   if (body.length > 100_000) {
-    throw new ApiError(413, "entry_too_large", "手记正文超过当前版本的大小限制。");
+    throw new ApiError(413, "entry_too_large", "碎片正文超过当前版本的大小限制。");
   }
   return { title, body };
 }
@@ -56,7 +56,7 @@ export async function getEntry(
     .bind(entryId, userId)
     .first<EntryRow>();
   if (!entry) {
-    throw new ApiError(404, "entry_not_found", "没有找到这篇手记。");
+    throw new ApiError(404, "entry_not_found", "没有找到这则碎片笔记。");
   }
   return entry;
 }
@@ -94,7 +94,7 @@ export async function updateEntry(
     .bind(title, body, new Date().toISOString(), entryId, userId)
     .run();
   if (result.meta.changes !== 1) {
-    throw new ApiError(404, "entry_not_found", "没有找到这篇手记。");
+    throw new ApiError(404, "entry_not_found", "没有找到这则碎片笔记。");
   }
   return getEntry(env, userId, entryId);
 }
@@ -109,8 +109,8 @@ export async function deleteEntry(
   )
     .bind(entryId, userId)
     .run();
-  if (result.meta.changes !== 1) {
-    throw new ApiError(404, "entry_not_found", "没有找到这篇手记。");
+  if (result.meta.changes < 1) {
+    throw new ApiError(404, "entry_not_found", "没有找到这则碎片笔记。");
   }
 }
 

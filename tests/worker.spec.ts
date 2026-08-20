@@ -10,9 +10,9 @@ import {
   SignJWT,
 } from "jose";
 import { describe, expect, it } from "vitest";
-import worker from "../src";
-import { normalizeTeamDomain, verifyAccessJwt } from "../src/auth";
-import { requireRecord, requireString } from "../src/http";
+import worker from "../src/server";
+import { normalizeTeamDomain, verifyAccessJwt } from "../src/server/auth";
+import { requireRecord, requireString } from "../src/server/http";
 
 const ORIGIN = "http://localhost";
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
@@ -173,6 +173,254 @@ describe("Ithaca Journal C0 Worker", () => {
     expect(removed.status).toBe(204);
     expect(await (await callWorker("/api/entries", {}, user)).json()).toEqual({
       entries: [],
+    });
+  });
+
+  it("starts one journey, completes the intro once, and advances at most one day per date", async () => {
+    const user = { subject: "traveler", email: "traveler@example.test" };
+    const empty = await callWorker("/api/journey", {}, user);
+    expect(empty.status).toBe(200);
+    expect(await empty.json()).toEqual({ journey: null });
+
+    const started = await callWorker(
+      "/api/journey",
+      {
+        method: "POST",
+        body: JSON.stringify({ local_date: "2026-08-20" }),
+      },
+      user,
+    );
+    expect(started.status).toBe(201);
+    expect(await started.json()).toMatchObject({
+      journey: { current_day: 1, status: "active", intro_completed_at: null },
+    });
+
+    const repeated = await callWorker(
+      "/api/journey",
+      {
+        method: "POST",
+        body: JSON.stringify({ local_date: "2026-08-20" }),
+      },
+      user,
+    );
+    expect(repeated.status).toBe(200);
+    expect(await repeated.json()).toMatchObject({ journey: { current_day: 1 } });
+
+    const intro = await callWorker(
+      "/api/journey/intro",
+      { method: "PUT", body: JSON.stringify({}) },
+      user,
+    );
+    expect(intro.status).toBe(200);
+    const introData = requireRecord(await intro.json());
+    expect(requireRecord(introData.journey).intro_completed_at).toEqual(
+      expect.any(String),
+    );
+
+    const nextDay = await callWorker(
+      "/api/journey",
+      {
+        method: "POST",
+        body: JSON.stringify({ local_date: "2026-08-25" }),
+      },
+      user,
+    );
+    expect(await nextDay.json()).toMatchObject({ journey: { current_day: 2 } });
+
+    const sameLaterDate = await callWorker(
+      "/api/journey",
+      {
+        method: "POST",
+        body: JSON.stringify({ local_date: "2026-08-25" }),
+      },
+      user,
+    );
+    expect(await sameLaterDate.json()).toMatchObject({ journey: { current_day: 2 } });
+    await env.DB.prepare(
+      "UPDATE journeys SET current_day = 20 WHERE user_id = (SELECT id FROM users WHERE access_subject = ?1)",
+    )
+      .bind("dev:traveler")
+      .run();
+    const finalDay = await callWorker(
+      "/api/journey",
+      {
+        method: "POST",
+        body: JSON.stringify({ local_date: "2026-08-26" }),
+      },
+      user,
+    );
+    expect(await finalDay.json()).toMatchObject({
+      journey: { current_day: 21, status: "completed", completed_at: expect.any(String) },
+    });
+    expect(
+      await env.DB.prepare("SELECT COUNT(*) AS count FROM journeys").first(),
+    ).toMatchObject({ count: 1 });
+  });
+
+  it("organizes fragments into a topic and compiles an immutable book snapshot", async () => {
+    const user = { subject: "compiler", email: "compiler@example.test" };
+    const first = await callWorker(
+      "/api/entries",
+      {
+        method: "POST",
+        body: JSON.stringify({ title: "车站", body: "我在雨里等车。" }),
+      },
+      user,
+    );
+    const second = await callWorker(
+      "/api/entries",
+      {
+        method: "POST",
+        body: JSON.stringify({ title: "钥匙", body: "旧钥匙还在口袋里。" }),
+      },
+      user,
+    );
+    const firstId = entryIdFromResponse(await first.json());
+    const secondId = entryIdFromResponse(await second.json());
+
+    const topicResponse = await callWorker(
+      "/api/topics",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title: "抵达与离开",
+          body: "有些抵达仍然携带着离开的痕迹。",
+          fragment_ids: [firstId, secondId],
+        }),
+      },
+      user,
+    );
+    expect(topicResponse.status).toBe(201);
+    const topicRoot = requireRecord(await topicResponse.json());
+    const topic = requireRecord(topicRoot.topic);
+    const topicId = requireString(topic, "id");
+    expect(topic.fragments).toHaveLength(2);
+    expect(await (await callWorker("/api/topics", {}, user)).json()).toMatchObject({
+      topics: [{ id: topicId, fragment_count: 2 }],
+    });
+
+    const bookResponse = await callWorker(
+      "/api/books",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title: "雨夜手记",
+          preface: "把散落的东西收拢起来。",
+          topic_ids: [topicId],
+        }),
+      },
+      user,
+    );
+    expect(bookResponse.status).toBe(201);
+    const bookRoot = requireRecord(await bookResponse.json());
+    const book = requireRecord(bookRoot.book);
+    const bookId = requireString(book, "id");
+    expect(requireString(book, "content_snapshot")).toContain("我在雨里等车");
+
+    await callWorker(
+      `/api/entries/${firstId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ title: "车站（改）", body: "这次没有下雨。" }),
+      },
+      user,
+    );
+    const reopenedBook = await callWorker(`/api/books/${bookId}`, {}, user);
+    const reopenedRoot = requireRecord(await reopenedBook.json());
+    const reopened = requireRecord(reopenedRoot.book);
+    expect(requireString(reopened, "content_snapshot")).toContain("我在雨里等车");
+    expect(requireString(reopened, "content_snapshot")).not.toContain("这次没有下雨");
+
+    expect(
+      (await callWorker(`/api/topics/${topicId}`, { method: "DELETE" }, user)).status,
+    ).toBe(204);
+    expect((await callWorker(`/api/books/${bookId}`, {}, user)).status).toBe(200);
+  });
+
+  it("delivers only unlocked letters and remembers the first open time", async () => {
+    const user = { subject: "reader", email: "reader@example.test" };
+    await callWorker(
+      "/api/journey",
+      {
+        method: "POST",
+        body: JSON.stringify({ local_date: "2026-08-20" }),
+      },
+      user,
+    );
+    await callWorker(
+      "/api/journey/intro",
+      { method: "PUT", body: JSON.stringify({}) },
+      user,
+    );
+
+    expect(await (await callWorker("/api/letters", {}, user)).json()).toMatchObject({
+      letters: [{ day: 1, title: "半年了", opened_at: null, current: true }],
+    });
+    const opened = await callWorker(
+      "/api/letters/1/open",
+      { method: "PUT", body: JSON.stringify({}) },
+      user,
+    );
+    expect(opened.status).toBe(200);
+    const openedRoot = requireRecord(await opened.json());
+    const openedAt = requireString(requireRecord(openedRoot.letter), "opened_at");
+    const reopened = await callWorker(
+      "/api/letters/1/open",
+      { method: "PUT", body: JSON.stringify({}) },
+      user,
+    );
+    expect(await reopened.json()).toMatchObject({ letter: { opened_at: openedAt } });
+    expect(
+      (await callWorker(
+        "/api/letters/2/open",
+        { method: "PUT", body: JSON.stringify({}) },
+        user,
+      )).status,
+    ).toBe(403);
+  });
+
+  it("rejects topic sources owned by another Access subject", async () => {
+    const owner = { subject: "fragment-owner", email: "fragment-owner@example.test" };
+    const other = { subject: "topic-other", email: "topic-other@example.test" };
+    const created = await callWorker(
+      "/api/entries",
+      {
+        method: "POST",
+        body: JSON.stringify({ title: "私有碎片", body: "只属于一个人。" }),
+      },
+      owner,
+    );
+    const entryId = entryIdFromResponse(await created.json());
+    const response = await callWorker(
+      "/api/topics",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title: "越界主题",
+          body: "不应建立。",
+          fragment_ids: [entryId],
+        }),
+      },
+      other,
+    );
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ error: { code: "fragment_not_found" } });
+  });
+
+  it("keeps journey state private to its Access subject", async () => {
+    const owner = { subject: "journey-owner", email: "owner@example.test" };
+    const other = { subject: "journey-other", email: "other@example.test" };
+    await callWorker(
+      "/api/journey",
+      {
+        method: "POST",
+        body: JSON.stringify({ local_date: "2026-08-20" }),
+      },
+      owner,
+    );
+
+    expect(await (await callWorker("/api/journey", {}, other)).json()).toEqual({
+      journey: null,
     });
   });
 
