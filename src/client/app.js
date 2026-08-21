@@ -22,22 +22,12 @@ const state = {
   workbenchMode: "fragments",
   dirty: false,
   busy: false,
-  introIndex: 0,
   messageTimer: null,
 };
-
-const INTRO_LINES = [
-  { speaker: "我", text: "（拖着行李箱的声音）呼……终于到了。" },
-  { speaker: "我", text: "看着手机上的导航，应该就是这里没错了。" },
-  { speaker: "我", text: "刚来到这座陌生城市，能找到这个安静的单间，已经很幸运了。" },
-  { speaker: "我", text: "门外是一只旧信箱。房间里只留下了一张书桌和一座旧书架。" },
-  { speaker: "我", text: "先住下来吧。也许，我可以从这里重新开始书写。" },
-];
 
 const refs = {
   authView: document.querySelector("#auth-view"),
   titleView: document.querySelector("#title-view"),
-  introView: document.querySelector("#intro-view"),
   sceneView: document.querySelector("#scene-view"),
   appView: document.querySelector("#app-view"),
   booksView: document.querySelector("#books-view"),
@@ -52,9 +42,6 @@ const refs = {
   titleEmail: document.querySelector("#title-email"),
   titleAccountButton: document.querySelector("#title-account-button"),
   titleLogoutButton: document.querySelector("#title-logout-button"),
-  introSpeaker: document.querySelector("#intro-speaker"),
-  introLine: document.querySelector("#intro-line"),
-  introNext: document.querySelector("#intro-next"),
   sceneDay: document.querySelector("#scene-day"),
   sceneEmail: document.querySelector("#scene-email"),
   sceneAccountButton: document.querySelector("#scene-account-button"),
@@ -225,12 +212,17 @@ function formatDate(value) {
 }
 
 function renderSceneTime(snapshot) {
+  document.documentElement.dataset.timePhase = snapshot.phase;
+  document.documentElement.dataset.timeMode = snapshot.timeMode;
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", snapshot.timeMode === "day" ? "#b9d8e5" : "#172231");
   refs.sceneDate.textContent = snapshot.dateLabel;
   refs.sceneWeekday.textContent = snapshot.weekdayLabel;
   refs.scenePhase.textContent = snapshot.phaseLabel;
   refs.sceneTime.setAttribute(
     "aria-label",
-    `${snapshot.fullDateLabel}，${snapshot.phaseLabel}`,
+    `${snapshot.fullDateLabel}，${snapshot.phaseLabel}，${snapshot.timeModeLabel}模式`,
   );
 }
 
@@ -285,7 +277,6 @@ function showAuth({
   refs.booksView.hidden = true;
   refs.appView.hidden = true;
   refs.sceneView.hidden = true;
-  refs.introView.hidden = true;
   refs.titleView.hidden = true;
   refs.authView.hidden = false;
   refs.accessTitle.textContent = title;
@@ -307,7 +298,6 @@ function showTitle(user, journey) {
   state.user = user;
   state.journey = journey;
   refs.authView.hidden = true;
-  refs.introView.hidden = true;
   refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
@@ -318,7 +308,7 @@ function showTitle(user, journey) {
 
   if (!journey) {
     refs.journeyActionLabel.textContent = "开始旅程";
-    refs.journeyMeta.textContent = "从陌生城市的第一夜开始";
+    refs.journeyMeta.textContent = "从抵达陌生城市的这一天开始";
   } else if (journey.status === "completed") {
     refs.journeyActionLabel.textContent = "回到房间";
     refs.journeyMeta.textContent = "二十一天之后，书写仍在继续";
@@ -330,32 +320,20 @@ function showTitle(user, journey) {
 }
 
 function showIntro() {
-  refs.authView.hidden = true;
-  refs.titleView.hidden = true;
-  refs.sceneView.hidden = true;
-  refs.appView.hidden = true;
-  refs.booksView.hidden = true;
-  refs.introView.hidden = false;
-  state.introIndex = 0;
-  renderIntroLine();
+  showScene("doorway", { focus: false });
+  sceneRuntime.openDialogue("journey.intro", {
+    onConfirm: completeIntro,
+    onError: (error) => handleAppError(error, "暂时无法保存序章进度，请稍后重试。"),
+  });
 }
 
-function renderIntroLine() {
-  const line = INTRO_LINES[state.introIndex];
-  refs.introSpeaker.textContent = line.speaker;
-  refs.introLine.textContent = line.text;
-  refs.introNext.textContent = state.introIndex === INTRO_LINES.length - 1 ? "走到门外" : "继续";
-  focusWhenReady(refs.introNext);
-}
-
-function showScene(sceneId = "room") {
+function showScene(sceneId = "room", options = {}) {
   const journey = state.journey;
   if (!state.user || !journey) {
     return;
   }
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
-  refs.introView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
   refs.sceneView.hidden = false;
@@ -363,7 +341,7 @@ function showScene(sceneId = "room") {
   refs.sceneDay.textContent = journey.status === "completed" ? "旅程之后" : `第 ${journey.current_day} 天`;
   refs.sceneEmail.textContent = state.user.email;
   refs.sceneLogoutButton.hidden = state.user.source !== "cloudflare-access";
-  sceneRuntime.show(sceneId);
+  sceneRuntime.show(sceneId, options);
 }
 
 function showApp(user) {
@@ -372,7 +350,6 @@ function showApp(user) {
   refs.logoutButton.hidden = user.source !== "cloudflare-access";
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
-  refs.introView.hidden = true;
   refs.sceneView.hidden = true;
   refs.booksView.hidden = true;
   refs.appView.hidden = false;
@@ -384,7 +361,6 @@ function setBusy(busy) {
   state.busy = busy;
   refs.accessRetry.disabled = busy;
   refs.journeyAction.disabled = busy;
-  refs.introNext.disabled = busy;
   refs.confirmDeleteAccount.disabled = busy;
   updateEditorActions();
 }
@@ -421,23 +397,11 @@ async function enterCurrentJourney() {
   }
 }
 
-async function advanceIntro() {
-  if (state.busy) {
-    return;
-  }
-  if (state.introIndex < INTRO_LINES.length - 1) {
-    state.introIndex += 1;
-    renderIntroLine();
-    return;
-  }
-
+async function completeIntro() {
   setBusy(true);
   try {
     const data = await api("/api/journey/intro", { method: "PUT" });
     state.journey = data.journey;
-    showScene("doorway");
-  } catch (error) {
-    handleAppError(error, "暂时无法保存序章进度，请稍后重试。");
   } finally {
     setBusy(false);
   }
@@ -957,7 +921,6 @@ function showBooksView() {
   if (!state.user) return;
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
-  refs.introView.hidden = true;
   refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = false;
@@ -1312,7 +1275,6 @@ refs.exportButton.addEventListener("click", () => void exportData());
 refs.logoutButton.addEventListener("click", () => void logout());
 refs.accessRetry.addEventListener("click", () => void restoreSession());
 refs.journeyAction.addEventListener("click", () => void enterCurrentJourney());
-refs.introNext.addEventListener("click", () => void advanceIntro());
 refs.returnRoomButton.addEventListener("click", returnToRoom);
 refs.booksReturnRoomButton.addEventListener("click", returnToRoom);
 refs.editTopicButton.addEventListener("click", () => openTopicDialog(state.currentTopic));

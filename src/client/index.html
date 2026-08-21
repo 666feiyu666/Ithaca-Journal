@@ -71,7 +71,7 @@
         <div class="title-screen__actions">
           <button id="journey-action" class="journey-action" type="button">
             <span id="journey-action-label">开始旅程</span>
-            <small id="journey-meta">从陌生城市的第一夜开始</small>
+            <small id="journey-meta">从抵达陌生城市的这一天开始</small>
           </button>
         </div>
         <p id="title-email" class="title-screen__identity"></p>
@@ -85,17 +85,6 @@
       </footer>
     </main>
 
-    <main id="intro-view" class="intro-screen" aria-labelledby="intro-title" hidden>
-      <div class="intro-screen__city" aria-hidden="true"></div>
-      <section class="intro-dialogue">
-        <p class="section-index">序章 / 初来乍到</p>
-        <h1 id="intro-title">陌生城市的第一夜</h1>
-        <p id="intro-speaker" class="intro-dialogue__speaker">我</p>
-        <p id="intro-line" class="intro-dialogue__line" aria-live="polite"></p>
-        <button id="intro-next" class="button button--primary" type="button">继续</button>
-      </section>
-    </main>
-
     <div id="scene-view" class="scene-shell" hidden>
       <header class="scene-header">
         <div class="scene-header__brand">
@@ -107,13 +96,29 @@
         </div>
         <p id="scene-email" class="scene-header__identity"></p>
         <div class="scene-header__actions">
+          <button
+            id="arrange-room-button"
+            class="scene-control scene-control--primary"
+            data-scene-arrange-toggle
+            type="button"
+            aria-pressed="false"
+            aria-controls="scene-world"
+            hidden
+          >布置房间</button>
+          <button
+            id="reset-room-layout-button"
+            class="scene-control"
+            data-scene-arrange-reset
+            type="button"
+            hidden
+          >恢复默认</button>
           <button id="scene-account-button" class="text-button text-button--night" type="button">删除数据</button>
           <button id="scene-logout-button" class="text-button text-button--night" type="button">退出</button>
         </div>
       </header>
 
       <main class="scene-stage" aria-labelledby="scene-heading">
-        <div class="scene-stage__heading">
+        <div class="scene-stage__heading sr-only">
           <div>
             <p class="section-index" data-scene-eyebrow>场景</p>
             <h1 id="scene-heading" data-scene-heading>正在准备场景</h1>
@@ -122,8 +127,22 @@
         </div>
 
         <div class="scene-frame" data-scene-frame>
-          <div class="scene-layers" data-scene-layers aria-hidden="true"></div>
-          <div class="scene-objects" data-scene-objects></div>
+          <div id="scene-world" class="scene-world" data-scene-world>
+            <div class="scene-layers" data-scene-layers aria-hidden="true"></div>
+            <div class="scene-objects" data-scene-objects></div>
+
+            <aside
+              class="scene-hint"
+              data-scene-hint
+              role="status"
+              aria-live="polite"
+              aria-hidden="true"
+              hidden
+            >
+              <strong data-scene-hint-title>物件</strong>
+              <span data-scene-hint-text>查看</span>
+            </aside>
+          </div>
 
           <aside
             class="scene-time"
@@ -135,17 +154,14 @@
             <strong id="scene-phase" class="scene-time__phase">深夜</strong>
           </aside>
 
-          <aside
-            class="scene-hint"
-            data-scene-hint
+          <p
+            id="scene-arrange-status"
+            class="scene-arrange-status"
+            data-scene-arrange-status
             role="status"
             aria-live="polite"
-            aria-hidden="true"
             hidden
-          >
-            <strong data-scene-hint-title>物件</strong>
-            <span data-scene-hint-text>查看</span>
-          </aside>
+          >拖动物件调整位置；也可以聚焦物件后使用方向键微调，按 Esc 完成。</p>
 
           <section
             class="scene-dialogue"

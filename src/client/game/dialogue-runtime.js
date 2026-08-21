@@ -19,6 +19,14 @@ export function createDialogueRuntime(root) {
   const hide = () => {
     root.hidden = true;
     root.removeAttribute("data-open");
+    root.removeAttribute("aria-busy");
+  };
+
+  const setBusy = (busy) => {
+    dismissButton.disabled = busy;
+    advanceButton.disabled = busy;
+    if (busy) root.setAttribute("aria-busy", "true");
+    else root.removeAttribute("aria-busy");
   };
 
   const render = () => {
@@ -31,10 +39,11 @@ export function createDialogueRuntime(root) {
       ? active.dialogue.actionLabel ?? "结束"
       : active.dialogue.advanceLabel ?? "继续";
     dismissButton.textContent = active.dialogue.dismissLabel ?? "返回";
+    dismissButton.hidden = active.dialogue.dismissible === false;
   };
 
   const dismiss = () => {
-    if (!active) return;
+    if (!active || active.dialogue.dismissible === false || dismissButton.disabled) return;
     const closing = active;
     active = null;
     hide();
@@ -42,7 +51,7 @@ export function createDialogueRuntime(root) {
     closing.returnFocus?.focus({ preventScroll: true });
   };
 
-  const advance = () => {
+  const advance = async () => {
     if (!active) return;
     if (lineIndex < active.dialogue.lines.length - 1) {
       lineIndex += 1;
@@ -50,13 +59,22 @@ export function createDialogueRuntime(root) {
       return;
     }
     const closing = active;
-    active = null;
-    hide();
-    closing.onConfirm?.();
+    setBusy(true);
+    try {
+      await closing.onConfirm?.();
+      if (active !== closing) return;
+      active = null;
+      hide();
+    } catch (error) {
+      if (active !== closing) return;
+      setBusy(false);
+      closing.onError?.(error);
+      window.requestAnimationFrame(() => advanceButton.focus({ preventScroll: true }));
+    }
   };
 
   dismissButton.addEventListener("click", dismiss);
-  advanceButton.addEventListener("click", advance);
+  advanceButton.addEventListener("click", () => void advance());
   root.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -64,7 +82,9 @@ export function createDialogueRuntime(root) {
       return;
     }
     if (event.key === "Tab" && active) {
-      const focusable = [dismissButton, advanceButton].filter((button) => !button.disabled);
+      const focusable = [dismissButton, advanceButton].filter(
+        (button) => !button.disabled && !button.hidden,
+      );
       const first = focusable[0];
       const last = focusable.at(-1);
       if (event.shiftKey && document.activeElement === first) {
@@ -78,13 +98,14 @@ export function createDialogueRuntime(root) {
   });
 
   return Object.freeze({
-    open(dialogue, { phase, onConfirm, onDismiss, returnFocus } = {}) {
+    open(dialogue, { phase, onConfirm, onDismiss, onError, returnFocus } = {}) {
       if (!dialogue?.lines?.length) {
         onConfirm?.();
         return;
       }
-      active = { dialogue, phase, onConfirm, onDismiss, returnFocus };
+      active = { dialogue, phase, onConfirm, onDismiss, onError, returnFocus };
       lineIndex = 0;
+      setBusy(false);
       root.hidden = false;
       root.dataset.open = "true";
       render();

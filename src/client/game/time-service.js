@@ -1,5 +1,6 @@
 const PHASE_RULES = [
-  { id: "morning", label: "早上", startsAt: 5, endsAt: 17 },
+  { id: "morning", label: "早上", startsAt: 5, endsAt: 12 },
+  { id: "afternoon", label: "下午", startsAt: 12, endsAt: 17 },
   { id: "dusk", label: "黄昏", startsAt: 17, endsAt: 22 },
 ];
 
@@ -15,6 +16,7 @@ export function getTimePhase(date = new Date()) {
 
 export function createTimeSnapshot(date = new Date()) {
   const phase = getTimePhase(date);
+  const timeMode = new Set(["morning", "afternoon"]).has(phase.id) ? "day" : "night";
   return {
     date,
     dateLabel: new Intl.DateTimeFormat("zh-CN", {
@@ -32,6 +34,8 @@ export function createTimeSnapshot(date = new Date()) {
     }).format(date),
     phase: phase.id,
     phaseLabel: phase.label,
+    timeMode,
+    timeModeLabel: timeMode === "day" ? "白天" : "夜晚",
   };
 }
 

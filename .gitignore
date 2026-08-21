@@ -33,7 +33,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# 7. 测试与自动化脚本文件与图片素材
+# 7. 数据迁移、测试与自动化脚本文件与图片素材
+migrations/*
 scripts/*
 tests/*
 art-sources/*

@@ -30,6 +30,16 @@ function assertPhaseSource(value, path) {
   }
 }
 
+function assertPhaseText(value, path) {
+  if (!value || typeof value !== "object") {
+    throw new TypeError(`${path} 必须是分时段文案表。`);
+  }
+  const values = Object.values(value);
+  if (!values.length || values.some((text) => typeof text !== "string" || !text.trim())) {
+    throw new TypeError(`${path} 中的文案必须是非空字符串。`);
+  }
+}
+
 function deepFreeze(value) {
   if (!value || typeof value !== "object") return value;
   for (const child of Object.values(value)) deepFreeze(child);
@@ -39,6 +49,7 @@ function deepFreeze(value) {
 function validateScene(scene) {
   assertText(scene?.id, "scene.id");
   assertText(scene?.title, `${scene.id}.title`);
+  if (scene.titleByPhase) assertPhaseText(scene.titleByPhase, `${scene.id}.titleByPhase`);
   if (!Array.isArray(scene.layers) || !Array.isArray(scene.objects)) {
     throw new TypeError(`${scene.id} 必须提供 layers 和 objects 数组。`);
   }
@@ -63,6 +74,9 @@ function validateScene(scene) {
     assertText(object?.id, `${scene.id}.objects[].id`);
     assertText(object?.label, `${scene.id}.${object.id}.label`);
     assertRect(object?.hitArea, `${scene.id}.${object.id}.hitArea`);
+    if (object.movable !== undefined && typeof object.movable !== "boolean") {
+      throw new TypeError(`${scene.id}.${object.id}.movable 必须是布尔值。`);
+    }
     if (object.visualSource || object.visualSourceByPhase) {
       assertPhaseSource(
         object.visualSourceByPhase ?? object.visualSource,

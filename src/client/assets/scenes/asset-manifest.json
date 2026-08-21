@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-21T07:07:02.637Z",
+  "generatedAt": "2026-08-21T07:41:25.916Z",
   "configFile": "scene-assets.config.json",
-  "configHash": "9ca99f855e60a311169e37541c3c420ab627f593b9e42ba9450a337a112fea3b",
+  "configHash": "dd8d149c0eed18391cce2846dba97e03ae21caef3f4dde4f9b4ec0fa69557211",
   "scriptHash": "615fdcede7cf7c448865ff64188dfe6fb9ef684bbde988ea570826f21de8f00d",
   "sourceRoot": "art-source/0.2.0/scenes/raw",
   "outputRoot": "src/client/assets/scenes",
