@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-21T07:07:02.637Z",
+  "configFile": "scene-assets.config.json",
+  "configHash": "9ca99f855e60a311169e37541c3c420ab627f593b9e42ba9450a337a112fea3b",
+  "scriptHash": "615fdcede7cf7c448865ff64188dfe6fb9ef684bbde988ea570826f21de8f00d",
+  "sourceRoot": "art-source/0.2.0/scenes/raw",
+  "outputRoot": "src/client/assets/scenes",
+  "assets": [
+    {
+      "id": "room-background",
+      "kind": "background",
+      "inputFile": "room-background.png",
+      "outputFile": "room/background-base.webp",
+      "sourceHash": "fe56e700fa14dbcfb70078f397b86208b215b8a4c440825f20a65209db1c1ff6",
+      "outputHash": "f2310310980f7b5bd14d888dd73ebff37c8da9c579ba97fece603a9c2a85c2a5",
+      "source": {
+        "width": 1456,
+        "height": 816,
+        "format": "png"
+      },
+      "output": {
+        "width": 1456,
+        "height": 816,
+        "format": "webp",
+        "bytes": 65520
+      }
+    },
+    {
+      "id": "doorway-background",
+      "kind": "background",
+      "inputFile": "doorway-background.png",
+      "outputFile": "doorway/background-base.webp",
+      "sourceHash": "e83d50748d06d5b8c0732e5ad3433950ea1e41b68fd04c32ba4f725c4ddc572e",
+      "outputHash": "56d35f46cfd6c76db29d137cebe5b67b2ad42a0f19d85af79d00bc217d5a67ea",
+      "source": {
+        "width": 1456,
+        "height": 816,
+        "format": "png"
+      },
+      "output": {
+        "width": 1456,
+        "height": 816,
+        "format": "webp",
+        "bytes": 42940
+      }
+    },
+    {
+      "id": "desk-chair",
+      "kind": "object",
+      "inputFile": "desk-chair.png",
+      "outputFile": "room/desk-chair.png",
+      "sourceHash": "a78b047aa4bca34afcb33ee137fc0042d8e3e25901eb341164590fc080558374",
+      "outputHash": "7cb21a774728f4c857e8313ec82a3f600c6943840fb9e3fca7f6f1962d818e38",
+      "source": {
+        "width": 1456,
+        "height": 816,
+        "format": "png"
+      },
+      "output": {
+        "width": 1241,
+        "height": 731,
+        "format": "png",
+        "bytes": 409504
+      },
+      "crop": {
+        "left": 164,
+        "top": 80,
+        "width": 1241,
+        "height": 731
+      },
+      "sampledBackground": [
+        255,
+        255,
+        255
+      ],
+      "alpha": {
+        "transparentPixels": 413037,
+        "partialPixels": 21919,
+        "opaquePixels": 472215,
+        "transparentPercent": 45.53,
+        "partialPercent": 2.42,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "matte": {
+        "borderSampleWidth": 4,
+        "backgroundStart": 8,
+        "backgroundEnd": 90,
+        "connectDistance": 110,
+        "enclosedBackgroundDistance": 45,
+        "trimAlpha": 4,
+        "padding": 18
+      },
+      "checkerboardPreview": ".artifacts/asset-review/checkerboard/desk-chair.png"
+    },
+    {
+      "id": "bookshelf",
+      "kind": "object",
+      "inputFile": "bookshelf.png",
+      "outputFile": "room/bookshelf.png",
+      "sourceHash": "ac4c3d1d28d3060b0852f19ad4922b81693996d964e893b5ec57cfdb50f4cc9a",
+      "outputHash": "521dbb2a160f8fcdfafe3a35af43ee6f7e28c1a6349e3740f3c6bb0a71021500",
+      "source": {
+        "width": 1456,
+        "height": 816,
+        "format": "png"
+      },
+      "output": {
+        "width": 586,
+        "height": 799,
+        "format": "png",
+        "bytes": 308011
+      },
+      "crop": {
+        "left": 443,
+        "top": 10,
+        "width": 586,
+        "height": 799
+      },
+      "sampledBackground": [
+        255,
+        255,
+        255
+      ],
+      "alpha": {
+        "transparentPixels": 54406,
+        "partialPixels": 798,
+        "opaquePixels": 413010,
+        "transparentPercent": 11.62,
+        "partialPercent": 0.17,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "matte": {
+        "borderSampleWidth": 4,
+        "backgroundStart": 8,
+        "backgroundEnd": 58,
+        "connectDistance": 76,
+        "enclosedBackgroundDistance": 45,
+        "trimAlpha": 4,
+        "padding": 16
+      },
+      "checkerboardPreview": ".artifacts/asset-review/checkerboard/bookshelf.png"
+    },
+    {
+      "id": "mailbox",
+      "kind": "object",
+      "inputFile": "mailbox.png",
+      "outputFile": "doorway/mailbox.png",
+      "sourceHash": "01e75f4e94bc3d728e811bc11bc1c9af8780b2656305c22a99e94f9e8e4ea6b3",
+      "outputHash": "687caaadf0aa79625a328539ef01affff40334163dd35fbd936ccedd1c4fa14a",
+      "source": {
+        "width": 1456,
+        "height": 816,
+        "format": "png"
+      },
+      "output": {
+        "width": 930,
+        "height": 624,
+        "format": "png",
+        "bytes": 683281
+      },
+      "crop": {
+        "left": 275,
+        "top": 91,
+        "width": 930,
+        "height": 624
+      },
+      "sampledBackground": [
+        247,
+        246,
+        244
+      ],
+      "alpha": {
+        "transparentPixels": 77368,
+        "partialPixels": 2005,
+        "opaquePixels": 500947,
+        "transparentPercent": 13.33,
+        "partialPercent": 0.35,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "matte": {
+        "borderSampleWidth": 4,
+        "backgroundStart": 8,
+        "backgroundEnd": 72,
+        "connectDistance": 92,
+        "enclosedBackgroundDistance": 45,
+        "trimAlpha": 4,
+        "padding": 16
+      },
+      "checkerboardPreview": ".artifacts/asset-review/checkerboard/mailbox.png"
+    }
+  ],
+  "reviewComposites": {
+    "room": ".artifacts/asset-review/composites/room.png",
+    "doorway": ".artifacts/asset-review/composites/doorway.png"
+  }
+}

@@ -1,3 +1,11 @@
+import { createDialogueRuntime } from "./game/dialogue-runtime.js";
+import { dialogues } from "./game/dialogues.js";
+import { createSceneRegistry } from "./game/scene-registry.js";
+import { createSceneRuntime } from "./game/scene-runtime.js";
+import { doorwayScene } from "./game/scenes/doorway.js";
+import { roomScene } from "./game/scenes/room.js";
+import { createTimeService } from "./game/time-service.js";
+
 const state = {
   user: null,
   journey: null,
@@ -22,7 +30,7 @@ const INTRO_LINES = [
   { speaker: "我", text: "（拖着行李箱的声音）呼……终于到了。" },
   { speaker: "我", text: "看着手机上的导航，应该就是这里没错了。" },
   { speaker: "我", text: "刚来到这座陌生城市，能找到这个安静的单间，已经很幸运了。" },
-  { speaker: "我", text: "房间里只留下了一张书桌、一座旧书架，还有一封不知道写给谁的信。" },
+  { speaker: "我", text: "门外是一只旧信箱。房间里只留下了一张书桌和一座旧书架。" },
   { speaker: "我", text: "先住下来吧。也许，我可以从这里重新开始书写。" },
 ];
 
@@ -30,7 +38,7 @@ const refs = {
   authView: document.querySelector("#auth-view"),
   titleView: document.querySelector("#title-view"),
   introView: document.querySelector("#intro-view"),
-  roomView: document.querySelector("#room-view"),
+  sceneView: document.querySelector("#scene-view"),
   appView: document.querySelector("#app-view"),
   booksView: document.querySelector("#books-view"),
   accessTitle: document.querySelector("#access-title"),
@@ -47,13 +55,15 @@ const refs = {
   introSpeaker: document.querySelector("#intro-speaker"),
   introLine: document.querySelector("#intro-line"),
   introNext: document.querySelector("#intro-next"),
-  roomDay: document.querySelector("#room-day"),
-  roomEmail: document.querySelector("#room-email"),
-  roomAccountButton: document.querySelector("#room-account-button"),
-  roomLogoutButton: document.querySelector("#room-logout-button"),
-  bookshelfHotspot: document.querySelector("#bookshelf-hotspot"),
-  deskHotspot: document.querySelector("#desk-hotspot"),
-  letterHotspot: document.querySelector("#letter-hotspot"),
+  sceneDay: document.querySelector("#scene-day"),
+  sceneEmail: document.querySelector("#scene-email"),
+  sceneAccountButton: document.querySelector("#scene-account-button"),
+  sceneLogoutButton: document.querySelector("#scene-logout-button"),
+  sceneDate: document.querySelector("#scene-date"),
+  sceneWeekday: document.querySelector("#scene-weekday"),
+  scenePhase: document.querySelector("#scene-phase"),
+  sceneTime: document.querySelector("[data-scene-time]"),
+  sceneDialogue: document.querySelector("[data-dialogue-root]"),
   returnRoomButton: document.querySelector("#return-room-button"),
   booksReturnRoomButton: document.querySelector("#books-return-room-button"),
   connectionDot: document.querySelector("#connection-dot"),
@@ -142,6 +152,26 @@ const refs = {
   appMessage: document.querySelector("#app-message"),
 };
 
+const sceneRegistry = createSceneRegistry([doorwayScene, roomScene]);
+const timeService = createTimeService();
+const dialogueRuntime = createDialogueRuntime(refs.sceneDialogue);
+const sceneRuntime = createSceneRuntime({
+  root: refs.sceneView,
+  registry: sceneRegistry,
+  dialogues,
+  dialogueRuntime,
+  timeService,
+  actions: {
+    openLetter: () => openJourneyLetter(),
+    openWorkbench: () => openWorkbench(),
+    openBookshelf: () => openBookshelf(),
+  },
+  onError: (error) => handleAppError(error, "场景交互暂时无法继续。"),
+});
+
+timeService.subscribe(renderSceneTime);
+timeService.start();
+
 class ApiClientError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -194,6 +224,16 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function renderSceneTime(snapshot) {
+  refs.sceneDate.textContent = snapshot.dateLabel;
+  refs.sceneWeekday.textContent = snapshot.weekdayLabel;
+  refs.scenePhase.textContent = snapshot.phaseLabel;
+  refs.sceneTime.setAttribute(
+    "aria-label",
+    `${snapshot.fullDateLabel}，${snapshot.phaseLabel}`,
+  );
+}
+
 function updateConnectivity() {
   const online = navigator.onLine;
   refs.connectionDot.dataset.state = online ? "online" : "offline";
@@ -244,7 +284,7 @@ function showAuth({
   state.dirty = false;
   refs.booksView.hidden = true;
   refs.appView.hidden = true;
-  refs.roomView.hidden = true;
+  refs.sceneView.hidden = true;
   refs.introView.hidden = true;
   refs.titleView.hidden = true;
   refs.authView.hidden = false;
@@ -268,7 +308,7 @@ function showTitle(user, journey) {
   state.journey = journey;
   refs.authView.hidden = true;
   refs.introView.hidden = true;
-  refs.roomView.hidden = true;
+  refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
   refs.titleView.hidden = false;
@@ -292,7 +332,7 @@ function showTitle(user, journey) {
 function showIntro() {
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
-  refs.roomView.hidden = true;
+  refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
   refs.introView.hidden = false;
@@ -304,11 +344,11 @@ function renderIntroLine() {
   const line = INTRO_LINES[state.introIndex];
   refs.introSpeaker.textContent = line.speaker;
   refs.introLine.textContent = line.text;
-  refs.introNext.textContent = state.introIndex === INTRO_LINES.length - 1 ? "进入房间" : "继续";
+  refs.introNext.textContent = state.introIndex === INTRO_LINES.length - 1 ? "走到门外" : "继续";
   focusWhenReady(refs.introNext);
 }
 
-function showRoom() {
+function showScene(sceneId = "room") {
   const journey = state.journey;
   if (!state.user || !journey) {
     return;
@@ -318,13 +358,12 @@ function showRoom() {
   refs.introView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
-  refs.roomView.hidden = false;
+  refs.sceneView.hidden = false;
   window.scrollTo({ top: 0, left: 0 });
-  refs.roomDay.textContent = journey.status === "completed" ? "旅程之后" : `第 ${journey.current_day} 天`;
-  refs.letterHotspot.querySelector("span").textContent = `查看第 ${journey.current_day} 天来信`;
-  refs.roomEmail.textContent = state.user.email;
-  refs.roomLogoutButton.hidden = state.user.source !== "cloudflare-access";
-  focusWhenReady(refs.deskHotspot);
+  refs.sceneDay.textContent = journey.status === "completed" ? "旅程之后" : `第 ${journey.current_day} 天`;
+  refs.sceneEmail.textContent = state.user.email;
+  refs.sceneLogoutButton.hidden = state.user.source !== "cloudflare-access";
+  sceneRuntime.show(sceneId);
 }
 
 function showApp(user) {
@@ -334,7 +373,7 @@ function showApp(user) {
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
   refs.introView.hidden = true;
-  refs.roomView.hidden = true;
+  refs.sceneView.hidden = true;
   refs.booksView.hidden = true;
   refs.appView.hidden = false;
   window.scrollTo({ top: 0, left: 0 });
@@ -371,7 +410,7 @@ async function enterCurrentJourney() {
     state.journey = data.journey;
     state.letters = [];
     if (data.journey.intro_completed_at) {
-      showRoom();
+      showScene("room");
     } else {
       showIntro();
     }
@@ -396,7 +435,7 @@ async function advanceIntro() {
   try {
     const data = await api("/api/journey/intro", { method: "PUT" });
     state.journey = data.journey;
-    showRoom();
+    showScene("doorway");
   } catch (error) {
     handleAppError(error, "暂时无法保存序章进度，请稍后重试。");
   } finally {
@@ -416,9 +455,9 @@ function setCompileBookError(message = "") {
 
 function configureAccountControls(user = state.user, journey = state.journey) {
   const isDevelopment = user?.source === "development";
-  const accountLabel = isDevelopment ? "重新体验 0.1.0" : "删除数据";
+  const accountLabel = isDevelopment ? "重新体验 0.2.0" : "删除数据";
   refs.titleAccountButton.textContent = accountLabel;
-  refs.roomAccountButton.textContent = isDevelopment ? "重置测试" : "删除数据";
+  refs.sceneAccountButton.textContent = isDevelopment ? "重置测试" : "删除数据";
   refs.accountButton.textContent = isDevelopment ? "重置测试" : "删除数据";
   refs.titleAccountButton.hidden = isDevelopment && !journey;
 
@@ -919,7 +958,7 @@ function showBooksView() {
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
   refs.introView.hidden = true;
-  refs.roomView.hidden = true;
+  refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = false;
   window.scrollTo({ top: 0, left: 0 });
@@ -1216,7 +1255,7 @@ function returnToRoom() {
   if (!canLeaveCurrentDraft()) {
     return;
   }
-  showRoom();
+  showScene("room");
 }
 
 async function restoreSession() {
@@ -1274,10 +1313,7 @@ refs.logoutButton.addEventListener("click", () => void logout());
 refs.accessRetry.addEventListener("click", () => void restoreSession());
 refs.journeyAction.addEventListener("click", () => void enterCurrentJourney());
 refs.introNext.addEventListener("click", () => void advanceIntro());
-refs.deskHotspot.addEventListener("click", () => void openWorkbench());
 refs.returnRoomButton.addEventListener("click", returnToRoom);
-refs.bookshelfHotspot.addEventListener("click", () => void openBookshelf());
-refs.letterHotspot.addEventListener("click", () => void openJourneyLetter());
 refs.booksReturnRoomButton.addEventListener("click", returnToRoom);
 refs.editTopicButton.addEventListener("click", () => openTopicDialog(state.currentTopic));
 refs.deleteTopicButton.addEventListener("click", () => refs.deleteTopicDialog.showModal());
@@ -1293,9 +1329,9 @@ refs.confirmDeleteBook.addEventListener("click", () => void removeCurrentBook())
 refs.letterSelect.addEventListener("change", () => void openJourneyLetter(Number(refs.letterSelect.value)));
 refs.accountButton.addEventListener("click", openDeleteAccountDialog);
 refs.titleAccountButton.addEventListener("click", openDeleteAccountDialog);
-refs.roomAccountButton.addEventListener("click", openDeleteAccountDialog);
+refs.sceneAccountButton.addEventListener("click", openDeleteAccountDialog);
 refs.titleLogoutButton.addEventListener("click", () => void logout());
-refs.roomLogoutButton.addEventListener("click", () => void logout());
+refs.sceneLogoutButton.addEventListener("click", () => void logout());
 refs.cancelDeleteAccount.addEventListener("click", () => refs.deleteAccountDialog.close());
 refs.deleteAccountForm.addEventListener("submit", (event) => void deleteAccount(event));
 window.addEventListener("online", updateConnectivity);

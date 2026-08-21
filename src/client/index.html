@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#172231" />
     <meta
       name="description"
-      content="《伊萨卡手记》0.1.0：从碎片笔记、主题整理到编纂成书的叙事书写空间。"
+      content="《伊萨卡手记》0.2.0：在视觉小说场景中探索物件，并从碎片笔记走向编纂成书。"
     />
-    <title>伊萨卡手记｜0.1.0 开发版</title>
+    <title>伊萨卡手记｜0.2.0 开发版</title>
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/app.js"></script>
   </head>
@@ -16,7 +16,7 @@
     <main id="auth-view" class="auth-shell" aria-labelledby="auth-title" hidden>
       <section class="auth-brand" aria-label="伊萨卡手记介绍">
         <div class="brand-mark" aria-hidden="true">IJ</div>
-        <p class="eyebrow">ITHACA JOURNAL · 0.1.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.2.0</p>
         <h1 id="auth-title">给尚未抵达的地方，<br />留下一页手记。</h1>
         <p class="auth-brand__copy">
           这是《伊萨卡手记》的小范围云端测试。它保存书写，也保存一次设计如何被使用、被质疑、再被改变的过程。
@@ -35,7 +35,7 @@
           <aside class="privacy-note" aria-labelledby="privacy-title">
             <p id="privacy-title" class="privacy-note__title">当前隐私边界</p>
             <p>
-              0.1.0 开发版将正文以<strong>服务器可读</strong>的方式存储。项目不会把正文写入日志；你可以随时导出或删除全部数据。真实内容测试前会重新评估隐私模型。
+              0.2.0 开发版沿用现有<strong>服务器可读</strong>存储。项目不会把正文写入日志；你可以随时导出或删除全部数据。真实内容测试前会重新评估隐私模型。
             </p>
           </aside>
 
@@ -65,7 +65,7 @@
     <main id="title-view" class="title-screen" aria-labelledby="title-heading" hidden>
       <div class="title-screen__stars" aria-hidden="true"></div>
       <section class="title-screen__content">
-        <p class="eyebrow">ITHACA JOURNAL · 0.1.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.2.0</p>
         <h1 id="title-heading">伊萨卡手记</h1>
         <p class="title-screen__tagline">在生活的碎片中，写下可以返回的地方。</p>
         <div class="title-screen__actions">
@@ -96,49 +96,80 @@
       </section>
     </main>
 
-    <div id="room-view" class="room-shell" hidden>
-      <header class="room-header">
-        <div class="room-header__brand">
+    <div id="scene-view" class="scene-shell" hidden>
+      <header class="scene-header">
+        <div class="scene-header__brand">
           <span class="app-brand__mark" aria-hidden="true">IJ</span>
           <span>
             <strong>伊萨卡手记</strong>
-            <small id="room-day">第 1 天</small>
+            <small id="scene-day">第 1 天</small>
           </span>
         </div>
-        <p id="room-email" class="room-header__identity"></p>
-        <div class="room-header__actions">
-          <button id="room-account-button" class="text-button text-button--night" type="button">删除数据</button>
-          <button id="room-logout-button" class="text-button text-button--night" type="button">退出</button>
+        <p id="scene-email" class="scene-header__identity"></p>
+        <div class="scene-header__actions">
+          <button id="scene-account-button" class="text-button text-button--night" type="button">删除数据</button>
+          <button id="scene-logout-button" class="text-button text-button--night" type="button">退出</button>
         </div>
       </header>
 
-      <main class="room-stage" aria-labelledby="room-heading">
-        <div class="room-stage__heading">
+      <main class="scene-stage" aria-labelledby="scene-heading">
+        <div class="scene-stage__heading">
           <div>
-            <p class="section-index">你的房间</p>
-            <h1 id="room-heading">今夜想从哪里开始？</h1>
+            <p class="section-index" data-scene-eyebrow>场景</p>
+            <h1 id="scene-heading" data-scene-heading>正在准备场景</h1>
           </div>
-          <p>选择房间中的物件。书桌保存书写，书架收藏成书，信件承载旅程。</p>
+          <p data-scene-description>选择场景中的物件，继续你的旅程。</p>
         </div>
 
-        <div class="room-frame">
-          <img
-            src="/assets/room/room-placeholder-v01.png"
-            alt="正视房间：左侧是书架，中央窗前是亮着灯的书桌，右侧墙上有一封信，旁边是房门。"
-          />
-          <button id="bookshelf-hotspot" class="room-hotspot room-hotspot--bookshelf" type="button">
-            <span>打开书架</span>
-          </button>
-          <button id="desk-hotspot" class="room-hotspot room-hotspot--desk" type="button">
-            <span>前往书桌</span>
-          </button>
-          <button id="letter-hotspot" class="room-hotspot room-hotspot--letter" type="button">
-            <span>查看来信</span>
-          </button>
+        <div class="scene-frame" data-scene-frame>
+          <div class="scene-layers" data-scene-layers aria-hidden="true"></div>
+          <div class="scene-objects" data-scene-objects></div>
+
+          <aside
+            class="scene-time"
+            data-scene-time
+            aria-label="当前日期与时段"
+          >
+            <span id="scene-date" class="scene-time__date">8月21日</span>
+            <span id="scene-weekday" class="scene-time__weekday">星期五</span>
+            <strong id="scene-phase" class="scene-time__phase">深夜</strong>
+          </aside>
+
+          <aside
+            class="scene-hint"
+            data-scene-hint
+            role="status"
+            aria-live="polite"
+            aria-hidden="true"
+            hidden
+          >
+            <strong data-scene-hint-title>物件</strong>
+            <span data-scene-hint-text>查看</span>
+          </aside>
+
+          <section
+            class="scene-dialogue"
+            data-dialogue-root
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="scene-dialogue-speaker"
+            aria-describedby="scene-dialogue-line"
+            hidden
+          >
+            <div class="scene-dialogue__mark" aria-hidden="true">IJ</div>
+            <div class="scene-dialogue__panel">
+              <p id="scene-dialogue-speaker" class="scene-dialogue__speaker" data-dialogue-speaker>我</p>
+              <p id="scene-dialogue-line" class="scene-dialogue__line" data-dialogue-line></p>
+              <div class="scene-dialogue__actions">
+                <button class="scene-dialogue__button scene-dialogue__button--quiet" data-dialogue-dismiss type="button">返回</button>
+                <button class="scene-dialogue__button" data-dialogue-advance type="button">继续</button>
+              </div>
+            </div>
+          </section>
         </div>
 
         <noscript>
-          <p class="room-fallback">需要启用 JavaScript 才能进入书桌、书架和来信。</p>
+          <p class="scene-fallback">需要启用 JavaScript 才能探索场景中的物件。</p>
         </noscript>
       </main>
     </div>
@@ -186,7 +217,7 @@
           <button id="topic-tab" type="button" aria-pressed="false">主题笔记</button>
         </div>
         <p id="signed-in-email" class="signed-in-email"></p>
-        <p class="nav-privacy-boundary">0.1.0 隐私边界：正文在服务器端可读</p>
+        <p class="nav-privacy-boundary">0.2.0 隐私边界：正文在服务器端可读</p>
         <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
         <p id="list-empty" class="list-empty" hidden>还没有保存的手记。</p>
       </aside>

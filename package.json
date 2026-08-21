@@ -1,6 +1,6 @@
 {
   "name": "ithaca-journal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,8 @@
     "types": "wrangler types",
     "check": "npm run types && tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
     "test": "npm run types && vitest run",
+    "assets:build": "node ./scripts/build-scene-assets.mjs",
+    "assets:check": "node ./scripts/build-scene-assets.mjs --check",
     "test:visual": "node ./scripts/visual-smoke.mjs",
     "build": "wrangler deploy --dry-run --env=\"\" --outdir ./dist",
     "db:migrate:local": "wrangler d1 migrations apply ithaca-journal-local --local",
@@ -21,6 +23,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.22.0",
     "@cloudflare/workers-types": "5.20260820.1",
+    "sharp": "^0.35.3",
     "typescript": "7.0.2",
     "vitest": "4.1.11",
     "wrangler": "4.124.0"

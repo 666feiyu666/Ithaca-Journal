@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "sourceRoot": "art-source/0.2.0/scenes/raw",
+  "outputRoot": "src/client/assets/scenes",
+  "reviewRoot": ".artifacts/asset-review",
+  "manifest": "src/client/assets/scenes/asset-manifest.json",
+  "expectedSourceSize": {
+    "width": 1456,
+    "height": 816
+  },
+  "backgroundDefaults": {
+    "quality": 88,
+    "effort": 6
+  },
+  "objectDefaults": {
+    "borderSampleWidth": 4,
+    "backgroundStart": 8,
+    "backgroundEnd": 70,
+    "connectDistance": 90,
+    "enclosedBackgroundDistance": 45,
+    "trimAlpha": 4,
+    "padding": 16
+  },
+  "assets": [
+    {
+      "id": "room-background",
+      "kind": "background",
+      "input": "room-background.png",
+      "output": "room/background-base.webp"
+    },
+    {
+      "id": "doorway-background",
+      "kind": "background",
+      "input": "doorway-background.png",
+      "output": "doorway/background-base.webp"
+    },
+    {
+      "id": "desk-chair",
+      "kind": "object",
+      "input": "desk-chair.png",
+      "output": "room/desk-chair.png",
+      "matte": {
+        "backgroundEnd": 90,
+        "connectDistance": 110,
+        "padding": 18
+      }
+    },
+    {
+      "id": "bookshelf",
+      "kind": "object",
+      "input": "bookshelf.png",
+      "output": "room/bookshelf.png",
+      "matte": {
+        "backgroundEnd": 58,
+        "connectDistance": 76,
+        "padding": 16
+      }
+    },
+    {
+      "id": "mailbox",
+      "kind": "object",
+      "input": "mailbox.png",
+      "output": "doorway/mailbox.png",
+      "matte": {
+        "backgroundEnd": 72,
+        "connectDistance": 92,
+        "padding": 16
+      }
+    }
+  ],
+  "composites": [
+    {
+      "id": "room",
+      "background": "room-background",
+      "objects": [
+        {
+          "asset": "bookshelf",
+          "rect": { "x": 3.5, "y": 15, "width": 28.5, "height": 72 }
+        },
+        {
+          "asset": "desk-chair",
+          "rect": { "x": 29, "y": 42, "width": 48, "height": 50 }
+        }
+      ]
+    },
+    {
+      "id": "doorway",
+      "background": "doorway-background",
+      "objects": [
+        {
+          "asset": "mailbox",
+          "rect": { "x": 14, "y": 35, "width": 20, "height": 24 }
+        }
+      ]
+    }
+  ]
+}
