@@ -41,7 +41,7 @@ export const roomScene = Object.freeze({
       kind: "feature",
       movable: true,
       visualSource: sceneAssets.room.deskChair,
-      hitArea: { x: 34, y: 35.6, width: 42, height: 44.1 },
+      hitArea: { x: 34, y: 35.6, width: 28, height: 33 },
       hintAnchor: { x: 55, y: 36 },
       hint: { title: "前往书桌", text: "纸页还在等你" },
       dialogueId: "room.desk",

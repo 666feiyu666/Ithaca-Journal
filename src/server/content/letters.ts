@@ -1,34 +1,34 @@
-/* src/js/data/MailData.js */
+import { JOURNEY_TOTAL_DAYS } from "../config/journey";
 
-export const TOTAL_LETTER_DAYS = 21;
+export interface LetterContent {
+  title: string;
+  sender: string;
+  content: string;
+}
 
-// 📝 每日读后感引导语 - 其实可以做得更好…
-export const  REFLECTION_PROMPTS = {
-    1: "你有什么想说的吗？",
-    2: "你有什么想说的吗？",
-    3: "你有什么想说的吗？",
-    4: "你有什么想说的吗？",
-    5: "你有什么想说的吗？",
-    6: "你有什么想说的吗？",
-    7: "你有什么想说的吗？",
-    8: "你有什么想说的吗？",
-    9: "你有什么想说的吗？",
-    10: "你有什么想说的吗？",
-    11: "你有什么想说的吗？",
-    12: "你有什么想说的吗？",
-    13: "你有什么想说的吗？",
-    14: "你有什么想说的吗？",
-    15: "你有什么想说的吗？",
-    16: "你有什么想说的吗？",
-    17: "你有什么想说的吗？",
-    18: "你有什么想说的吗？",
-    19: "你有什么想说的吗？",
-    20: "你有什么想说的吗？",
-    21: "你有什么想说的吗？",
-};
+export type LetterCatalog = Readonly<Record<number, LetterContent>>;
 
-// ✉️ 信件内容库
-export const LETTERS = {
+export function assertLetterCatalog(
+  letters: LetterCatalog,
+  totalDays = JOURNEY_TOTAL_DAYS,
+): void {
+  const configuredDays = Object.keys(letters)
+    .map(Number)
+    .sort((left, right) => left - right);
+  if (configuredDays.length !== totalDays) {
+    throw new Error(`信件配置应包含 ${totalDays} 天，实际为 ${configuredDays.length} 天。`);
+  }
+
+  for (let day = 1; day <= totalDays; day += 1) {
+    const letter = letters[day];
+    if (!letter) throw new Error(`信件配置缺少第 ${day} 天。`);
+    for (const field of ["title", "sender", "content"] as const) {
+      if (!letter[field].trim()) throw new Error(`第 ${day} 天信件缺少 ${field}。`);
+    }
+  }
+}
+
+export const LETTERS: LetterCatalog = {
         // === 第一周：叙事 ===
         1: {
             title: "半年了",
@@ -778,3 +778,5 @@ PPT做得花团锦簇，日报写得洋洋洒洒，早到晚退，那是我的�
 ——糖水菠萝`
         }
 };
+
+assertLetterCatalog(LETTERS);

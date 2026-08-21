@@ -127,6 +127,9 @@ export async function compileBook(
 ): Promise<BookDetail> {
   const { title, preface, topicIds } = validateBookPayload(payload);
   const topics = await Promise.all(topicIds.map((topicId) => getTopic(env, userId, topicId)));
+  if (topics.some((topic) => topic.fragments.length === 0)) {
+    throw new ApiError(422, "empty_topic", "空白主题还不能编纂成书，请先放入至少一则碎片。");
+  }
   const contentSnapshot = renderBook(title, preface, topics);
   if (contentSnapshot.length > MAX_BOOK_CHARACTERS) {
     throw new ApiError(413, "book_too_large", "编纂结果超过当前版本的大小限制。");

@@ -1,6 +1,7 @@
 import { ApiError } from "./http";
 import { getJourney } from "./journey";
-import { LETTERS, type LetterContent } from "./letters-data.js";
+import { JOURNEY_TOTAL_DAYS } from "./config/journey";
+import { LETTERS, type LetterContent } from "./content/letters";
 
 interface OpenedLetterRow {
   day: number;
@@ -30,7 +31,7 @@ async function requireJourneyDay(env: Env, userId: string): Promise<number> {
 
 function requireLetter(day: number): LetterContent {
   const letter = LETTERS[day];
-  if (!Number.isInteger(day) || day < 1 || day > 21 || !letter) {
+  if (!Number.isInteger(day) || day < 1 || day > JOURNEY_TOTAL_DAYS || !letter) {
     throw new ApiError(404, "letter_not_found", "没有找到这封信。");
   }
   return letter;

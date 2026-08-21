@@ -13,7 +13,7 @@ export function createAccountFeature({
 
   function configureControls(user = state.user, journey = state.journey) {
     const isDevelopment = user?.source === "development";
-    const accountLabel = isDevelopment ? "重新体验 0.2.0" : "删除数据";
+    const accountLabel = isDevelopment ? "重新体验 0.3.0" : "删除数据";
     refs.titleAccountButton.textContent = accountLabel;
     refs.sceneAccountButton.textContent = isDevelopment ? "重置测试" : "删除数据";
     refs.accountButton.textContent = isDevelopment ? "重置测试" : "删除数据";

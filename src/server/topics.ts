@@ -14,6 +14,8 @@ interface TopicRow {
   body: string;
   created_at: string;
   updated_at: string;
+  layout_version: number;
+  pattern_seed: string;
 }
 
 export interface TopicFragmentRow {
@@ -23,6 +25,10 @@ export interface TopicFragmentRow {
   created_at: string;
   updated_at: string;
   position: number;
+  canvas_x: number;
+  canvas_y: number;
+  z_index: number;
+  shape_variant: number;
 }
 
 export interface TopicDetail extends TopicRow {
@@ -32,7 +38,15 @@ export interface TopicDetail extends TopicRow {
 interface TopicPayload {
   title: string;
   body: string;
-  fragmentIds: string[];
+  fragmentIds: string[] | null;
+}
+
+interface TopicLayoutItem {
+  fragmentId: string;
+  canvasX: number;
+  canvasY: number;
+  zIndex: number;
+  shapeVariant: number;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -41,7 +55,7 @@ function validateTopicPayload(payload: unknown): TopicPayload {
   const record = requireRecord(payload);
   const rawTitle = requireString(record, "title").trim();
   const body = requireString(record, "body");
-  const fragmentIds = record.fragment_ids;
+  const fragmentIdsValue = record.fragment_ids;
 
   if (!rawTitle) {
     throw new ApiError(422, "topic_title_required", "请为主题命名。");
@@ -52,17 +66,84 @@ function validateTopicPayload(payload: unknown): TopicPayload {
   if (body.length > 100_000) {
     throw new ApiError(413, "topic_too_large", "主题笔记超过当前版本的大小限制。");
   }
-  if (!Array.isArray(fragmentIds) || fragmentIds.length === 0) {
-    throw new ApiError(422, "fragments_required", "请至少选择一则碎片笔记。");
+  if (fragmentIdsValue !== undefined && !Array.isArray(fragmentIdsValue)) {
+    throw new ApiError(422, "invalid_fragment_ids", "fragment_ids 必须是数组。");
   }
-  if (fragmentIds.length > 50) {
+  if (Array.isArray(fragmentIdsValue) && fragmentIdsValue.length > 50) {
     throw new ApiError(422, "too_many_fragments", "一个主题最多整理 50 则碎片笔记。");
   }
-  if (!fragmentIds.every((id) => typeof id === "string" && UUID_PATTERN.test(id))) {
+  if (
+    Array.isArray(fragmentIdsValue)
+    && !fragmentIdsValue.every((id) => typeof id === "string" && UUID_PATTERN.test(id))
+  ) {
     throw new ApiError(422, "invalid_fragment_ids", "碎片笔记标识无效。");
   }
 
-  return { title: rawTitle, body, fragmentIds: [...new Set(fragmentIds)] };
+  return {
+    title: rawTitle,
+    body,
+    fragmentIds: Array.isArray(fragmentIdsValue)
+      ? [...new Set(fragmentIdsValue as string[])]
+      : null,
+  };
+}
+
+function validateTopicLayout(payload: unknown): TopicLayoutItem[] {
+  const record = requireRecord(payload);
+  const itemsValue = record.items;
+  if (!Array.isArray(itemsValue)) {
+    throw new ApiError(422, "invalid_layout", "items 必须是数组。");
+  }
+  if (itemsValue.length > 50) {
+    throw new ApiError(422, "too_many_fragments", "一个主题最多整理 50 则碎片笔记。");
+  }
+
+  const items = itemsValue.map((value): TopicLayoutItem => {
+    const item = requireRecord(value);
+    const fragmentId = item.fragment_id;
+    const canvasX = item.canvas_x;
+    const canvasY = item.canvas_y;
+    const zIndex = item.z_index;
+    const shapeVariant = item.shape_variant;
+
+    if (typeof fragmentId !== "string" || !UUID_PATTERN.test(fragmentId)) {
+      throw new ApiError(422, "invalid_fragment_ids", "碎片笔记标识无效。");
+    }
+    if (
+      typeof canvasX !== "number"
+      || !Number.isFinite(canvasX)
+      || canvasX < 0
+      || canvasX > 1
+      || typeof canvasY !== "number"
+      || !Number.isFinite(canvasY)
+      || canvasY < 0
+      || canvasY > 1
+    ) {
+      throw new ApiError(422, "invalid_layout_position", "画布坐标必须在 0 到 1 之间。");
+    }
+    if (
+      typeof zIndex !== "number"
+      || !Number.isInteger(zIndex)
+      || zIndex < 0
+      || zIndex > 10_000
+    ) {
+      throw new ApiError(422, "invalid_z_index", "碎片层级无效。");
+    }
+    if (
+      typeof shapeVariant !== "number"
+      || !Number.isInteger(shapeVariant)
+      || shapeVariant < 0
+      || shapeVariant > 15
+    ) {
+      throw new ApiError(422, "invalid_shape_variant", "拼图形态必须在 0 到 15 之间。");
+    }
+    return { fragmentId, canvasX, canvasY, zIndex, shapeVariant };
+  });
+
+  if (new Set(items.map((item) => item.fragmentId)).size !== items.length) {
+    throw new ApiError(422, "duplicate_fragments", "同一主题中不能重复放入同一则碎片。");
+  }
+  return items;
 }
 
 async function requireOwnedFragments(
@@ -70,6 +151,9 @@ async function requireOwnedFragments(
   userId: string,
   fragmentIds: string[],
 ): Promise<void> {
+  if (fragmentIds.length === 0) {
+    return;
+  }
   const placeholders = fragmentIds.map((_, index) => `?${index + 2}`).join(", ");
   const result = await env.DB.prepare(
     `SELECT id
@@ -109,7 +193,7 @@ export async function getTopic(
   topicId: string,
 ): Promise<TopicDetail> {
   const topic = await env.DB.prepare(
-    `SELECT id, title, body, created_at, updated_at
+    `SELECT id, title, body, created_at, updated_at, layout_version, pattern_seed
      FROM topics
      WHERE id = ?1 AND user_id = ?2`,
   )
@@ -122,11 +206,13 @@ export async function getTopic(
   const fragments = await env.DB.prepare(
     `SELECT journal_entries.id, journal_entries.title, journal_entries.body,
             journal_entries.created_at, journal_entries.updated_at,
-            topic_fragments.position
+            topic_fragments.position, topic_fragments.canvas_x,
+            topic_fragments.canvas_y, topic_fragments.z_index,
+            topic_fragments.shape_variant
      FROM topic_fragments
      JOIN journal_entries ON journal_entries.id = topic_fragments.fragment_id
      WHERE topic_fragments.topic_id = ?1 AND journal_entries.user_id = ?2
-     ORDER BY topic_fragments.position ASC`,
+     ORDER BY topic_fragments.z_index ASC, topic_fragments.position ASC`,
   )
     .bind(topicId, userId)
     .all<TopicFragmentRow>();
@@ -140,19 +226,30 @@ export async function createTopic(
   payload: unknown,
 ): Promise<TopicDetail> {
   const { title, body, fragmentIds } = validateTopicPayload(payload);
-  await requireOwnedFragments(env, userId, fragmentIds);
+  const initialFragmentIds = fragmentIds ?? [];
+  await requireOwnedFragments(env, userId, initialFragmentIds);
   const id = crypto.randomUUID();
+  const patternSeed = crypto.randomUUID();
   const now = new Date().toISOString();
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT INTO topics (id, user_id, title, body, created_at, updated_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?5)`,
-    ).bind(id, userId, title, body, now),
-    ...fragmentIds.map((fragmentId, position) =>
+      `INSERT INTO topics
+         (id, user_id, title, body, created_at, updated_at, layout_version, pattern_seed)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?5, 1, ?6)`,
+    ).bind(id, userId, title, body, now, patternSeed),
+    ...initialFragmentIds.map((fragmentId, position) =>
       env.DB.prepare(
-        `INSERT INTO topic_fragments (topic_id, fragment_id, position)
-         VALUES (?1, ?2, ?3)`,
-      ).bind(id, fragmentId, position),
+        `INSERT INTO topic_fragments
+           (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?3, ?6)`,
+      ).bind(
+        id,
+        fragmentId,
+        position,
+        0.06 + ((position % 4) * 0.30),
+        0.08 + (Math.floor(position / 4) * 0.07),
+        position % 16,
+      ),
     ),
   ]);
   return getTopic(env, userId, id);
@@ -166,21 +263,72 @@ export async function updateTopic(
 ): Promise<TopicDetail> {
   await getTopic(env, userId, topicId);
   const { title, body, fragmentIds } = validateTopicPayload(payload);
-  await requireOwnedFragments(env, userId, fragmentIds);
+  if (fragmentIds !== null) {
+    await requireOwnedFragments(env, userId, fragmentIds);
+  }
   const now = new Date().toISOString();
-  await env.DB.batch([
+  const statements = [
     env.DB.prepare(
       `UPDATE topics
        SET title = ?1, body = ?2, updated_at = ?3
        WHERE id = ?4 AND user_id = ?5`,
     ).bind(title, body, now, topicId, userId),
+  ];
+  if (fragmentIds !== null) {
+    statements.push(
+      env.DB.prepare("DELETE FROM topic_fragments WHERE topic_id = ?1").bind(topicId),
+      ...fragmentIds.map((fragmentId, position) =>
+        env.DB.prepare(
+          `INSERT INTO topic_fragments
+             (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?3, ?6)`,
+        ).bind(
+          topicId,
+          fragmentId,
+          position,
+          0.06 + ((position % 4) * 0.30),
+          0.08 + (Math.floor(position / 4) * 0.07),
+          position % 16,
+        ),
+      ),
+    );
+  }
+  await env.DB.batch(statements);
+  return getTopic(env, userId, topicId);
+}
+
+export async function updateTopicLayout(
+  env: Env,
+  userId: string,
+  topicId: string,
+  payload: unknown,
+): Promise<TopicDetail> {
+  await getTopic(env, userId, topicId);
+  const items = validateTopicLayout(payload);
+  await requireOwnedFragments(env, userId, items.map((item) => item.fragmentId));
+  const now = new Date().toISOString();
+  await env.DB.batch([
     env.DB.prepare("DELETE FROM topic_fragments WHERE topic_id = ?1").bind(topicId),
-    ...fragmentIds.map((fragmentId, position) =>
+    ...items.map((item, position) =>
       env.DB.prepare(
-        `INSERT INTO topic_fragments (topic_id, fragment_id, position)
-         VALUES (?1, ?2, ?3)`,
-      ).bind(topicId, fragmentId, position),
+        `INSERT INTO topic_fragments
+           (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+      ).bind(
+        topicId,
+        item.fragmentId,
+        position,
+        item.canvasX,
+        item.canvasY,
+        item.zIndex,
+        item.shapeVariant,
+      ),
     ),
+    env.DB.prepare(
+      `UPDATE topics
+       SET updated_at = ?1, layout_version = layout_version + 1
+       WHERE id = ?2 AND user_id = ?3`,
+    ).bind(now, topicId, userId),
   ]);
   return getTopic(env, userId, topicId);
 }

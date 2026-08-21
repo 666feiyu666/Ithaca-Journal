@@ -1,22 +1,20 @@
-const PHASE_RULES = [
-  { id: "morning", label: "早上", startsAt: 5, endsAt: 12 },
-  { id: "afternoon", label: "下午", startsAt: 12, endsAt: 17 },
-  { id: "dusk", label: "黄昏", startsAt: 17, endsAt: 22 },
-];
+import {
+  DAY_TIME_PHASE_IDS,
+  FALLBACK_TIME_PHASE,
+  TIME_PHASE_RULES,
+} from "../config/time-phases.js";
 
 export function getTimePhase(date = new Date()) {
   const hour = date.getHours();
   return (
-    PHASE_RULES.find((phase) => hour >= phase.startsAt && hour < phase.endsAt) ?? {
-      id: "lateNight",
-      label: "深夜",
-    }
+    TIME_PHASE_RULES.find((phase) => hour >= phase.startsAt && hour < phase.endsAt) ??
+    FALLBACK_TIME_PHASE
   );
 }
 
 export function createTimeSnapshot(date = new Date()) {
   const phase = getTimePhase(date);
-  const timeMode = new Set(["morning", "afternoon"]).has(phase.id) ? "day" : "night";
+  const timeMode = DAY_TIME_PHASE_IDS.includes(phase.id) ? "day" : "night";
   return {
     date,
     dateLabel: new Intl.DateTimeFormat("zh-CN", {

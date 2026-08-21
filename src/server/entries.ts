@@ -3,6 +3,7 @@ import { ApiError, requireRecord, requireString } from "./http";
 interface EntrySummaryRow {
   id: string;
   title: string;
+  excerpt: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,7 +34,7 @@ export async function listEntries(
   userId: string,
 ): Promise<EntrySummaryRow[]> {
   const result = await env.DB.prepare(
-    `SELECT id, title, created_at, updated_at
+    `SELECT id, title, substr(body, 1, 180) AS excerpt, created_at, updated_at
      FROM journal_entries
      WHERE user_id = ?1
      ORDER BY updated_at DESC`,

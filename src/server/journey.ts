@@ -1,4 +1,5 @@
 import { ApiError, requireRecord, requireString } from "./http";
+import { JOURNEY_TOTAL_DAYS } from "./config/journey";
 
 export interface JourneyRow {
   status: "active" | "completed";
@@ -59,22 +60,22 @@ export async function enterJourney(
   await env.DB.prepare(
     `UPDATE journeys
      SET current_day = CASE
-           WHEN current_day < 21 THEN current_day + 1
+           WHEN current_day < ?4 THEN current_day + 1
            ELSE current_day
          END,
          status = CASE
-           WHEN current_day >= 20 THEN 'completed'
+           WHEN current_day + 1 >= ?4 THEN 'completed'
            ELSE status
          END,
          completed_at = CASE
-           WHEN current_day >= 20 THEN COALESCE(completed_at, ?2)
+           WHEN current_day + 1 >= ?4 THEN COALESCE(completed_at, ?2)
            ELSE completed_at
          END,
          last_progress_date = ?1,
          last_entered_at = ?2
      WHERE user_id = ?3 AND last_progress_date < ?1`,
   )
-    .bind(localDate, now, userId)
+    .bind(localDate, now, userId, JOURNEY_TOTAL_DAYS)
     .run();
 
   await env.DB.prepare(

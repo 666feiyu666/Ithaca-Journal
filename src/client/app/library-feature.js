@@ -148,11 +148,14 @@ export function createLibraryFeature({
       input.type = "checkbox";
       input.name = "book-topic";
       input.value = topic.id;
+      input.disabled = topic.fragment_count === 0;
       const copy = document.createElement("span");
       const title = document.createElement("strong");
       title.textContent = topic.title;
       const count = document.createElement("small");
-      count.textContent = `${topic.fragment_count} 则碎片`;
+      count.textContent = topic.fragment_count === 0
+        ? "画布为空，暂不能编纂"
+        : `${topic.fragment_count} 则碎片`;
       copy.append(title, count);
       label.append(input, copy);
       refs.bookTopicOptions.append(label);
@@ -171,8 +174,8 @@ export function createLibraryFeature({
         setBusy(false);
       }
     }
-    if (!state.topics.length) {
-      showMessage("先在书桌整理出一则主题，再开始编纂。", "error");
+    if (!state.topics.some((topic) => topic.fragment_count > 0)) {
+      showMessage("先为至少一则主题放入碎片，再开始编纂。", "error");
       return;
     }
     setCompileBookError();

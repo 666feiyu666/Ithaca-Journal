@@ -1,10 +1,11 @@
 {
   "name": "ithaca-journal",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "test": "node --test",
     "types": "wrangler types",
     "check": "npm run types && tsc -p tsconfig.json --noEmit",
     "build": "wrangler deploy --dry-run --env=\"\" --outdir ./dist"

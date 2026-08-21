@@ -8,12 +8,11 @@ import { createLibraryFeature } from "./app/library-feature.js";
 import { createAppState } from "./app/state.js";
 import { createTopicsFeature } from "./app/topics-feature.js";
 import { createWorkbenchFeature } from "./app/workbench-feature.js";
+import { dialogues } from "./config/dialogues.js";
+import { sceneDefinitions } from "./config/scenes/index.js";
 import { createDialogueRuntime } from "./game/dialogue-runtime.js";
-import { dialogues } from "./game/dialogues.js";
 import { createSceneRegistry } from "./game/scene-registry.js";
 import { createSceneRuntime } from "./game/scene-runtime.js";
-import { doorwayScene } from "./game/scenes/doorway.js";
-import { roomScene } from "./game/scenes/room.js";
 import { createTimeService } from "./game/time-service.js";
 
 const state = createAppState();
@@ -83,6 +82,10 @@ function showAuth({
   state.currentTopic = null;
   state.currentBook = null;
   state.workbenchMode = "fragments";
+  state.fragmentDrawerOpen = false;
+  state.topicDirectoryOpen = false;
+  state.topicLayoutBusy = false;
+  state.editorExpanded = false;
   state.dirty = false;
   refs.booksView.hidden = true;
   refs.appView.hidden = true;
@@ -147,6 +150,8 @@ function showApp(user) {
   refs.sceneView.hidden = true;
   refs.booksView.hidden = true;
   refs.appView.hidden = false;
+  refs.appView.dataset.workbenchMode = state.workbenchMode;
+  refs.appView.dataset.drawerOpen = String(state.fragmentDrawerOpen);
   window.scrollTo({ top: 0, left: 0 });
   updateConnectivity();
 }
@@ -156,6 +161,10 @@ function updateActions() {
   refs.deleteEntryButton.disabled = state.busy || !state.current?.id;
   refs.newEntryButton.disabled = state.busy;
   refs.newTopicButton.disabled = state.busy;
+  refs.fragmentDrawerButton.disabled = state.busy;
+  refs.fragmentTab.disabled = state.busy;
+  refs.topicTab.disabled = state.busy;
+  refs.workbenchBookButton.disabled = state.busy;
   refs.saveTopic.disabled = state.busy;
   refs.compileBookButton.disabled = state.busy;
   refs.emptyCompileBookButton.disabled = state.busy;
@@ -198,7 +207,7 @@ function returnToRoom() {
   showScene("room");
 }
 
-const sceneRegistry = createSceneRegistry([doorwayScene, roomScene]);
+const sceneRegistry = createSceneRegistry(sceneDefinitions);
 const timeService = createTimeService();
 const dialogueRuntime = createDialogueRuntime(refs.sceneDialogue);
 const sceneRuntime = createSceneRuntime({
@@ -222,9 +231,9 @@ entriesFeature = createEntriesFeature({
   setBusy,
   updateActions,
   renderList: () => workbenchFeature.renderList(),
-  showEmptyEditor: () => workbenchFeature.showEmptyEditor(),
   showMessage,
   handleError: handleAppError,
+  onSaved: (info) => workbenchFeature?.handleEntrySaved(info),
 });
 
 topicsFeature = createTopicsFeature({
@@ -237,6 +246,8 @@ topicsFeature = createTopicsFeature({
   showMessage,
   handleError: handleAppError,
   canLeaveCurrentDraft: entriesFeature.canLeaveCurrentDraft,
+  closeTopicDirectory: () => workbenchFeature?.setTopicDirectoryOpen(false),
+  openTopicDirectory: () => workbenchFeature?.setTopicDirectoryOpen(true),
 });
 
 workbenchFeature = createWorkbenchFeature({
@@ -290,6 +301,7 @@ accountFeature.bindEvents();
 
 refs.returnRoomButton.addEventListener("click", returnToRoom);
 refs.booksReturnRoomButton.addEventListener("click", returnToRoom);
+refs.workbenchBookButton.addEventListener("click", () => void libraryFeature.open());
 window.addEventListener("online", updateConnectivity);
 window.addEventListener("offline", updateConnectivity);
 window.addEventListener("beforeunload", (event) => {

@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#172231" />
     <meta
       name="description"
-      content="《伊萨卡手记》0.2.0：在视觉小说场景中探索物件，并从碎片笔记走向编纂成书。"
+      content="《伊萨卡手记》0.3.0：从一张随手笺出发，把碎片拼成主题，再把主题写成书。"
     />
-    <title>伊萨卡手记｜0.2.0 开发版</title>
+    <title>伊萨卡手记｜0.3.0 开发版</title>
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/app.js"></script>
   </head>
@@ -16,7 +16,7 @@
     <main id="auth-view" class="auth-shell" aria-labelledby="auth-title" hidden>
       <section class="auth-brand" aria-label="伊萨卡手记介绍">
         <div class="brand-mark" aria-hidden="true">IJ</div>
-        <p class="eyebrow">ITHACA JOURNAL · 0.2.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.3.0</p>
         <h1 id="auth-title">给尚未抵达的地方，<br />留下一页手记。</h1>
         <p class="auth-brand__copy">
           这是《伊萨卡手记》的小范围云端测试。它保存书写，也保存一次设计如何被使用、被质疑、再被改变的过程。
@@ -35,7 +35,7 @@
           <aside class="privacy-note" aria-labelledby="privacy-title">
             <p id="privacy-title" class="privacy-note__title">当前隐私边界</p>
             <p>
-              0.2.0 开发版沿用现有<strong>服务器可读</strong>存储。项目不会把正文写入日志；你可以随时导出或删除全部数据。真实内容测试前会重新评估隐私模型。
+              0.3.0 开发版沿用现有<strong>服务器可读</strong>存储。项目不会把正文写入日志；你可以随时导出或删除全部数据。真实内容测试前会重新评估隐私模型。
             </p>
           </aside>
 
@@ -65,7 +65,7 @@
     <main id="title-view" class="title-screen" aria-labelledby="title-heading" hidden>
       <div class="title-screen__stars" aria-hidden="true"></div>
       <section class="title-screen__content">
-        <p class="eyebrow">ITHACA JOURNAL · 0.2.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.3.0</p>
         <h1 id="title-heading">伊萨卡手记</h1>
         <p class="title-screen__tagline">在生活的碎片中，写下可以返回的地方。</p>
         <div class="title-screen__actions">
@@ -213,27 +213,58 @@
         </div>
       </header>
 
-      <aside class="journal-nav" aria-labelledby="journal-list-title">
+      <nav class="workbench-bar" aria-label="写作台功能">
+        <button id="fragment-tab" class="workbench-home" type="button" aria-pressed="true">
+          <span class="section-index">02 / 写作台</span>
+          <strong>随手笺</strong>
+          <small>写下此刻，收进碎片匣</small>
+        </button>
+        <div class="workbench-bar__routes">
+          <button
+            id="fragment-drawer-button"
+            class="workbench-route workbench-route--drawer"
+            type="button"
+            aria-expanded="false"
+            aria-controls="journal-nav"
+          >
+            <span>碎片匣</span>
+            <small><span id="fragment-count">0</span> 则纸页</small>
+          </button>
+          <button
+            id="topic-tab"
+            class="workbench-route"
+            type="button"
+            aria-pressed="false"
+            aria-expanded="false"
+            aria-controls="journal-nav"
+          >
+            <span>主题拼图</span>
+            <small><span id="topic-count">0</span> 个主题</small>
+          </button>
+          <button id="workbench-book-button" class="workbench-route" type="button">
+            <span>撰写书籍</span>
+            <small>把主题排成篇章</small>
+          </button>
+        </div>
+      </nav>
+
+      <aside id="journal-nav" class="journal-nav" aria-labelledby="journal-list-title" hidden>
         <div class="journal-nav__heading">
           <div>
-            <p class="section-index">02 / 写作台</p>
-            <h2 id="journal-list-title">素材与主题</h2>
+            <p id="journal-list-index" class="section-index">碎片匣</p>
+            <h2 id="journal-list-title">已经留下的纸页</h2>
           </div>
           <button id="new-entry-button" class="new-entry-button" type="button">
             <span aria-hidden="true">＋</span>
-            <span>新碎片</span>
+            <span>新纸页</span>
           </button>
           <button id="new-topic-button" class="new-entry-button" type="button" hidden>
             <span aria-hidden="true">＋</span>
             <span>新主题</span>
           </button>
         </div>
-        <div class="workbench-tabs" role="group" aria-label="笔记类型">
-          <button id="fragment-tab" type="button" aria-pressed="true">碎片笔记</button>
-          <button id="topic-tab" type="button" aria-pressed="false">主题笔记</button>
-        </div>
         <p id="signed-in-email" class="signed-in-email"></p>
-        <p class="nav-privacy-boundary">0.2.0 隐私边界：正文在服务器端可读</p>
+        <p class="nav-privacy-boundary">隐私边界：正文在服务器端可读</p>
         <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
         <p id="list-empty" class="list-empty" hidden>还没有保存的手记。</p>
       </aside>
@@ -250,26 +281,36 @@
         <section id="editor-panel" class="editor-panel" hidden>
           <header class="editor-toolbar">
             <div>
-              <p class="section-index">03 / 碎片笔记</p>
+              <p class="section-index">一张尚未装订的纸</p>
               <p id="entry-date" class="entry-date">尚未保存</p>
             </div>
             <div class="editor-toolbar__actions">
               <span id="save-state" class="save-state" role="status" aria-live="polite">尚未保存</span>
+              <button
+                id="expand-editor-button"
+                class="button button--quiet"
+                type="button"
+                aria-pressed="false"
+              >展开书写</button>
               <button id="delete-entry-button" class="button button--danger-quiet" type="button" disabled>
                 删除
               </button>
-              <button id="save-button" class="button button--primary" type="button" disabled>保存手记</button>
+              <button id="save-button" class="button button--primary" type="button" disabled>收进碎片匣</button>
             </div>
           </header>
 
           <div class="paper-editor">
+            <div class="paper-editor__folio" aria-hidden="true">
+              <span>ITHACA · LOOSE NOTE</span>
+              <span>未装订</span>
+            </div>
             <label class="sr-only" for="entry-title">手记标题</label>
             <input
               id="entry-title"
               class="entry-title"
               type="text"
               maxlength="120"
-                placeholder="未命名碎片"
+              placeholder="题目（可选）"
             />
             <div class="paper-rule" aria-hidden="true"></div>
             <label class="sr-only" for="entry-body">手记正文</label>
@@ -277,7 +318,7 @@
               id="entry-body"
               class="entry-body"
               maxlength="100000"
-              placeholder="从这里开始写……"
+              placeholder="今天想留下什么？"
             ></textarea>
             <footer class="editor-footer">
               <span id="character-count">0 个字符</span>
@@ -287,26 +328,65 @@
         </section>
 
         <section id="topic-panel" class="topic-panel" hidden>
-          <header class="editor-toolbar">
-            <div>
-              <p class="section-index">04 / 主题笔记</p>
-              <p id="topic-date" class="entry-date"></p>
+          <header class="topic-panel__header">
+            <div class="topic-panel__identity">
+              <p class="section-index">03 / 主题映射</p>
+              <div class="topic-panel__title-row">
+                <h2 id="topic-title"></h2>
+                <p id="topic-date" class="entry-date"></p>
+              </div>
+              <p id="topic-body" class="topic-panel__body"></p>
             </div>
-            <div class="editor-toolbar__actions">
+            <div class="editor-toolbar__actions topic-panel__actions">
+              <span id="topic-layout-state" class="save-state" role="status" aria-live="polite">布局已保存</span>
+              <button id="auto-arrange-topic-button" class="button button--quiet" type="button">自动整理</button>
               <button id="edit-topic-button" class="button button--quiet" type="button">调整主题</button>
               <button id="delete-topic-button" class="button button--danger-quiet" type="button">删除主题</button>
             </div>
           </header>
-          <article class="topic-paper">
-            <h2 id="topic-title"></h2>
-            <div class="paper-rule" aria-hidden="true"></div>
-            <p id="topic-body" class="topic-paper__body"></p>
-            <section class="topic-sources" aria-labelledby="topic-sources-title">
-              <p class="section-index">构成这个主题的碎片</p>
-              <h3 id="topic-sources-title">素材脉络</h3>
-              <div id="topic-source-list" class="topic-source-list"></div>
+
+          <div class="topic-workspace">
+            <aside
+              id="topic-fragment-tray"
+              class="topic-fragment-tray"
+              aria-labelledby="topic-tray-title"
+            >
+              <header class="topic-fragment-tray__header">
+                <p class="section-index">碎片托盘</p>
+                <h3 id="topic-tray-title">从纸匣取用素材</h3>
+                <p id="topic-tray-count" class="topic-fragment-tray__count"></p>
+              </header>
+              <p class="topic-fragment-tray__hint">拖到右侧，或使用“加入主题”。原始碎片仍留在碎片匣中。</p>
+              <div id="topic-tray-list" class="topic-tray-list" role="list"></div>
+              <p id="topic-tray-empty" class="topic-tray-empty" hidden>碎片匣还是空的。先回到随手笺，留下一张纸。</p>
+            </aside>
+
+            <section class="topic-board-shell" aria-labelledby="topic-board-title">
+              <header class="topic-board-shell__header">
+                <div>
+                  <p class="section-index">笔记映射画布</p>
+                  <h3 id="topic-board-title">先摆放这些笔记</h3>
+                </div>
+                <div class="topic-board-shell__meta">
+                  <p id="topic-board-help">拖动纸页改变位置；聚焦纸页后也可用方向键微调。</p>
+                  <p id="topic-mapping-gate" class="topic-mapping-gate"></p>
+                </div>
+              </header>
+              <div
+                id="topic-board"
+                class="topic-board"
+                tabindex="0"
+                aria-describedby="topic-board-help"
+              >
+                <div id="topic-board-empty" class="topic-board-empty">
+                  <span class="topic-board-empty__mark" aria-hidden="true">＋</span>
+                  <strong>映射画布还空着</strong>
+                  <p>从左边取一张笔记纸页，先观察这些想法如何靠近；这一步还不是拼图。</p>
+                </div>
+                <div id="topic-piece-layer" class="topic-piece-layer"></div>
+              </div>
             </section>
-          </article>
+          </div>
         </section>
       </main>
 
@@ -359,20 +439,17 @@
     <dialog id="topic-dialog" class="dialog dialog--wide">
       <form id="topic-form">
         <p class="section-index">整理主题</p>
-        <h2 id="topic-dialog-title">把碎片放在一起</h2>
+        <h2 id="topic-dialog-title">先为这个主题留一个位置</h2>
         <input id="topic-id" type="hidden" />
         <label for="topic-title-input">主题名称</label>
         <input id="topic-title-input" type="text" maxlength="120" placeholder="例如：抵达与离开" required />
-        <label for="topic-body-input">你从这些碎片中看见了什么？</label>
+        <label for="topic-body-input">主题说明（可选）</label>
         <textarea id="topic-body-input" rows="6" maxlength="100000" placeholder="写下关联、矛盾、重复出现的意象，或一个仍待回答的问题。"></textarea>
-        <fieldset class="source-picker">
-          <legend>选择构成主题的碎片</legend>
-          <div id="topic-fragment-options" class="source-picker__options"></div>
-        </fieldset>
+        <p class="dialog__hint">创建后会进入主题工作台，再从左侧把碎片放进画布。</p>
         <p id="topic-form-error" class="form-error" role="alert" hidden></p>
         <div class="dialog__actions">
           <button id="cancel-topic" class="button button--quiet" type="button">取消</button>
-          <button id="save-topic" class="button button--primary" type="submit">保存主题</button>
+          <button id="save-topic" class="button button--primary" type="submit">创建并进入画布</button>
         </div>
       </form>
     </dialog>
@@ -420,8 +497,8 @@
     <dialog id="delete-topic-dialog" class="dialog">
       <form method="dialog">
         <p class="section-index">危险操作</p>
-        <h2>删除这则主题笔记？</h2>
-        <p>碎片笔记会保留；已经编纂完成的书也会保留自己的内容快照。</p>
+        <h2>删除这幅主题拼图？</h2>
+        <p>碎片纸页会保留；已经编纂完成的书也会保留自己的内容快照。</p>
         <div class="dialog__actions">
           <button class="button button--quiet" value="cancel">取消</button>
           <button id="confirm-delete-topic" class="button button--danger" value="confirm">确认删除</button>

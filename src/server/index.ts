@@ -30,16 +30,19 @@ import {
   getTopic,
   listTopics,
   updateTopic,
+  updateTopicLayout,
 } from "./topics";
 
 const ENTRY_PATH = /^\/api\/entries\/([0-9a-f-]{36})$/;
 const TOPIC_PATH = /^\/api\/topics\/([0-9a-f-]{36})$/;
+const TOPIC_LAYOUT_PATH = /^\/api\/topics\/([0-9a-f-]{36})\/layout$/;
 const BOOK_PATH = /^\/api\/books\/([0-9a-f-]{36})$/;
 const LETTER_OPEN_PATH = /^\/api\/letters\/(\d{1,2})\/open$/;
 
 function routeLabel(pathname: string): string {
   return pathname
     .replace(ENTRY_PATH, "/api/entries/:id")
+    .replace(TOPIC_LAYOUT_PATH, "/api/topics/:id/layout")
     .replace(TOPIC_PATH, "/api/topics/:id")
     .replace(BOOK_PATH, "/api/books/:id")
     .replace(LETTER_OPEN_PATH, "/api/letters/:day/open");
@@ -135,6 +138,21 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       return jsonResponse({ topic }, 201);
     }
     methodNotAllowed(["GET", "POST"]);
+  }
+
+  const topicLayoutId = TOPIC_LAYOUT_PATH.exec(url.pathname)?.[1];
+  if (topicLayoutId) {
+    if (request.method !== "PUT") {
+      methodNotAllowed(["PUT"]);
+    }
+    const user = await requireAuthenticatedUser(request, env);
+    const topic = await updateTopicLayout(
+      env,
+      user.id,
+      topicLayoutId,
+      await readJsonBody(request),
+    );
+    return jsonResponse({ topic });
   }
 
   const topicId = TOPIC_PATH.exec(url.pathname)?.[1];
