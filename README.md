@@ -3,19 +3,6 @@
 
 ---
 
-## 当前开发主线（2026-08）
-
-项目已经完成 **0.1.0 核心闭环**，并进入 **0.2.0 视觉小说场景系统**的本地开发。正式 Web 主线采用 **Cloudflare Workers Static Assets + Worker API + Access + D1**，源码统一位于根目录 [`src/`](src/)。旧 Electron 论文工件由论文标签与发布页冻结，不再复制到活动开发目录。
-
-0.2.0 当前切片把单图房间改造成可配置场景：首次序章后先到门外，通过信箱查看来信、通过门进入房间；书桌、书架和门都先打开统一场景对话。左上角日期、星期和早上/黄昏/深夜来自本机时间。房间和门外已接入分层正式素材；Midjourney 原图由 [`scripts/build-scene-assets.mjs`](scripts/build-scene-assets.mjs) 透明化、裁切、压缩并生成可检查 manifest。素材目录、文件名和替换步骤见 [`src/client/assets/scenes/README.md`](src/client/assets/scenes/README.md)。
-
-- [论文对应的冻结 macOS Release](https://github.com/666feiyu666/Ithaca-Journal/releases/tag/paper-2026-beyond-psychological-reductionism)
-- [论文对应的源码标签](https://github.com/666feiyu666/Ithaca-Journal/tree/paper-2026-beyond-psychological-reductionism)
-- [ResearchGate 论文](https://www.researchgate.net/publication/412164002_Beyond_Psychological_Reductionism_A_Dramatistic_Critique_of_Gamification_and_the_Design_Practice_of_Ithaca_Journal)
-- [Itch.io 冻结原型](https://frank-don.itch.io/ithaca-journal)
-
----
-
 ## 📖 项目源流
 
 **《伊萨卡手记》** 最初是一款融合了**叙事理论**与**游戏化机制**的桌面端日记应用，现在正沿着同一产品目标发展为 Web 应用。
@@ -78,48 +65,6 @@
 * **🧩 叙事合成 (2.0计划)**：
     * **碎片收集**：留心收集散落在城市各处的神秘碎片。
     * **重组解谜**：将碎片重组，你可能会还原出前任房客尘封的故事，拼凑出这个世界背后的真相。
-
----
-
-## 🚀 0.2.0 Web 开发
-
-```powershell
-npm install
-npm run db:migrate:local
-npm run dev
-```
-
-### 重新验收首次流程
-
-本地开发身份已经存在旅程时，可以在标题界面点击“重新体验 0.2.0”（在场景或写作台中显示为“重置测试”），输入 `RESET` 后清除当前本地测试身份的数据。应用会自动回到“开始旅程”，用于重新手动验收序章和完整书写闭环。
-
-该入口只在 `AUTH_MODE=development` 的本地环境中使用；staging 和 production 仍显示正式的账户删除流程。
-
-本地开发使用 localhost 限定的隔离身份，不发送真实邮箱验证码。提交前运行：
-
-```powershell
-npm run check
-npm test
-```
-
-在 `npm run dev` 运行期间，可以另开终端执行完整浏览器闭环验收：
-
-```powershell
-npm run test:visual
-```
-
-它会使用本机无界面的 Chrome/Edge 验证标题界面、序章或继续旅程、门外与房间、对象提示、统一对话、现实时间 HUD、21 天来信、碎片保存、主题整理、编纂成书与返回房间，并覆盖 1024×720、1440×900、1920×1080 三个桌面视口。生成的截图保存在忽略提交的 `.artifacts/visual-review/`。
-
-活动代码目录：
-
-- `src/client/`：Web 界面与静态资产。
-- `src/client/game/`：场景注册表、场景/对话运行时、时间服务与场景配置。
-- `src/server/`：Worker API、身份与 D1 存取。
-- `migrations/`：D1 迁移。
-- `tests/`：Worker 与集成测试。
-- `scripts/visual-smoke.mjs`：不依赖第三方自动化库的本地浏览器闭环验收。
-
-当前隐私边界：正文、主题与成书快照在服务器端可读；应用不把正文写入日志，用户可以导出或删除全部应用数据。面向真实用户测试前必须重新完成隐私评审。
 
 ---
 

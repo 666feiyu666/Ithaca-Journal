@@ -172,12 +172,14 @@ export function createSceneRuntime({
         button.append(visual);
       }
 
-      const marker = document.createElement("span");
-      marker.className = "scene-object__marker";
-      marker.setAttribute("aria-hidden", "true");
-      marker.textContent = sceneObject.placeholderVisual ? sceneObject.label : "";
-      if (sceneObject.placeholderVisual) button.classList.add("scene-object--placeholder");
-      button.append(marker);
+      if (sceneObject.placeholderVisual) {
+        const marker = document.createElement("span");
+        marker.className = "scene-object__marker";
+        marker.setAttribute("aria-hidden", "true");
+        marker.textContent = sceneObject.label;
+        button.classList.add("scene-object--placeholder");
+        button.append(marker);
+      }
 
       button.addEventListener("pointerenter", () => showHint(sceneObject));
       button.addEventListener("pointerleave", () => {
