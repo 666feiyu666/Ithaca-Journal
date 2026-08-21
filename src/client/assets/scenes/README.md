@@ -21,7 +21,5 @@ The committed `room/room-placeholder-v01.png` is retained only as a historical f
 - Backgrounds: WebP, opaque, full source canvas.
 - Interactive objects: tightly cropped transparent PNG with stable padding. Their placement and rendered size are controlled by the scene object's `hitArea`.
 - Use lowercase kebab-case filenames and do not add version suffixes to final files.
-- Keep prompts, source files, and third-party references outside the runtime directory. Only production-cleared exports belong here.
+- Keep prompts, source files, third-party references, and local processing tools outside the runtime directory. Only production-cleared exports belong here.
 - Missing time-of-day variants must fall back to the base asset; do not duplicate the base image for every phase.
-
-Raw Midjourney exports live outside the runtime tree in `art-source/0.2.0/scenes/raw/`. Rebuild and verify the production files with `npm run assets:build` and `npm run assets:check`.

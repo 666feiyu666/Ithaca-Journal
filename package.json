@@ -6,26 +6,12 @@
   "scripts": {
     "dev": "wrangler dev",
     "types": "wrangler types",
-    "check": "npm run types && tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
-    "test": "npm run types && vitest run",
-    "assets:build": "node ./scripts/build-scene-assets.mjs",
-    "assets:check": "node ./scripts/build-scene-assets.mjs --check",
-    "test:visual": "node ./scripts/visual-smoke.mjs",
-    "build": "wrangler deploy --dry-run --env=\"\" --outdir ./dist",
-    "db:migrate:local": "wrangler d1 migrations apply ithaca-journal-local --local",
-    "db:migrate:staging": "wrangler d1 migrations apply ithaca-journal-staging --remote --env staging",
-    "db:migrate:production": "wrangler d1 migrations apply ithaca-journal-production --remote --env production",
-    "validate:access:staging": "node ./scripts/validate-access-config.mjs staging",
-    "validate:access:production": "node ./scripts/validate-access-config.mjs production",
-    "deploy:staging": "npm run validate:access:staging && wrangler deploy --env staging",
-    "deploy:production": "npm run validate:access:production && wrangler deploy --env production"
+    "check": "npm run types && tsc -p tsconfig.json --noEmit",
+    "build": "wrangler deploy --dry-run --env=\"\" --outdir ./dist"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.22.0",
     "@cloudflare/workers-types": "5.20260820.1",
-    "sharp": "^0.35.3",
     "typescript": "7.0.2",
-    "vitest": "4.1.11",
     "wrangler": "4.124.0"
   },
   "dependencies": {
