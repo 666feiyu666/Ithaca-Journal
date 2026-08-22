@@ -25,6 +25,12 @@ import {
 import { completeIntro, enterJourney, getJourney } from "./journey";
 import { listAvailableLetters, openLetter } from "./letters";
 import {
+  exportOwnedPuzzles,
+  listPuzzleShop,
+  purchasePuzzle,
+  setTopicPuzzle,
+} from "./puzzles";
+import {
   createTopic,
   deleteTopic,
   getTopic,
@@ -36,6 +42,8 @@ import {
 const ENTRY_PATH = /^\/api\/entries\/([0-9a-f-]{36})$/;
 const TOPIC_PATH = /^\/api\/topics\/([0-9a-f-]{36})$/;
 const TOPIC_LAYOUT_PATH = /^\/api\/topics\/([0-9a-f-]{36})\/layout$/;
+const TOPIC_PUZZLE_PATH = /^\/api\/topics\/([0-9a-f-]{36})\/puzzle$/;
+const PUZZLE_PURCHASE_PATH = /^\/api\/puzzles\/([a-z0-9-]+)\/purchase$/;
 const BOOK_PATH = /^\/api\/books\/([0-9a-f-]{36})$/;
 const LETTER_OPEN_PATH = /^\/api\/letters\/(\d{1,2})\/open$/;
 
@@ -43,6 +51,8 @@ function routeLabel(pathname: string): string {
   return pathname
     .replace(ENTRY_PATH, "/api/entries/:id")
     .replace(TOPIC_LAYOUT_PATH, "/api/topics/:id/layout")
+    .replace(TOPIC_PUZZLE_PATH, "/api/topics/:id/puzzle")
+    .replace(PUZZLE_PURCHASE_PATH, "/api/puzzles/:id/purchase")
     .replace(TOPIC_PATH, "/api/topics/:id")
     .replace(BOOK_PATH, "/api/books/:id")
     .replace(LETTER_OPEN_PATH, "/api/letters/:day/open");
@@ -140,6 +150,30 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     methodNotAllowed(["GET", "POST"]);
   }
 
+  if (url.pathname === "/api/puzzles") {
+    if (request.method !== "GET") {
+      methodNotAllowed(["GET"]);
+    }
+    const user = await requireAuthenticatedUser(request, env);
+    const topicId = url.searchParams.get("topic_id") ?? "";
+    return jsonResponse({ puzzles: await listPuzzleShop(env, user.id, topicId) });
+  }
+
+  const puzzlePurchaseId = PUZZLE_PURCHASE_PATH.exec(url.pathname)?.[1];
+  if (puzzlePurchaseId) {
+    if (request.method !== "POST") {
+      methodNotAllowed(["POST"]);
+    }
+    const user = await requireAuthenticatedUser(request, env);
+    const payload = await readJsonBody(request);
+    const topicId = requireString(requireRecord(payload), "topic_id");
+    await purchasePuzzle(env, user.id, puzzlePurchaseId, payload);
+    return jsonResponse({
+      topic: await getTopic(env, user.id, topicId),
+      puzzles: await listPuzzleShop(env, user.id, topicId),
+    });
+  }
+
   const topicLayoutId = TOPIC_LAYOUT_PATH.exec(url.pathname)?.[1];
   if (topicLayoutId) {
     if (request.method !== "PUT") {
@@ -153,6 +187,24 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       await readJsonBody(request),
     );
     return jsonResponse({ topic });
+  }
+
+  const topicPuzzleId = TOPIC_PUZZLE_PATH.exec(url.pathname)?.[1];
+  if (topicPuzzleId) {
+    if (request.method !== "PUT") {
+      methodNotAllowed(["PUT"]);
+    }
+    const user = await requireAuthenticatedUser(request, env);
+    await setTopicPuzzle(
+      env,
+      user.id,
+      topicPuzzleId,
+      await readJsonBody(request),
+    );
+    return jsonResponse({
+      topic: await getTopic(env, user.id, topicPuzzleId),
+      puzzles: await listPuzzleShop(env, user.id, topicPuzzleId),
+    });
   }
 
   const topicId = TOPIC_PATH.exec(url.pathname)?.[1];
@@ -224,11 +276,12 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       methodNotAllowed(["GET"]);
     }
     const user = await requireAuthenticatedUser(request, env);
-    const [entries, topicSummaries, books, journey] = await Promise.all([
+    const [entries, topicSummaries, books, journey, puzzles] = await Promise.all([
       exportEntries(env, user.id),
       listTopics(env, user.id),
       exportBooks(env, user.id),
       getJourney(env, user.id),
+      exportOwnedPuzzles(env, user.id),
     ]);
     const topics = await Promise.all(
       topicSummaries.map((topic) => getTopic(env, user.id, topic.id)),
@@ -240,7 +293,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return jsonResponse(
       {
         format: "ithaca-journal-export",
-        version: 2,
+        version: 3,
         exported_at: new Date().toISOString(),
         user: { email: user.email },
         entries,
@@ -248,6 +301,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
         books,
         journey,
         letters,
+        puzzles,
       },
       200,
       { "Content-Disposition": `attachment; filename="${filename}"` },

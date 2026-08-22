@@ -1,4 +1,5 @@
 const MAX_TOPIC_FRAGMENTS = 50;
+const PUZZLE_SLOT_COUNT = 50;
 
 export function clampUnit(value) {
   if (!Number.isFinite(value)) return 0;
@@ -12,7 +13,7 @@ export function shapeVariantFor(seed, fragmentId) {
     hash ^= source.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
-  return Math.abs(hash) % 16;
+  return Math.abs(hash) % PUZZLE_SLOT_COUNT;
 }
 
 export function normalizeTopicFragment(fragment, index = 0, seed = "") {
@@ -25,10 +26,28 @@ export function normalizeTopicFragment(fragment, index = 0, seed = "") {
       : index,
     shape_variant: Number.isInteger(fragment.shape_variant)
       && fragment.shape_variant >= 0
-      && fragment.shape_variant <= 15
+      && fragment.shape_variant < PUZZLE_SLOT_COUNT
       ? fragment.shape_variant
       : shapeVariantFor(seed, fragment.id),
+    is_snapped: fragment.is_snapped === true || fragment.is_snapped === 1,
   };
+}
+
+export function assignPuzzleSlots(fragments, pieceCount) {
+  if (!Number.isInteger(pieceCount) || pieceCount < 1) return fragments;
+  const used = new Set();
+  return [...fragments]
+    .sort((left, right) => left.position - right.position)
+    .map((fragment, position) => {
+      if (position >= pieceCount) return { ...fragment, position };
+      let slot = fragment.shape_variant;
+      if (!Number.isInteger(slot) || slot < 0 || slot >= pieceCount || used.has(slot)) {
+        slot = 0;
+        while (used.has(slot) && slot < pieceCount) slot += 1;
+      }
+      used.add(slot);
+      return { ...fragment, position, shape_variant: slot };
+    });
 }
 
 export function autoArrangeTopicFragments(fragments) {
@@ -60,7 +79,9 @@ export function nextTopicPlacement(count) {
 
 export function toTopicLayoutPayload(fragments) {
   return {
-    items: fragments.map((fragment, position) => ({
+    items: [...fragments]
+      .sort((left, right) => left.position - right.position)
+      .map((fragment, position) => ({
       fragment_id: fragment.id,
       canvas_x: clampUnit(Number(fragment.canvas_x)),
       canvas_y: clampUnit(Number(fragment.canvas_y)),
@@ -68,7 +89,64 @@ export function toTopicLayoutPayload(fragments) {
       shape_variant: Number.isInteger(fragment.shape_variant)
         ? fragment.shape_variant
         : 0,
+      is_snapped: fragment.is_snapped === true,
     })),
+  };
+}
+
+export function puzzleFrame(boardSize, puzzleCanvas) {
+  const margin = Math.min(40, boardSize.width * 0.06, boardSize.height * 0.06);
+  const availableWidth = Math.max(1, boardSize.width - (margin * 2));
+  const availableHeight = Math.max(1, boardSize.height - (margin * 2));
+  const aspectRatio = puzzleCanvas.width / puzzleCanvas.height;
+  const width = Math.min(availableWidth, availableHeight * aspectRatio, 900);
+  const height = width / aspectRatio;
+  return {
+    left: (boardSize.width - width) / 2,
+    top: (boardSize.height - height) / 2,
+    width,
+    height,
+    scale: width / puzzleCanvas.width,
+  };
+}
+
+export function puzzlePieceMetrics(pieceBounds, puzzleCanvas, boardSize) {
+  const frame = puzzleFrame(boardSize, puzzleCanvas);
+  const width = pieceBounds.width * frame.scale;
+  const height = pieceBounds.height * frame.scale;
+  const left = frame.left + ((pieceBounds.x - puzzleCanvas.x) * frame.scale);
+  const top = frame.top + ((pieceBounds.y - puzzleCanvas.y) * frame.scale);
+  return {
+    left,
+    top,
+    width,
+    height,
+    canvas_x: clampUnit(left / Math.max(1, boardSize.width - width)),
+    canvas_y: clampUnit(top / Math.max(1, boardSize.height - height)),
+    scale: frame.scale,
+  };
+}
+
+export function snapPuzzlePlacement(
+  placement,
+  pieceBounds,
+  puzzleCanvas,
+  boardSize,
+) {
+  const target = puzzlePieceMetrics(pieceBounds, puzzleCanvas, boardSize);
+  const candidate = pixelPosition(placement, boardSize, {
+    width: target.width,
+    height: target.height,
+  });
+  const distance = Math.hypot(candidate.left - target.left, candidate.top - target.top);
+  const threshold = Math.min(56, Math.max(28, target.scale * 12));
+  if (distance > threshold) {
+    return { ...placement, is_snapped: false };
+  }
+  return {
+    canvas_x: target.canvas_x,
+    canvas_y: target.canvas_y,
+    is_snapped: true,
   };
 }
 

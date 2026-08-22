@@ -6,6 +6,7 @@ interface TopicSummaryRow {
   created_at: string;
   updated_at: string;
   fragment_count: number;
+  active_puzzle_id: string | null;
 }
 
 interface TopicRow {
@@ -16,6 +17,7 @@ interface TopicRow {
   updated_at: string;
   layout_version: number;
   pattern_seed: string;
+  active_puzzle_id: string | null;
 }
 
 export interface TopicFragmentRow {
@@ -29,6 +31,7 @@ export interface TopicFragmentRow {
   canvas_y: number;
   z_index: number;
   shape_variant: number;
+  is_snapped: number;
 }
 
 export interface TopicDetail extends TopicRow {
@@ -47,9 +50,12 @@ interface TopicLayoutItem {
   canvasY: number;
   zIndex: number;
   shapeVariant: number;
+  isSnapped: boolean;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_TOPIC_FRAGMENTS = 50;
+const PUZZLE_SLOT_COUNT = 50;
 
 function validateTopicPayload(payload: unknown): TopicPayload {
   const record = requireRecord(payload);
@@ -69,7 +75,7 @@ function validateTopicPayload(payload: unknown): TopicPayload {
   if (fragmentIdsValue !== undefined && !Array.isArray(fragmentIdsValue)) {
     throw new ApiError(422, "invalid_fragment_ids", "fragment_ids 必须是数组。");
   }
-  if (Array.isArray(fragmentIdsValue) && fragmentIdsValue.length > 50) {
+  if (Array.isArray(fragmentIdsValue) && fragmentIdsValue.length > MAX_TOPIC_FRAGMENTS) {
     throw new ApiError(422, "too_many_fragments", "一个主题最多整理 50 则碎片笔记。");
   }
   if (
@@ -94,7 +100,7 @@ function validateTopicLayout(payload: unknown): TopicLayoutItem[] {
   if (!Array.isArray(itemsValue)) {
     throw new ApiError(422, "invalid_layout", "items 必须是数组。");
   }
-  if (itemsValue.length > 50) {
+  if (itemsValue.length > MAX_TOPIC_FRAGMENTS) {
     throw new ApiError(422, "too_many_fragments", "一个主题最多整理 50 则碎片笔记。");
   }
 
@@ -105,6 +111,7 @@ function validateTopicLayout(payload: unknown): TopicLayoutItem[] {
     const canvasY = item.canvas_y;
     const zIndex = item.z_index;
     const shapeVariant = item.shape_variant;
+    const isSnapped = item.is_snapped;
 
     if (typeof fragmentId !== "string" || !UUID_PATTERN.test(fragmentId)) {
       throw new ApiError(422, "invalid_fragment_ids", "碎片笔记标识无效。");
@@ -133,11 +140,21 @@ function validateTopicLayout(payload: unknown): TopicLayoutItem[] {
       typeof shapeVariant !== "number"
       || !Number.isInteger(shapeVariant)
       || shapeVariant < 0
-      || shapeVariant > 15
+      || shapeVariant >= PUZZLE_SLOT_COUNT
     ) {
-      throw new ApiError(422, "invalid_shape_variant", "拼图形态必须在 0 到 15 之间。");
+      throw new ApiError(422, "invalid_shape_variant", "拼图形态必须在 0 到 49 之间。");
     }
-    return { fragmentId, canvasX, canvasY, zIndex, shapeVariant };
+    if (isSnapped !== undefined && typeof isSnapped !== "boolean") {
+      throw new ApiError(422, "invalid_snap_state", "拼图吸附状态无效。");
+    }
+    return {
+      fragmentId,
+      canvasX,
+      canvasY,
+      zIndex,
+      shapeVariant,
+      isSnapped: isSnapped === true,
+    };
   });
 
   if (new Set(items.map((item) => item.fragmentId)).size !== items.length) {
@@ -175,6 +192,7 @@ async function requireOwnedFragments(
 export async function listTopics(env: Env, userId: string): Promise<TopicSummaryRow[]> {
   const result = await env.DB.prepare(
     `SELECT topics.id, topics.title, topics.created_at, topics.updated_at,
+            topics.active_puzzle_id,
             COUNT(topic_fragments.fragment_id) AS fragment_count
      FROM topics
      LEFT JOIN topic_fragments ON topic_fragments.topic_id = topics.id
@@ -193,7 +211,8 @@ export async function getTopic(
   topicId: string,
 ): Promise<TopicDetail> {
   const topic = await env.DB.prepare(
-    `SELECT id, title, body, created_at, updated_at, layout_version, pattern_seed
+    `SELECT id, title, body, created_at, updated_at, layout_version, pattern_seed,
+            active_puzzle_id
      FROM topics
      WHERE id = ?1 AND user_id = ?2`,
   )
@@ -208,7 +227,7 @@ export async function getTopic(
             journal_entries.created_at, journal_entries.updated_at,
             topic_fragments.position, topic_fragments.canvas_x,
             topic_fragments.canvas_y, topic_fragments.z_index,
-            topic_fragments.shape_variant
+            topic_fragments.shape_variant, topic_fragments.is_snapped
      FROM topic_fragments
      JOIN journal_entries ON journal_entries.id = topic_fragments.fragment_id
      WHERE topic_fragments.topic_id = ?1 AND journal_entries.user_id = ?2
@@ -240,15 +259,15 @@ export async function createTopic(
     ...initialFragmentIds.map((fragmentId, position) =>
       env.DB.prepare(
         `INSERT INTO topic_fragments
-           (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?3, ?6)`,
+           (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant, is_snapped)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?3, ?6, 0)`,
       ).bind(
         id,
         fragmentId,
         position,
         0.06 + ((position % 4) * 0.30),
         0.08 + (Math.floor(position / 4) * 0.07),
-        position % 16,
+        position % PUZZLE_SLOT_COUNT,
       ),
     ),
   ]);
@@ -280,15 +299,15 @@ export async function updateTopic(
       ...fragmentIds.map((fragmentId, position) =>
         env.DB.prepare(
           `INSERT INTO topic_fragments
-             (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?3, ?6)`,
+             (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant, is_snapped)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?3, ?6, 0)`,
         ).bind(
           topicId,
           fragmentId,
           position,
           0.06 + ((position % 4) * 0.30),
           0.08 + (Math.floor(position / 4) * 0.07),
-          position % 16,
+          position % PUZZLE_SLOT_COUNT,
         ),
       ),
     );
@@ -312,8 +331,8 @@ export async function updateTopicLayout(
     ...items.map((item, position) =>
       env.DB.prepare(
         `INSERT INTO topic_fragments
-           (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+           (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant, is_snapped)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
       ).bind(
         topicId,
         item.fragmentId,
@@ -322,6 +341,7 @@ export async function updateTopicLayout(
         item.canvasY,
         item.zIndex,
         item.shapeVariant,
+        item.isSnapped ? 1 : 0,
       ),
     ),
     env.DB.prepare(

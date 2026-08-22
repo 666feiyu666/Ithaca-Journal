@@ -6,8 +6,7 @@ export const dialogues = Object.freeze({
       { speaker: "我", text: "（拖着行李箱的声音）呼……终于到了。" },
       { speaker: "我", text: "看着手机上的导航，应该就是这里没错了。" },
       { speaker: "我", text: "刚来到这座陌生城市，能找到这个安静的单间，已经很幸运了。" },
-      { speaker: "我", text: "门外是一只旧信箱。房间里只留下了一张书桌和一座旧书架。" },
-      { speaker: "我", text: "先住下来吧。也许，我可以从这里重新开始书写。" },
+      { speaker: "我", text: "总之先住下来吧。" },
     ],
     actionLabel: "开始探索",
   },
@@ -28,7 +27,7 @@ export const dialogues = Object.freeze({
   },
   "doorway.enterRoom": {
     id: "doorway.enterRoom",
-    lines: [{ speaker: "我", text: "钥匙还握在手里。先进去看看吧。" }],
+    lines: [{ speaker: "我", text: "回到房间里吧。" }],
     actionLabel: "进入房间",
   },
   "room.desk": {
@@ -53,7 +52,7 @@ export const dialogues = Object.freeze({
   },
   "room.leave": {
     id: "room.leave",
-    lines: [{ speaker: "我", text: "门外还有那只旧信箱。" }],
+    lines: [{ speaker: "我", text: "要去检查一下信箱吗？" }],
     actionLabel: "走到门外",
   },
 });

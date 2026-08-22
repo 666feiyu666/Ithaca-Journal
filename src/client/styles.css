@@ -831,6 +831,19 @@ a {
   flex: 0 0 auto;
 }
 
+.active-puzzle-label {
+  max-width: 11rem;
+  overflow: hidden;
+  padding: 0.38rem 0.55rem;
+  border: 1px solid rgba(179, 77, 46, 0.28);
+  color: var(--rust-700);
+  background: rgba(255, 250, 240, 0.72);
+  font-family: var(--reading-font);
+  font-size: 0.67rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .topic-workspace {
   height: calc(100% - 7.55rem);
   min-height: 24rem;
@@ -1100,7 +1113,7 @@ a {
 .topic-piece {
   position: absolute;
   width: 14rem;
-  min-height: 9.5rem;
+  height: 10.5rem;
   display: flex;
   flex-direction: column;
   padding: 1rem 1.05rem 0.85rem;
@@ -1113,12 +1126,76 @@ a {
   user-select: none;
 }
 
+.topic-piece--mapped {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    left 180ms ease-out,
+    top 180ms ease-out,
+    filter var(--ease);
+}
+
+.topic-piece--mapped > :not(.topic-piece__shape) {
+  display: none;
+}
+
+.topic-piece--waiting::after {
+  content: "等待更大拼图";
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.55rem;
+  color: rgba(120, 91, 57, 0.58);
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.topic-piece__shape {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 10px 12px rgba(34, 27, 24, 0.2));
+  pointer-events: none;
+}
+
+.topic-piece__outline {
+  fill: none;
+  stroke: rgba(255, 250, 240, 0.94);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  transition: stroke var(--ease), stroke-width var(--ease);
+}
+
 .topic-piece:hover,
 .topic-piece:focus-visible {
   z-index: 100 !important;
   border-color: var(--rust-600);
   outline: none;
-  box-shadow: 0 15px 30px rgba(58, 43, 28, 0.18);
+}
+
+.topic-piece--mapped:hover,
+.topic-piece--mapped:focus-visible {
+  border-color: transparent;
+}
+
+.topic-piece:hover .topic-piece__shape,
+.topic-piece:focus-visible .topic-piece__shape {
+  filter: drop-shadow(0 15px 15px rgba(58, 43, 28, 0.2));
+}
+
+.topic-piece:hover .topic-piece__outline,
+.topic-piece:focus-visible .topic-piece__outline {
+  stroke: var(--rust-600);
+  stroke-width: 2.8;
+}
+
+.topic-piece--snapped .topic-piece__shape {
+  filter: drop-shadow(0 4px 5px rgba(34, 27, 24, 0.12));
 }
 
 .topic-piece:active {
@@ -1186,6 +1263,145 @@ a {
 
 .topic-layout-busy #topic-layout-state {
   color: var(--rust-700);
+}
+
+.puzzle-shop-dialog {
+  width: min(58rem, calc(100vw - 2rem));
+  max-height: min(48rem, calc(100svh - 2rem));
+  padding: 0;
+  overflow: auto;
+}
+
+.puzzle-shop-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.puzzle-shop-dialog__context {
+  padding: 0.7rem 0.85rem;
+  border-left: 2px solid var(--rust-600);
+  background: var(--paper-200);
+  font-family: var(--reading-font);
+  font-size: 0.83rem;
+}
+
+.puzzle-shop-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.puzzle-product-card {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 8.5rem;
+  padding: 1rem;
+  border: 1px solid var(--paper-400);
+  background: rgba(255, 250, 240, 0.72);
+}
+
+.puzzle-product-card[data-state="active"] {
+  border-color: var(--rust-600);
+  box-shadow: inset 3px 0 0 var(--rust-600);
+}
+
+.puzzle-product-card[data-state="locked"] {
+  background: rgba(238, 229, 215, 0.62);
+}
+
+.puzzle-product-preview {
+  width: 10rem;
+  height: 6rem;
+  padding: 0.35rem;
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255, 216, 151, 0.92), transparent 28%),
+    linear-gradient(160deg, #f1c9b8 0%, #d8917f 56%, #9c6b78 100%);
+}
+
+.puzzle-product-preview path {
+  fill: rgba(255, 250, 240, 0.12);
+  stroke: rgba(255, 250, 240, 0.92);
+  stroke-width: 0.8;
+}
+
+.puzzle-product-card__loose-preview {
+  width: 10rem;
+  height: 6rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cdbb9f;
+  color: var(--ink-500);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 19px, rgba(102, 83, 57, 0.08) 20px),
+    #fffaf0;
+  font-family: var(--reading-font);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+}
+
+.puzzle-product-card__copy {
+  min-width: 0;
+}
+
+.puzzle-product-card__copy h3 {
+  margin: 0;
+  font-family: var(--reading-font);
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.puzzle-product-card__copy p {
+  margin: 0.38rem 0 0 !important;
+  font-size: 0.76rem;
+}
+
+.puzzle-product-card__copy small {
+  display: block;
+  margin-top: 0.55rem;
+  color: var(--rust-700);
+  font-size: 0.67rem;
+}
+
+.puzzle-product-card__action {
+  min-width: 8.4rem;
+}
+
+.puzzle-shop-dialog__note {
+  color: var(--ink-500) !important;
+  font-size: 0.69rem;
+}
+
+.piece-detail-dialog {
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: min(44rem, calc(100svh - 2rem));
+  padding: 0;
+  overflow: auto;
+}
+
+.piece-detail-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.piece-detail-dialog__body {
+  min-height: 12rem;
+  max-height: 55vh;
+  padding: 1.4rem 1.5rem;
+  overflow-y: auto;
+  border: 1px solid var(--paper-400);
+  color: var(--ink-900);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(102, 83, 57, 0.07) 32px),
+    #fffaf0;
+  font-family: var(--reading-font);
+  font-size: 0.95rem;
+  line-height: 2;
+  white-space: pre-wrap;
 }
 
 .dialog__hint {
@@ -2445,6 +2661,21 @@ html[data-time-mode="day"] .title-link:hover {
 }
 
 @media (max-width: 850px) {
+  .puzzle-product-card {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+  }
+
+  .puzzle-product-preview,
+  .puzzle-product-card__loose-preview {
+    width: 7.5rem;
+    height: 4.8rem;
+  }
+
+  .puzzle-product-card__action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .auth-shell {
     grid-template-columns: 1fr;
   }
@@ -2638,6 +2869,28 @@ html[data-time-mode="day"] .title-link:hover {
 }
 
 @media (max-width: 520px) {
+  .puzzle-shop-dialog form {
+    padding: 1.15rem;
+  }
+
+  .puzzle-shop-dialog__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .puzzle-product-card {
+    grid-template-columns: 1fr;
+  }
+
+  .puzzle-product-preview,
+  .puzzle-product-card__loose-preview {
+    width: 100%;
+  }
+
+  .puzzle-product-card__action {
+    grid-column: auto;
+  }
+
   .auth-brand__copy {
     font-size: 0.92rem;
   }

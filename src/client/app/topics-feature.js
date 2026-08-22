@@ -1,16 +1,25 @@
 import { formatDate } from "./format.js";
 import {
+  createPuzzlePreview,
+  createPuzzleShape,
+  fitPuzzleShapes,
+} from "./puzzle-shape.js";
+import {
+  assignPuzzleSlots,
   autoArrangeTopicFragments,
   nextTopicPlacement,
   normalizeTopicFragment,
   pixelPosition,
   placementFromPointer,
+  puzzlePieceMetrics,
   shapeVariantFor,
+  snapPuzzlePlacement,
   toTopicLayoutPayload,
 } from "./topic-layout.js";
+import { puzzleDefinitionFor } from "../config/puzzles.js";
 
 const TOPIC_DRAG_TYPE = "application/x-ithaca-topic-fragment";
-const PIECE_SIZE = Object.freeze({ width: 224, height: 152 });
+const PIECE_SIZE = Object.freeze({ width: 224, height: 168 });
 
 export function setTopicDragAvailability(root, busy) {
   for (const piece of root.querySelectorAll(".topic-piece")) {
@@ -62,6 +71,9 @@ export function createTopicsFeature({
   openTopicDirectory = () => {},
 }) {
   let resizeFrame = 0;
+  let puzzleShop = [];
+  let puzzleShopBusy = false;
+  let detailFragmentId = "";
 
   function setTopicFormError(message = "") {
     refs.topicFormError.textContent = message;
@@ -86,8 +98,9 @@ export function createTopicsFeature({
     state.topicLayoutBusy = busy;
     refs.topicPanel.classList.toggle("topic-layout-busy", busy);
     refs.autoArrangeTopicButton.disabled = busy || (state.currentTopic?.fragments.length ?? 0) < 2;
+    refs.openPuzzleShopButton.disabled = busy;
     for (const button of refs.topicPanel.querySelectorAll(
-      ".topic-tray-card__add, .topic-piece__remove",
+      ".topic-tray-card__add, .topic-piece__remove, .puzzle-product-card__action",
     )) {
       button.disabled = busy;
     }
@@ -98,21 +111,40 @@ export function createTopicsFeature({
     const boardWidth = refs.topicBoard.clientWidth;
     const boardHeight = refs.topicBoard.clientHeight;
     if (!boardWidth || !boardHeight || !state.currentTopic) return;
+    const boardSize = { width: boardWidth, height: boardHeight };
+    const activePuzzle = puzzleDefinitionFor(state.currentTopic.active_puzzle_id);
     const fragments = new Map(
       state.currentTopic.fragments.map((fragment) => [fragment.id, fragment]),
     );
     for (const piece of refs.topicPieceLayer.children) {
       const fragment = fragments.get(piece.dataset.fragmentId);
       if (!fragment) continue;
-      const position = pixelPosition(
-        fragment,
-        { width: boardWidth, height: boardHeight },
-        PIECE_SIZE,
-      );
+      const puzzlePiece = activePuzzle && fragment.position < activePuzzle.pieceCount
+        ? activePuzzle.pieces[fragment.shape_variant]
+        : null;
+      let pieceSize = PIECE_SIZE;
+      let position;
+      if (puzzlePiece) {
+        const metrics = puzzlePieceMetrics(
+          puzzlePiece.bounds,
+          activePuzzle.canvas,
+          boardSize,
+        );
+        pieceSize = { width: metrics.width, height: metrics.height };
+        piece.style.width = `${metrics.width}px`;
+        piece.style.height = `${metrics.height}px`;
+        position = fragment.is_snapped
+          ? metrics
+          : pixelPosition(fragment, boardSize, pieceSize);
+        piece.classList.toggle("topic-piece--snapped", fragment.is_snapped);
+      } else {
+        position = pixelPosition(fragment, boardSize, pieceSize);
+      }
       piece.style.left = `${position.left}px`;
       piece.style.top = `${position.top}px`;
       piece.style.zIndex = String(fragment.z_index + 1);
     }
+    fitPuzzleShapes(refs.topicPieceLayer);
   }
 
   function schedulePiecePositioning() {
@@ -186,24 +218,33 @@ export function createTopicsFeature({
 
   function renderBoard() {
     const fragments = state.currentTopic?.fragments ?? [];
+    const activePuzzle = puzzleDefinitionFor(state.currentTopic?.active_puzzle_id);
     refs.topicBoardEmpty.hidden = fragments.length !== 0;
     refs.topicPieceLayer.replaceChildren();
 
     for (const fragment of fragments) {
+      const mapped = Boolean(activePuzzle && fragment.position < activePuzzle.pieceCount);
       const piece = document.createElement("article");
       piece.className = "topic-piece";
+      piece.classList.toggle("topic-piece--mapped", mapped);
+      piece.classList.toggle("topic-piece--waiting", Boolean(activePuzzle && !mapped));
       piece.dataset.fragmentId = fragment.id;
       piece.tabIndex = 0;
       piece.draggable = true;
+      piece.title = mapped ? "拖动拼接；双击查看这则碎片" : "拖动纸页；双击查看全文";
       piece.setAttribute(
         "aria-label",
-        `${fragment.title || "没有题目的纸页"}。可拖动，或使用方向键调整位置。`,
+        `${fragment.title || "没有题目的纸页"}。${mapped ? "已映射为拼片。" : "仍是散页。"}可拖动，或使用方向键调整位置。`,
       );
+
+      const shape = mapped
+        ? createPuzzleShape(activePuzzle.id, fragment.shape_variant)
+        : null;
 
       const folio = document.createElement("div");
       folio.className = "topic-piece__folio";
       const type = document.createElement("span");
-      type.textContent = "LOOSE NOTE";
+      type.textContent = mapped ? "STORY PIECE" : "LOOSE NOTE";
       const index = document.createElement("span");
       index.textContent = String(fragment.position + 1).padStart(2, "0");
       folio.append(type, index);
@@ -231,7 +272,16 @@ export function createTopicsFeature({
         writeDragData(event, { source: "board", fragmentId: fragment.id });
       });
       piece.addEventListener("dragend", clearDropStates);
+      piece.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        openPieceDetail(fragment);
+      });
       piece.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          openPieceDetail(fragment);
+          return;
+        }
         const movement = {
           ArrowLeft: [-1, 0],
           ArrowRight: [1, 0],
@@ -241,13 +291,24 @@ export function createTopicsFeature({
         if (!movement || state.topicLayoutBusy) return;
         event.preventDefault();
         const step = event.shiftKey ? 0.1 : 0.025;
+        const puzzlePiece = activePuzzle?.pieces[fragment.shape_variant];
+        const snappedMetrics = fragment.is_snapped && puzzlePiece
+          ? puzzlePieceMetrics(
+            puzzlePiece.bounds,
+            activePuzzle.canvas,
+            {
+              width: refs.topicBoard.clientWidth,
+              height: refs.topicBoard.clientHeight,
+            },
+          )
+          : null;
         void moveFragmentInTopic(fragment.id, {
-          canvas_x: fragment.canvas_x + (movement[0] * step),
-          canvas_y: fragment.canvas_y + (movement[1] * step),
+          canvas_x: (snappedMetrics?.canvas_x ?? fragment.canvas_x) + (movement[0] * step),
+          canvas_y: (snappedMetrics?.canvas_y ?? fragment.canvas_y) + (movement[1] * step),
         });
       });
 
-      piece.append(folio, title, excerpt, removeButton);
+      piece.append(...(shape ? [shape] : []), folio, title, excerpt, removeButton);
       refs.topicPieceLayer.append(piece);
     }
     schedulePiecePositioning();
@@ -257,14 +318,190 @@ export function createTopicsFeature({
     renderTray();
     renderBoard();
     const count = state.currentTopic?.fragments.length ?? 0;
-    refs.topicMappingGate.textContent = count === 0
-      ? "先放入笔记。达到设定数量后，才会开放 Placeholder 映射与拼图阶段。"
-      : `当前已摆放 ${count} 则笔记；它们仍处于整理阶段，尚未转化为拼图片。`;
+    const activePuzzle = puzzleDefinitionFor(state.currentTopic?.active_puzzle_id);
+    refs.activePuzzleLabel.textContent = activePuzzle?.title ?? "散页模式";
+    refs.autoArrangeTopicButton.textContent = activePuzzle ? "自动拼合" : "自动整理";
+    if (!activePuzzle) {
+      refs.topicMappingGate.textContent = count === 0
+        ? "先放入碎片笔记，再去商店查看可以兑换的拼图。"
+        : `画布已有 ${count} 则碎片；数量是兑换门槛，文字不会被消耗。`;
+    } else {
+      const mappedCount = Math.min(count, activePuzzle.pieceCount);
+      const snappedCount = state.currentTopic.fragments
+        .filter((fragment) => fragment.position < activePuzzle.pieceCount && fragment.is_snapped)
+        .length;
+      const waitingCount = Math.max(0, count - activePuzzle.pieceCount);
+      refs.topicMappingGate.textContent = waitingCount
+        ? `${activePuzzle.title}已吸附 ${snappedCount} / ${mappedCount} 片；另外 ${waitingCount} 则仍作为散页保留。`
+        : `${activePuzzle.title}已吸附 ${snappedCount} / ${mappedCount} 片。拖近正确位置会自动扣合。`;
+    }
     setLayoutBusy(state.topicLayoutBusy);
+  }
+
+  function openPieceDetail(fragment) {
+    detailFragmentId = fragment.id;
+    refs.pieceDetailTitle.textContent = fragment.title || "没有题目的纸页";
+    refs.pieceDetailMeta.textContent = `第 ${fragment.position + 1} 则 · ${formatDate(fragment.updated_at)}`;
+    refs.pieceDetailBody.textContent = fragment.body || fragment.excerpt || "这张纸上还没有正文。";
+    refs.pieceDetailDialog.showModal();
+  }
+
+  function renderPuzzleShop() {
+    const count = state.currentTopic?.fragments.length ?? 0;
+    refs.puzzleShopContext.textContent = puzzleShopBusy
+      ? "正在清点画布与已经拥有的拼图……"
+      : `当前主题画布有 ${count} 则碎片笔记。`;
+    refs.puzzleShopList.replaceChildren();
+
+    const looseCard = document.createElement("article");
+    looseCard.className = "puzzle-product-card puzzle-product-card--loose";
+    looseCard.setAttribute("role", "listitem");
+    const looseVisual = document.createElement("div");
+    looseVisual.className = "puzzle-product-card__loose-preview";
+    looseVisual.setAttribute("aria-hidden", "true");
+    looseVisual.textContent = "散页";
+    const looseCopy = document.createElement("div");
+    looseCopy.className = "puzzle-product-card__copy";
+    const looseTitle = document.createElement("h3");
+    looseTitle.textContent = "散页画布";
+    const looseDescription = document.createElement("p");
+    looseDescription.textContent = "保留自由摆放的纸页，不套用任何拼图轮廓。";
+    const looseState = document.createElement("small");
+    looseState.textContent = state.currentTopic?.active_puzzle_id ? "随时可以切回" : "当前正在使用";
+    looseCopy.append(looseTitle, looseDescription, looseState);
+    const looseButton = document.createElement("button");
+    looseButton.type = "button";
+    looseButton.className = "button button--quiet puzzle-product-card__action";
+    looseButton.textContent = state.currentTopic?.active_puzzle_id ? "切回散页" : "使用中";
+    looseButton.disabled = puzzleShopBusy || !state.currentTopic?.active_puzzle_id;
+    looseButton.addEventListener("click", () => void activatePuzzle(null));
+    looseCard.append(looseVisual, looseCopy, looseButton);
+    refs.puzzleShopList.append(looseCard);
+
+    for (const product of puzzleShop) {
+      const card = document.createElement("article");
+      card.className = "puzzle-product-card";
+      card.dataset.state = product.active
+        ? "active"
+        : product.owned
+          ? "owned"
+          : product.eligible
+            ? "eligible"
+            : "locked";
+      card.setAttribute("role", "listitem");
+
+      const preview = createPuzzlePreview(product.id);
+      if (preview) card.append(preview);
+      const copy = document.createElement("div");
+      copy.className = "puzzle-product-card__copy";
+      const title = document.createElement("h3");
+      title.textContent = product.title;
+      const description = document.createElement("p");
+      description.textContent = product.description;
+      const progress = document.createElement("small");
+      if (product.active) {
+        progress.textContent = "已经拥有 · 当前主题使用中";
+      } else if (product.owned) {
+        progress.textContent = "已经拥有 · 可以随时切换";
+      } else if (product.eligible) {
+        progress.textContent = `${count} / ${product.piece_count} · 已达到兑换条件`;
+      } else {
+        progress.textContent = `${count} / ${product.piece_count} · 还差 ${product.remaining_fragments} 则`;
+      }
+      copy.append(title, description, progress);
+
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "button button--primary puzzle-product-card__action";
+      action.disabled = puzzleShopBusy || product.active || (!product.owned && !product.eligible);
+      action.textContent = product.active
+        ? "使用中"
+        : product.owned
+          ? "使用这套"
+          : product.eligible
+            ? `兑换并使用 ${product.piece_count} 片`
+            : `还差 ${product.remaining_fragments} 则`;
+      action.addEventListener("click", () => {
+        if (product.owned) void activatePuzzle(product.id);
+        else void purchasePuzzleProduct(product.id);
+      });
+      card.append(copy, action);
+      refs.puzzleShopList.append(card);
+    }
+  }
+
+  async function loadPuzzleShop({ reportError = false } = {}) {
+    if (!state.currentTopic?.id) return;
+    const topicId = state.currentTopic.id;
+    try {
+      const data = await api(`/api/puzzles?topic_id=${encodeURIComponent(topicId)}`);
+      if (state.currentTopic?.id !== topicId) return;
+      puzzleShop = data.puzzles;
+      renderPuzzleShop();
+    } catch (error) {
+      if (reportError) handleError(error, "无法打开拼图商店。");
+    }
+  }
+
+  async function openPuzzleShop() {
+    if (!state.currentTopic?.id || puzzleShopBusy) return;
+    refs.puzzleShopDialog.showModal();
+    puzzleShopBusy = true;
+    renderPuzzleShop();
+    await loadPuzzleShop({ reportError: true });
+    puzzleShopBusy = false;
+    renderPuzzleShop();
+  }
+
+  async function applyPuzzleChange(request, message) {
+    if (!state.currentTopic?.id || puzzleShopBusy) return;
+    puzzleShopBusy = true;
+    setLayoutBusy(true);
+    renderPuzzleShop();
+    try {
+      const data = await request();
+      state.currentTopic = normalizeTopic(data.topic);
+      puzzleShop = data.puzzles;
+      await loadTopics();
+      renderWorkspace();
+      renderPuzzleShop();
+      showMessage(message);
+    } catch (error) {
+      handleError(error, "无法切换这套拼图。");
+    } finally {
+      puzzleShopBusy = false;
+      setLayoutBusy(false);
+      renderPuzzleShop();
+    }
+  }
+
+  async function purchasePuzzleProduct(puzzleId) {
+    const topicId = state.currentTopic?.id;
+    if (!topicId) return;
+    await applyPuzzleChange(
+      () => api(`/api/puzzles/${puzzleId}/purchase`, {
+        method: "POST",
+        body: JSON.stringify({ topic_id: topicId }),
+      }),
+      "拼图已经永久收藏，并应用到当前主题。",
+    );
+  }
+
+  async function activatePuzzle(puzzleId) {
+    const topicId = state.currentTopic?.id;
+    if (!topicId) return;
+    await applyPuzzleChange(
+      () => api(`/api/topics/${topicId}/puzzle`, {
+        method: "PUT",
+        body: JSON.stringify({ puzzle_id: puzzleId }),
+      }),
+      puzzleId ? "已经切换到这套拼图。" : "已经切回散页画布。",
+    );
   }
 
   function showTopic(topic) {
     state.currentTopic = normalizeTopic(topic);
+    puzzleShop = [];
     state.dirty = false;
     state.workbenchMode = "topics";
     closeTopicDirectory();
@@ -278,6 +515,7 @@ export function createTopicsFeature({
     refs.topicBody.textContent = topic.body || "还没有写下主题说明；可以先在画布上看看这些碎片如何靠近。";
     setLayoutState("布局已保存");
     renderWorkspace();
+    void loadPuzzleShop();
     renderList();
   }
 
@@ -355,6 +593,7 @@ export function createTopicsFeature({
       });
       state.currentTopic = normalizeTopic(data.topic);
       await loadTopics();
+      await loadPuzzleShop();
       setLayoutState("布局已自动保存");
       renderWorkspace();
       if (focusId) focusPiece(focusId);
@@ -383,15 +622,22 @@ export function createTopicsFeature({
     }
     const previous = state.currentTopic.fragments;
     const defaultPlacement = nextTopicPlacement(previous.length);
+    const activePuzzle = puzzleDefinitionFor(state.currentTopic.active_puzzle_id);
     const nextFragment = normalizeTopicFragment({
       ...source,
       body: source.body ?? source.excerpt ?? "",
       ...defaultPlacement,
       ...placement,
       position: previous.length,
-      shape_variant: shapeVariantFor(state.currentTopic.pattern_seed, source.id),
+      shape_variant: activePuzzle
+        ? previous.length % activePuzzle.pieceCount
+        : shapeVariantFor(state.currentTopic.pattern_seed, source.id),
+      is_snapped: false,
     }, previous.length, state.currentTopic.pattern_seed);
-    await persistLayout([...previous, nextFragment], previous, fragmentId);
+    const next = activePuzzle
+      ? assignPuzzleSlots([...previous, nextFragment], activePuzzle.pieceCount)
+      : [...previous, nextFragment];
+    await persistLayout(next, previous, fragmentId);
   }
 
   async function moveFragmentInTopic(fragmentId, placement) {
@@ -400,7 +646,12 @@ export function createTopicsFeature({
     const highestZ = previous.reduce((maximum, fragment) => Math.max(maximum, fragment.z_index), 0);
     const next = previous.map((fragment) => (
       fragment.id === fragmentId
-        ? normalizeTopicFragment({ ...fragment, ...placement, z_index: highestZ + 1 })
+        ? normalizeTopicFragment({
+          ...fragment,
+          ...placement,
+          is_snapped: placement.is_snapped === true,
+          z_index: highestZ + 1,
+        })
         : fragment
     ));
     await persistLayout(next, previous, fragmentId);
@@ -409,17 +660,44 @@ export function createTopicsFeature({
   async function removeFragmentFromTopic(fragmentId) {
     if (!state.currentTopic) return;
     const previous = state.currentTopic.fragments;
-    const next = previous
+    const activePuzzle = puzzleDefinitionFor(state.currentTopic.active_puzzle_id);
+    const remaining = previous
       .filter((fragment) => fragment.id !== fragmentId)
+      .sort((left, right) => left.position - right.position)
       .map((fragment, position) => ({ ...fragment, position }));
+    const next = activePuzzle
+      ? assignPuzzleSlots(remaining, activePuzzle.pieceCount)
+      : remaining;
     await persistLayout(next, previous);
   }
 
   async function autoArrangeCurrentTopic() {
     if (!state.currentTopic || state.currentTopic.fragments.length < 2) return;
     const previous = state.currentTopic.fragments;
-    const next = autoArrangeTopicFragments(previous)
-      .map((fragment, position) => ({ ...fragment, position }));
+    const activePuzzle = puzzleDefinitionFor(state.currentTopic.active_puzzle_id);
+    const next = activePuzzle
+      ? assignPuzzleSlots(previous, activePuzzle.pieceCount).map((fragment) => {
+        const piece = fragment.position < activePuzzle.pieceCount
+          ? activePuzzle.pieces[fragment.shape_variant]
+          : null;
+        if (!piece) return { ...fragment, is_snapped: false };
+        const metrics = puzzlePieceMetrics(
+          piece.bounds,
+          activePuzzle.canvas,
+          {
+            width: refs.topicBoard.clientWidth,
+            height: refs.topicBoard.clientHeight,
+          },
+        );
+        return {
+          ...fragment,
+          canvas_x: metrics.canvas_x,
+          canvas_y: metrics.canvas_y,
+          is_snapped: true,
+        };
+      })
+      : autoArrangeTopicFragments(previous)
+        .map((fragment, position) => ({ ...fragment, position, is_snapped: false }));
     await persistLayout(next, previous);
   }
 
@@ -448,12 +726,38 @@ export function createTopicsFeature({
       const placement = placementFromPointer(
         event,
         refs.topicBoard.getBoundingClientRect(),
-        PIECE_SIZE,
+        payload.source === "board"
+          ? (() => {
+            const element = refs.topicPieceLayer.querySelector(
+              `[data-fragment-id="${CSS.escape(payload.fragmentId)}"]`,
+            );
+            return element
+              ? { width: element.offsetWidth, height: element.offsetHeight }
+              : PIECE_SIZE;
+          })()
+          : PIECE_SIZE,
       );
       if (payload.source === "tray") {
         void addFragmentToTopic(payload.fragmentId, placement);
       } else {
-        void moveFragmentInTopic(payload.fragmentId, placement);
+        const fragment = state.currentTopic?.fragments
+          .find(({ id }) => id === payload.fragmentId);
+        const activePuzzle = puzzleDefinitionFor(state.currentTopic?.active_puzzle_id);
+        const puzzlePiece = fragment && activePuzzle && fragment.position < activePuzzle.pieceCount
+          ? activePuzzle.pieces[fragment.shape_variant]
+          : null;
+        const resolvedPlacement = puzzlePiece
+          ? snapPuzzlePlacement(
+            placement,
+            puzzlePiece.bounds,
+            activePuzzle.canvas,
+            {
+              width: refs.topicBoard.clientWidth,
+              height: refs.topicBoard.clientHeight,
+            },
+          )
+          : { ...placement, is_snapped: false };
+        void moveFragmentInTopic(payload.fragmentId, resolvedPlacement);
       }
     });
 
@@ -503,9 +807,15 @@ export function createTopicsFeature({
 
   function bindEvents() {
     refs.editTopicButton.addEventListener("click", () => openTopicDialog(state.currentTopic));
+    refs.openPuzzleShopButton.addEventListener("click", () => void openPuzzleShop());
     refs.autoArrangeTopicButton.addEventListener("click", () => void autoArrangeCurrentTopic());
     refs.deleteTopicButton.addEventListener("click", () => refs.deleteTopicDialog.showModal());
     refs.confirmDeleteTopic.addEventListener("click", () => void removeCurrentTopic());
+    refs.pieceDetailRemove.addEventListener("click", () => {
+      const fragmentId = detailFragmentId;
+      refs.pieceDetailDialog.close();
+      if (fragmentId) void removeFragmentFromTopic(fragmentId);
+    });
     refs.topicForm.addEventListener("submit", (event) => void saveTopic(event));
     refs.cancelTopic.addEventListener("click", () => refs.topicDialog.close());
     bindCanvasEvents();
