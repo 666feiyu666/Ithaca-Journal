@@ -10,6 +10,7 @@ export function createJourneyFeature({
   showTitle,
   showScene,
   showIntro,
+  ensurePrivacy,
   handleError,
 }) {
   async function enterCurrentJourney() {
@@ -89,6 +90,7 @@ export function createJourneyFeature({
     setBusy(true);
     try {
       const session = await api("/api/session");
+      await ensurePrivacy(session.user);
       const journeyData = await api("/api/journey");
       showTitle(session.user, journeyData.journey);
     } catch (error) {

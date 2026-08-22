@@ -61,6 +61,7 @@ export function createTopicsFeature({
   state,
   refs,
   api,
+  vault,
   setBusy,
   renderList,
   showEmptyEditor,
@@ -460,7 +461,7 @@ export function createTopicsFeature({
     renderPuzzleShop();
     try {
       const data = await request();
-      state.currentTopic = normalizeTopic(data.topic);
+      state.currentTopic = normalizeTopic(await vault.openTopic(data.topic));
       puzzleShop = data.puzzles;
       await loadTopics();
       renderWorkspace();
@@ -521,7 +522,7 @@ export function createTopicsFeature({
 
   async function loadTopics() {
     const data = await api("/api/topics");
-    state.topics = data.topics;
+    state.topics = await Promise.all(data.topics.map((topic) => vault.openTopic(topic)));
     state.topicsLoaded = true;
     renderList();
   }
@@ -533,7 +534,7 @@ export function createTopicsFeature({
     setBusy(true);
     try {
       const data = await api(`/api/topics/${topicId}`);
-      showTopic(data.topic);
+      showTopic(await vault.openTopic(data.topic));
     } catch (error) {
       handleError(error, "无法打开这则主题笔记。");
     } finally {
@@ -557,21 +558,27 @@ export function createTopicsFeature({
     if (state.busy) return;
     setBusy(true);
     setTopicFormError();
-    const topicId = refs.topicId.value;
+    const existingTopicId = refs.topicId.value;
+    const topicId = existingTopicId || crypto.randomUUID();
     try {
-      const data = await api(topicId ? `/api/topics/${topicId}` : "/api/topics", {
-        method: topicId ? "PUT" : "POST",
+      const sealedPayload = await vault.seal("topic", topicId, {
+        title: refs.topicTitleInput.value.trim(),
+        body: refs.topicBodyInput.value,
+      });
+      const data = await api(existingTopicId ? `/api/topics/${topicId}` : "/api/topics", {
+        method: existingTopicId ? "PUT" : "POST",
         body: JSON.stringify({
-          title: refs.topicTitleInput.value,
-          body: refs.topicBodyInput.value,
+          ...(existingTopicId ? {} : { id: topicId }),
+          sealed_payload: sealedPayload,
         }),
       });
+      const topic = await vault.openTopic(data.topic);
       refs.topicDialog.close();
       state.workbenchMode = "topics";
-      state.currentTopic = data.topic;
+      state.currentTopic = topic;
       await loadTopics();
-      showTopic(data.topic);
-      showMessage(topicId ? "主题说明已经更新。" : "主题已经建立，从左侧取一张碎片开始吧。");
+      showTopic(topic);
+      showMessage(existingTopicId ? "主题说明已经更新。" : "主题已经建立，从左侧取一张碎片开始吧。");
     } catch (error) {
       setTopicFormError(error instanceof Error ? error.message : "无法保存主题。");
     } finally {
@@ -591,7 +598,7 @@ export function createTopicsFeature({
         method: "PUT",
         body: JSON.stringify(toTopicLayoutPayload(nextFragments)),
       });
-      state.currentTopic = normalizeTopic(data.topic);
+      state.currentTopic = normalizeTopic(await vault.openTopic(data.topic));
       await loadTopics();
       await loadPuzzleShop();
       setLayoutState("布局已自动保存");
@@ -792,7 +799,7 @@ export function createTopicsFeature({
       await loadTopics();
       if (state.topics[0]) {
         const data = await api(`/api/topics/${state.topics[0].id}`);
-        showTopic(data.topic);
+        showTopic(await vault.openTopic(data.topic));
       } else {
         showEmptyEditor();
         openTopicDirectory();

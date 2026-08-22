@@ -1,10 +1,11 @@
-import { ApiClientError } from "./api-client.js";
 import { formatDate } from "./format.js";
 
 export function createEntriesFeature({
   state,
   refs,
   api,
+  vault,
+  exportPlaintext,
   setBusy,
   updateActions,
   renderList,
@@ -72,7 +73,7 @@ export function createEntriesFeature({
 
   async function loadEntries() {
     const data = await api("/api/entries");
-    state.entries = data.entries;
+    state.entries = await Promise.all(data.entries.map((entry) => vault.openEntry(entry)));
     state.entriesLoaded = true;
     renderList();
   }
@@ -86,7 +87,7 @@ export function createEntriesFeature({
     updateSaveState("正在打开…", "saved");
     try {
       const data = await api(`/api/entries/${entryId}`);
-      showEditor(data.entry, { expanded: true });
+      showEditor(await vault.openEntry(data.entry), { expanded: true });
     } catch (error) {
       handleError(error, "无法打开这则碎片笔记。");
     } finally {
@@ -108,25 +109,32 @@ export function createEntriesFeature({
 
     setBusy(true);
     updateSaveState("正在保存…", "saved");
-    const payload = JSON.stringify({
-      title: refs.entryTitle.value,
-      body: refs.entryBody.value,
-    });
-
     try {
       const isExisting = Boolean(state.current.id);
+      const entryId = state.current.id ?? crypto.randomUUID();
+      const content = {
+        title: refs.entryTitle.value.trim() || "未命名碎片",
+        body: refs.entryBody.value,
+      };
+      const sealedPayload = await vault.seal("entry", entryId, content);
       const data = await api(
         isExisting ? `/api/entries/${state.current.id}` : "/api/entries",
-        { method: isExisting ? "PUT" : "POST", body: payload },
+        {
+          method: isExisting ? "PUT" : "POST",
+          body: JSON.stringify({
+            ...(isExisting ? {} : { id: entryId }),
+            sealed_payload: sealedPayload,
+          }),
+        },
       );
-      state.current = data.entry;
+      state.current = await vault.openEntry(data.entry);
       state.dirty = false;
-      refs.entryDate.textContent = `最近保存：${formatDate(data.entry.updated_at)}`;
+      refs.entryDate.textContent = `最近保存：${formatDate(state.current.updated_at)}`;
       refs.saveButton.textContent = "保存修改";
       updateSaveState("已保存", "saved");
       await loadEntries();
       renderList();
-      onSaved?.({ created: !isExisting, entry: data.entry });
+      onSaved?.({ created: !isExisting, entry: state.current });
       showMessage(isExisting ? "这张纸的修改已经保存。" : "这张纸已经收进碎片匣。");
     } catch (error) {
       updateSaveState("保存失败", "error");
@@ -157,28 +165,7 @@ export function createEntriesFeature({
 
   async function exportData() {
     try {
-      const response = await fetch("/api/export", {
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new ApiClientError(
-          response.status,
-          data?.error?.code ?? "export_failed",
-          data?.error?.message ?? "导出失败。",
-        );
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `ithaca-journal-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.append(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      await exportPlaintext();
       showMessage("导出文件已经生成。");
     } catch (error) {
       handleError(error, "导出失败，请稍后重试。");

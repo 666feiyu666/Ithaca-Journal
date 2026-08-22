@@ -1,18 +1,21 @@
 {
   "name": "ithaca-journal",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "test": "node --test",
+    "test:integration": "vitest run --config tests/vitest.config.ts",
     "types": "wrangler types",
     "check": "npm run types && tsc -p tsconfig.json --noEmit",
     "build": "wrangler deploy --dry-run --env=\"\" --outdir ./dist"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
     "@cloudflare/workers-types": "5.20260820.1",
     "typescript": "7.0.2",
+    "vitest": "4.1.11",
     "wrangler": "4.124.0"
   },
   "dependencies": {

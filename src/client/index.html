@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#172231" />
     <meta
       name="description"
-      content="《伊萨卡手记》0.3.0：从一张随手笺出发，把碎片拼成主题，再把主题写成书。"
+      content="《伊萨卡手记》0.4.0：从一张随手笺出发，把碎片拼成主题，再把主题写成书。"
     />
-    <title>伊萨卡手记｜0.3.0 开发版</title>
+    <title>伊萨卡手记｜0.4.0 开发版</title>
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/app.js"></script>
   </head>
@@ -16,7 +16,7 @@
     <main id="auth-view" class="auth-shell" aria-labelledby="auth-title" hidden>
       <section class="auth-brand" aria-label="伊萨卡手记介绍">
         <div class="brand-mark" aria-hidden="true">IJ</div>
-        <p class="eyebrow">ITHACA JOURNAL · 0.3.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.4.0</p>
         <h1 id="auth-title">给尚未抵达的地方，<br />留下一页手记。</h1>
         <p class="auth-brand__copy">
           这是《伊萨卡手记》的小范围云端测试。它保存书写，也保存一次设计如何被使用、被质疑、再被改变的过程。
@@ -31,13 +31,6 @@
           <p id="access-status" class="section-lede" role="status" aria-live="polite">
             本地开发将使用隔离的开发身份；线上测试由 Cloudflare Access 验证受邀邮箱。
           </p>
-
-          <aside class="privacy-note" aria-labelledby="privacy-title">
-            <p id="privacy-title" class="privacy-note__title">当前隐私边界</p>
-            <p>
-              0.3.0 开发版沿用现有<strong>服务器可读</strong>存储。项目不会把正文写入日志；你可以随时导出或删除全部数据。真实内容测试前会重新评估隐私模型。
-            </p>
-          </aside>
 
           <div class="access-actions">
             <p id="access-error" class="form-error" role="alert" hidden></p>
@@ -65,7 +58,7 @@
     <main id="title-view" class="title-screen" aria-labelledby="title-heading" hidden>
       <div class="title-screen__stars" aria-hidden="true"></div>
       <section class="title-screen__content">
-        <p class="eyebrow">ITHACA JOURNAL · 0.3.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.4.0</p>
         <h1 id="title-heading">伊萨卡手记</h1>
         <p class="title-screen__tagline">在生活的碎片中，写下可以返回的地方。</p>
         <div class="title-screen__actions">
@@ -77,7 +70,7 @@
         <p id="title-email" class="title-screen__identity"></p>
       </section>
       <footer class="title-screen__footer">
-        <span>正文当前在服务器端可读</span>
+        <span>小范围云端测试 · 0.4.0</span>
         <div>
           <button id="title-account-button" class="title-link" type="button">删除数据</button>
           <button id="title-logout-button" class="title-link" type="button">退出</button>
@@ -203,7 +196,6 @@
         <div class="app-header__status">
           <span id="connection-dot" class="connection-dot" aria-hidden="true"></span>
           <span id="connection-label">正在连接</span>
-          <span class="server-readable-label">服务器可读</span>
         </div>
 
         <div class="app-header__actions">
@@ -264,7 +256,6 @@
           </button>
         </div>
         <p id="signed-in-email" class="signed-in-email"></p>
-        <p class="nav-privacy-boundary">隐私边界：正文在服务器端可读</p>
         <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
         <p id="list-empty" class="list-empty" hidden>还没有保存的手记。</p>
       </aside>

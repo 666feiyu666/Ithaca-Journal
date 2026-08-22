@@ -1,9 +1,22 @@
 import { formatDate } from "./format.js";
 
+const MAX_SEALED_BOOK_BYTES = 1_100_000;
+
+function compileBookContent(title, preface, topics) {
+  const sections = topics.map((topic) => {
+    const fragments = topic.fragments
+      .map((fragment) => `### 素材｜${fragment.title}\n\n${fragment.body}`)
+      .join("\n\n");
+    return [`## ${topic.title}`, topic.body, fragments].filter(Boolean).join("\n\n");
+  });
+  return [`# ${title}`, preface, ...sections].filter(Boolean).join("\n\n---\n\n");
+}
+
 export function createLibraryFeature({
   state,
   refs,
   api,
+  vault,
   setBusy,
   showMessage,
   handleError,
@@ -96,7 +109,7 @@ export function createLibraryFeature({
 
   async function loadBooks() {
     const data = await api("/api/books");
-    state.books = data.books;
+    state.books = await Promise.all(data.books.map((book) => vault.openBook(book)));
     state.booksLoaded = true;
     renderBookList();
   }
@@ -106,7 +119,7 @@ export function createLibraryFeature({
     setBusy(true);
     try {
       const data = await api(`/api/books/${bookId}`);
-      showBook(data.book);
+      showBook(await vault.openBook(data.book));
     } catch (error) {
       handleError(error, "无法打开这本书。");
     } finally {
@@ -127,7 +140,7 @@ export function createLibraryFeature({
         showBook(state.currentBook);
       } else if (state.books[0]) {
         const data = await api(`/api/books/${state.books[0].id}`);
-        showBook(data.book);
+        showBook(await vault.openBook(data.book));
       } else {
         showEmptyBook();
       }
@@ -199,19 +212,44 @@ export function createLibraryFeature({
     setBusy(true);
     setCompileBookError();
     try {
+      const topics = await Promise.all(topicIds.map(async (topicId) => {
+        const data = await api(`/api/topics/${topicId}`);
+        return vault.openTopic(data.topic);
+      }));
+      const title = refs.bookTitleInput.value.trim();
+      const preface = refs.bookPrefaceInput.value;
+      const contentSnapshot = compileBookContent(title, preface, topics);
+      const sources = topics.map((topic) => ({
+        topic_id: topic.id,
+        title: topic.title,
+        updated_at: topic.updated_at,
+        fragment_ids: topic.fragments.map((fragment) => fragment.id),
+      }));
+      const bookContent = {
+        title,
+        preface,
+        content_snapshot: contentSnapshot,
+        sources,
+      };
+      if (new TextEncoder().encode(JSON.stringify(bookContent)).byteLength > MAX_SEALED_BOOK_BYTES) {
+        throw new Error("编纂结果超过当前版本的加密存储大小限制。");
+      }
+      const bookId = crypto.randomUUID();
+      const sealedPayload = await vault.seal("book", bookId, bookContent);
       const data = await api("/api/books", {
         method: "POST",
         body: JSON.stringify({
-          title: refs.bookTitleInput.value,
-          preface: refs.bookPrefaceInput.value,
-          topic_ids: topicIds,
+          id: bookId,
+          sealed_payload: sealedPayload,
+          source_topic_ids: topicIds,
         }),
       });
+      const book = await vault.openBook(data.book);
       refs.compileBookDialog.close();
-      state.currentBook = data.book;
+      state.currentBook = book;
       await loadBooks();
       showBooksView();
-      showBook(data.book);
+      showBook(book);
       showMessage("新书已经装订并放上书架。 ");
     } catch (error) {
       setCompileBookError(error instanceof Error ? error.message : "无法完成编纂。");
@@ -230,7 +268,7 @@ export function createLibraryFeature({
       await loadBooks();
       if (state.books[0]) {
         const data = await api(`/api/books/${state.books[0].id}`);
-        showBook(data.book);
+        showBook(await vault.openBook(data.book));
       } else {
         showEmptyBook();
       }

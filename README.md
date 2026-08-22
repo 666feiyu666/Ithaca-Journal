@@ -1,5 +1,5 @@
 # 🍍 伊萨卡手记 | The Ithaca Journal
-![Stage](https://img.shields.io/badge/version-0.2.0%20local%20scene%20slice-d18a3f) ![Platform](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-f38020) ![License](https://img.shields.io/badge/license-MIT-green)
+![Stage](https://img.shields.io/badge/version-0.4.0%20browser%20encrypted-d18a3f) ![Platform](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-f38020) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
@@ -81,15 +81,3 @@
 * **查尔斯·泰勒** - 《自我的根源：现代认同的形成》
 * **阿拉斯戴尔·麦金太尔** - 《追寻美德》
 * ……
-
----
-
-## ⚙️ 配置与内容边界
-
-- `src/client/config/`：场景、家具默认矩形、对话、素材映射和时间阶段等浏览器端声明。
-- `src/client/game/`：场景注册、渲染、交互和本地布置持久化等运行机制。
-- `src/server/config/`：旅程长度与解锁行为等服务端产品规则。
-- `src/server/content/`：信件和反思提示等有类型、可校验的叙事内容。
-- D1 与 `localStorage`：用户旅程、阅读状态、日记和自定义家具位置；用户状态不作为产品默认配置提交。
-
-环境变量与密钥继续由 Wrangler 配置和运行环境负责，不进入上述产品配置模块。

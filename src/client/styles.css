@@ -202,26 +202,6 @@ a {
   line-height: 1.65;
 }
 
-.privacy-note {
-  margin: 0 0 2.2rem;
-  padding: 1.1rem 1.2rem;
-  border-left: 3px solid var(--rust-600);
-  background: rgba(255, 250, 240, 0.72);
-}
-
-.privacy-note__title {
-  margin: 0 0 0.4rem !important;
-  color: var(--ink-900) !important;
-  font-weight: 700;
-}
-
-.privacy-note p {
-  margin: 0;
-  color: var(--ink-700);
-  font-size: 0.86rem;
-  line-height: 1.7;
-}
-
 .access-actions {
   display: grid;
   gap: 0.65rem;
@@ -429,13 +409,6 @@ a {
   background: #d2836d;
 }
 
-.server-readable-label {
-  margin-left: 0.4rem;
-  padding-left: 0.8rem;
-  border-left: 1px solid rgba(255, 250, 240, 0.18);
-  color: #d9a08d;
-}
-
 .app-header__actions {
   display: flex;
   align-items: center;
@@ -595,16 +568,6 @@ a {
   font-size: 0.7rem;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.nav-privacy-boundary {
-  margin: 0 0.45rem 1rem;
-  padding: 0.55rem 0.65rem;
-  border-left: 2px solid var(--rust-600);
-  color: var(--ink-700);
-  background: rgba(255, 250, 240, 0.42);
-  font-size: 0.67rem;
-  line-height: 1.5;
 }
 
 .entry-list {
@@ -3006,7 +2969,7 @@ html[data-time-mode="day"] .title-link:hover {
   }
 }
 
-/* 主题工作台在 0.3.0 中明确以桌面鼠标交互为目标；窄屏只保留可滚动的桌面画布。 */
+/* 主题工作台当前仍以桌面鼠标交互为目标；窄屏只保留可滚动的桌面画布。 */
 @media (max-width: 1023px) {
   .app-shell[data-workbench-mode="topics"] .editor-stage {
     overflow: auto;

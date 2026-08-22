@@ -1,18 +1,23 @@
-import { ApiError, requireRecord, requireString } from "./http";
-import { getTopic, type TopicDetail } from "./topics";
+import { ApiError, requireRecord } from "./http";
+import { requirePrivacyProfile } from "./privacy";
+import {
+  CLIENT_ENCRYPTION_VERSION,
+  ENCRYPTED_CONTENT_LABEL,
+  parseStoredSealedPayload,
+  requireSealedPayload,
+  requireUuid,
+  requireUuidArray,
+  serializeSealedPayload,
+  type SealedPayload,
+} from "./sealed";
 
-interface BookRow {
+interface StoredBookRow {
   id: string;
   title: string;
   preface: string;
   content_snapshot: string;
   source_snapshot: string;
-  created_at: string;
-}
-
-interface BookSummaryRow {
-  id: string;
-  title: string;
+  encryption_version: number;
   created_at: string;
 }
 
@@ -23,134 +28,221 @@ interface BookSourceSnapshot {
   fragment_ids: string[];
 }
 
-export interface BookDetail extends Omit<BookRow, "source_snapshot"> {
+interface BookMetadata {
+  id: string;
+  encryption_version: number;
+  created_at: string;
+}
+
+export interface LegacyBookRecord extends BookMetadata {
+  encryption_version: 0;
+  title: string;
+  preface: string;
+  content_snapshot: string;
   sources: BookSourceSnapshot[];
 }
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MAX_BOOK_CHARACTERS = 500_000;
-
-function validateBookPayload(payload: unknown): {
-  title: string;
-  preface: string;
-  topicIds: string[];
-} {
-  const record = requireRecord(payload);
-  const title = requireString(record, "title").trim();
-  const prefaceValue = record.preface ?? "";
-  const topicIdsValue = record.topic_ids;
-
-  if (!title) {
-    throw new ApiError(422, "book_title_required", "请为这本书命名。");
-  }
-  if (title.length > 120) {
-    throw new ApiError(422, "title_too_long", "书名不能超过 120 个字符。");
-  }
-  if (typeof prefaceValue !== "string") {
-    throw new ApiError(422, "invalid_payload", "preface 必须是文本。");
-  }
-  if (prefaceValue.length > 20_000) {
-    throw new ApiError(413, "preface_too_large", "序言超过当前版本的大小限制。");
-  }
-  if (!Array.isArray(topicIdsValue) || topicIdsValue.length === 0) {
-    throw new ApiError(422, "topics_required", "请至少选择一则主题笔记。");
-  }
-  if (topicIdsValue.length > 20) {
-    throw new ApiError(422, "too_many_topics", "一本书最多收录 20 则主题笔记。");
-  }
-  if (!topicIdsValue.every((id) => typeof id === "string" && UUID_PATTERN.test(id))) {
-    throw new ApiError(422, "invalid_topic_ids", "主题笔记标识无效。");
-  }
-
-  return {
-    title,
-    preface: prefaceValue,
-    topicIds: [...new Set(topicIdsValue)],
-  };
+export interface EncryptedBookRecord extends BookMetadata {
+  encryption_version: 1;
+  sealed_payload: SealedPayload;
+  source_topic_ids: string[];
 }
 
-function renderBook(title: string, preface: string, topics: TopicDetail[]): string {
-  const sections = topics.map((topic) => {
-    const fragments = topic.fragments
-      .map((fragment) => `### 素材｜${fragment.title}\n\n${fragment.body}`)
-      .join("\n\n");
-    return [`## ${topic.title}`, topic.body, fragments].filter(Boolean).join("\n\n");
-  });
-  return [`# ${title}`, preface, ...sections].filter(Boolean).join("\n\n---\n\n");
+export type BookRecord = LegacyBookRecord | EncryptedBookRecord;
+
+interface OwnedTopicRow {
+  id: string;
+  fragment_count: number;
 }
 
-function toBookDetail(row: BookRow): BookDetail {
-  let sources: BookSourceSnapshot[];
+const MAX_BOOK_TOPICS = 20;
+
+function parseLegacySources(serialized: string): BookSourceSnapshot[] {
+  let value: unknown;
   try {
-    sources = JSON.parse(row.source_snapshot) as BookSourceSnapshot[];
+    value = JSON.parse(serialized) as unknown;
   } catch {
     throw new ApiError(500, "invalid_book_snapshot", "这本书的来源快照无法读取。");
   }
-  const { source_snapshot: _sourceSnapshot, ...book } = row;
-  return { ...book, sources };
+  if (!Array.isArray(value)) {
+    throw new ApiError(500, "invalid_book_snapshot", "这本书的来源快照无法读取。");
+  }
+  return value as BookSourceSnapshot[];
 }
 
-export async function listBooks(env: Env, userId: string): Promise<BookSummaryRow[]> {
+function parseEncryptedSourceIds(serialized: string): string[] {
+  let value: unknown;
+  try {
+    value = JSON.parse(serialized) as unknown;
+  } catch {
+    throw new ApiError(500, "invalid_book_snapshot", "这本书的来源索引无法读取。");
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ApiError(500, "invalid_book_snapshot", "这本书的来源索引无法读取。");
+  }
+  const topicIds = (value as Record<string, unknown>).topic_ids;
+  if (!Array.isArray(topicIds) || !topicIds.every((id) => typeof id === "string")) {
+    throw new ApiError(500, "invalid_book_snapshot", "这本书的来源索引无法读取。");
+  }
+  return topicIds as string[];
+}
+
+function toBookRecord(row: StoredBookRow): BookRecord {
+  const metadata = { id: row.id, created_at: row.created_at };
+  if (row.encryption_version === CLIENT_ENCRYPTION_VERSION) {
+    return {
+      ...metadata,
+      encryption_version: CLIENT_ENCRYPTION_VERSION,
+      sealed_payload: parseStoredSealedPayload(row.content_snapshot),
+      source_topic_ids: parseEncryptedSourceIds(row.source_snapshot),
+    };
+  }
+  if (row.encryption_version !== 0) {
+    throw new ApiError(500, "unsupported_stored_encryption", "保存的成书加密版本无法读取。");
+  }
+  return {
+    ...metadata,
+    encryption_version: 0,
+    title: row.title,
+    preface: row.preface,
+    content_snapshot: row.content_snapshot,
+    sources: parseLegacySources(row.source_snapshot),
+  };
+}
+
+function validateBookPayload(payload: unknown, requireId: boolean): {
+  id: string | null;
+  sealedPayload: SealedPayload;
+  sourceTopicIds: string[];
+} {
+  const record = requireRecord(payload);
+  const sourceTopicIds = requireUuidArray(record, "source_topic_ids", {
+    required: true,
+    maximum: MAX_BOOK_TOPICS,
+  });
+  return {
+    id: requireId ? requireUuid(record, "id") : null,
+    sealedPayload: requireSealedPayload(record),
+    sourceTopicIds: sourceTopicIds ?? [],
+  };
+}
+
+async function requireCompilableTopics(
+  env: Env,
+  userId: string,
+  topicIds: string[],
+): Promise<void> {
+  const placeholders = topicIds.map((_, index) => `?${index + 2}`).join(", ");
   const result = await env.DB.prepare(
-    `SELECT id, title, created_at
+    `SELECT topics.id, COUNT(topic_fragments.fragment_id) AS fragment_count
+     FROM topics
+     LEFT JOIN topic_fragments ON topic_fragments.topic_id = topics.id
+     WHERE topics.user_id = ?1 AND topics.id IN (${placeholders})
+     GROUP BY topics.id`,
+  )
+    .bind(userId, ...topicIds)
+    .all<OwnedTopicRow>();
+  if (result.results.length !== topicIds.length) {
+    throw new ApiError(422, "topic_not_found", "所选主题不存在或不属于当前账户。");
+  }
+  if (result.results.some((topic) => topic.fragment_count === 0)) {
+    throw new ApiError(422, "empty_topic", "空白主题还不能编纂成书，请先放入至少一则碎片。");
+  }
+}
+
+async function storedBook(env: Env, userId: string, bookId: string): Promise<StoredBookRow> {
+  const row = await env.DB.prepare(
+    `SELECT id, title, preface, content_snapshot, source_snapshot,
+            encryption_version, created_at
+     FROM books
+     WHERE id = ?1 AND user_id = ?2`,
+  )
+    .bind(bookId, userId)
+    .first<StoredBookRow>();
+  if (!row) {
+    throw new ApiError(404, "book_not_found", "没有找到这本书。");
+  }
+  return row;
+}
+
+export async function listBooks(env: Env, userId: string): Promise<BookRecord[]> {
+  const result = await env.DB.prepare(
+    `SELECT id, title, preface, content_snapshot, source_snapshot,
+            encryption_version, created_at
      FROM books
      WHERE user_id = ?1
      ORDER BY created_at DESC`,
   )
     .bind(userId)
-    .all<BookSummaryRow>();
-  return result.results;
+    .all<StoredBookRow>();
+  return result.results.map(toBookRecord);
 }
 
 export async function getBook(
   env: Env,
   userId: string,
   bookId: string,
-): Promise<BookDetail> {
-  const row = await env.DB.prepare(
-    `SELECT id, title, preface, content_snapshot, source_snapshot, created_at
-     FROM books
-     WHERE id = ?1 AND user_id = ?2`,
-  )
-    .bind(bookId, userId)
-    .first<BookRow>();
-  if (!row) {
-    throw new ApiError(404, "book_not_found", "没有找到这本书。");
-  }
-  return toBookDetail(row);
+): Promise<BookRecord> {
+  return toBookRecord(await storedBook(env, userId, bookId));
 }
 
-export async function compileBook(
+export async function createBook(
   env: Env,
   userId: string,
   payload: unknown,
-): Promise<BookDetail> {
-  const { title, preface, topicIds } = validateBookPayload(payload);
-  const topics = await Promise.all(topicIds.map((topicId) => getTopic(env, userId, topicId)));
-  if (topics.some((topic) => topic.fragments.length === 0)) {
-    throw new ApiError(422, "empty_topic", "空白主题还不能编纂成书，请先放入至少一则碎片。");
-  }
-  const contentSnapshot = renderBook(title, preface, topics);
-  if (contentSnapshot.length > MAX_BOOK_CHARACTERS) {
-    throw new ApiError(413, "book_too_large", "编纂结果超过当前版本的大小限制。");
-  }
-
-  const sourceSnapshot: BookSourceSnapshot[] = topics.map((topic) => ({
-    topic_id: topic.id,
-    title: topic.title,
-    updated_at: topic.updated_at,
-    fragment_ids: topic.fragments.map((fragment) => fragment.id),
-  }));
-  const id = crypto.randomUUID();
+): Promise<BookRecord> {
+  await requirePrivacyProfile(env, userId);
+  const { id, sealedPayload, sourceTopicIds } = validateBookPayload(payload, true);
+  const bookId = id as string;
+  await requireCompilableTopics(env, userId, sourceTopicIds);
   const now = new Date().toISOString();
   await env.DB.prepare(
     `INSERT INTO books
-       (id, user_id, title, preface, content_snapshot, source_snapshot, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+       (id, user_id, title, preface, content_snapshot, source_snapshot,
+        encryption_version, created_at)
+     VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, ?7)`,
   )
-    .bind(id, userId, title, preface, contentSnapshot, JSON.stringify(sourceSnapshot), now)
+    .bind(
+      bookId,
+      userId,
+      ENCRYPTED_CONTENT_LABEL,
+      serializeSealedPayload(sealedPayload),
+      JSON.stringify({ topic_ids: sourceTopicIds }),
+      CLIENT_ENCRYPTION_VERSION,
+      now,
+    )
     .run();
-  return getBook(env, userId, id);
+  return getBook(env, userId, bookId);
+}
+
+export async function updateBook(
+  env: Env,
+  userId: string,
+  bookId: string,
+  payload: unknown,
+): Promise<BookRecord> {
+  await requirePrivacyProfile(env, userId);
+  await storedBook(env, userId, bookId);
+  const { sealedPayload, sourceTopicIds } = validateBookPayload(payload, false);
+  const result = await env.DB.prepare(
+    `UPDATE books
+     SET title = ?1, preface = '', content_snapshot = ?2, source_snapshot = ?3,
+         encryption_version = ?4
+     WHERE id = ?5 AND user_id = ?6`,
+  )
+    .bind(
+      ENCRYPTED_CONTENT_LABEL,
+      serializeSealedPayload(sealedPayload),
+      JSON.stringify({ topic_ids: sourceTopicIds }),
+      CLIENT_ENCRYPTION_VERSION,
+      bookId,
+      userId,
+    )
+    .run();
+  if (result.meta.changes !== 1) {
+    throw new ApiError(404, "book_not_found", "没有找到这本书。");
+  }
+  return getBook(env, userId, bookId);
 }
 
 export async function deleteBook(
@@ -168,14 +260,15 @@ export async function deleteBook(
   }
 }
 
-export async function exportBooks(env: Env, userId: string): Promise<BookDetail[]> {
+export async function exportBooks(env: Env, userId: string): Promise<BookRecord[]> {
   const result = await env.DB.prepare(
-    `SELECT id, title, preface, content_snapshot, source_snapshot, created_at
+    `SELECT id, title, preface, content_snapshot, source_snapshot,
+            encryption_version, created_at
      FROM books
      WHERE user_id = ?1
      ORDER BY created_at ASC`,
   )
     .bind(userId)
-    .all<BookRow>();
-  return result.results.map(toBookDetail);
+    .all<StoredBookRow>();
+  return result.results.map(toBookRecord);
 }

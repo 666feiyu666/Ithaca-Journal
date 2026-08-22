@@ -2,7 +2,14 @@ import {
   deleteUserData,
   requireAuthenticatedUser,
 } from "./auth";
-import { compileBook, deleteBook, exportBooks, getBook, listBooks } from "./books";
+import {
+  createBook,
+  deleteBook,
+  exportBooks,
+  getBook,
+  listBooks,
+  updateBook,
+} from "./books";
 import {
   createEntry,
   deleteEntry,
@@ -24,6 +31,7 @@ import {
 } from "./http";
 import { completeIntro, enterJourney, getJourney } from "./journey";
 import { listAvailableLetters, openLetter } from "./letters";
+import { createPrivacyProfile, getPrivacyStatus } from "./privacy";
 import {
   exportOwnedPuzzles,
   listPuzzleShop,
@@ -82,6 +90,20 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       user: { email: user.email, source: user.source },
       environment: env.APP_ENV,
     });
+  }
+
+  if (url.pathname === "/api/privacy") {
+    const user = await requireAuthenticatedUser(request, env);
+    if (request.method === "GET") {
+      return jsonResponse(await getPrivacyStatus(env, user.id));
+    }
+    if (request.method === "POST") {
+      return jsonResponse(
+        await createPrivacyProfile(env, user.id, await readJsonBody(request)),
+        201,
+      );
+    }
+    methodNotAllowed(["GET", "POST"]);
   }
 
   if (url.pathname === "/api/journey") {
@@ -235,7 +257,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       return jsonResponse({ books: await listBooks(env, user.id) });
     }
     if (request.method === "POST") {
-      const book = await compileBook(env, user.id, await readJsonBody(request));
+      const book = await createBook(env, user.id, await readJsonBody(request));
       return jsonResponse({ book }, 201);
     }
     methodNotAllowed(["GET", "POST"]);
@@ -247,11 +269,16 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     if (request.method === "GET") {
       return jsonResponse({ book: await getBook(env, user.id, bookId) });
     }
+    if (request.method === "PUT") {
+      return jsonResponse({
+        book: await updateBook(env, user.id, bookId, await readJsonBody(request)),
+      });
+    }
     if (request.method === "DELETE") {
       await deleteBook(env, user.id, bookId);
       return emptyResponse(204);
     }
-    methodNotAllowed(["GET", "DELETE"]);
+    methodNotAllowed(["GET", "PUT", "DELETE"]);
   }
 
   if (url.pathname === "/api/letters") {
@@ -289,11 +316,10 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     const letters = journey?.intro_completed_at
       ? await listAvailableLetters(env, user.id)
       : [];
-    const filename = `ithaca-journal-${new Date().toISOString().slice(0, 10)}.json`;
     return jsonResponse(
       {
         format: "ithaca-journal-export",
-        version: 3,
+        version: 4,
         exported_at: new Date().toISOString(),
         user: { email: user.email },
         entries,
@@ -304,7 +330,6 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
         puzzles,
       },
       200,
-      { "Content-Disposition": `attachment; filename="${filename}"` },
     );
   }
 

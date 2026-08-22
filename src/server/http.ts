@@ -1,4 +1,4 @@
-const MAX_JSON_BYTES = 160_000;
+const MAX_JSON_BYTES = 1_700_000;
 
 type ErrorHeaders = Record<string, string>;
 

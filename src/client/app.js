@@ -5,6 +5,8 @@ import { createEntriesFeature } from "./app/entries-feature.js";
 import { focusWhenReady } from "./app/format.js";
 import { createJourneyFeature } from "./app/journey-feature.js";
 import { createLibraryFeature } from "./app/library-feature.js";
+import { createPrivacyFeature } from "./app/privacy-feature.js";
+import { createPrivacyVault } from "./app/privacy-service.js";
 import { createAppState } from "./app/state.js";
 import { createTopicsFeature } from "./app/topics-feature.js";
 import { createWorkbenchFeature } from "./app/workbench-feature.js";
@@ -17,11 +19,13 @@ import { createTimeService } from "./game/time-service.js";
 
 const state = createAppState();
 const refs = queryAppElements();
+const privacyVault = createPrivacyVault();
 
 let accountFeature;
 let entriesFeature;
 let journeyFeature;
 let libraryFeature;
+let privacyFeature;
 let topicsFeature;
 let workbenchFeature;
 
@@ -70,6 +74,7 @@ function showAuth({
   canLogin = false,
 } = {}) {
   state.user = null;
+  privacyFeature?.lock();
   state.journey = null;
   state.entries = [];
   state.entriesLoaded = false;
@@ -224,10 +229,18 @@ const sceneRuntime = createSceneRuntime({
   onError: (error) => handleAppError(error, "场景交互暂时无法继续。"),
 });
 
+privacyFeature = createPrivacyFeature({
+  state,
+  api,
+  vault: privacyVault,
+});
+
 entriesFeature = createEntriesFeature({
   state,
   refs,
   api,
+  vault: privacyVault,
+  exportPlaintext: privacyFeature.exportPlaintext,
   setBusy,
   updateActions,
   renderList: () => workbenchFeature.renderList(),
@@ -240,6 +253,7 @@ topicsFeature = createTopicsFeature({
   state,
   refs,
   api,
+  vault: privacyVault,
   setBusy,
   renderList: () => workbenchFeature.renderList(),
   showEmptyEditor: () => workbenchFeature.showEmptyEditor(),
@@ -264,6 +278,7 @@ libraryFeature = createLibraryFeature({
   state,
   refs,
   api,
+  vault: privacyVault,
   setBusy,
   showMessage,
   handleError: handleAppError,
@@ -280,6 +295,7 @@ journeyFeature = createJourneyFeature({
   showTitle,
   showScene,
   showIntro,
+  ensurePrivacy: privacyFeature.ensureUnlocked,
   handleError: handleAppError,
 });
 

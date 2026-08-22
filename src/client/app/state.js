@@ -1,6 +1,7 @@
 export function createAppState() {
   return {
     user: null,
+    privacyUnlocked: false,
     journey: null,
     entries: [],
     entriesLoaded: false,

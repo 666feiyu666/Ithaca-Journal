@@ -1,18 +1,21 @@
-import { ApiError, requireRecord, requireString } from "./http";
+import { ApiError, requireRecord } from "./http";
+import { requirePrivacyProfile } from "./privacy";
+import {
+  CLIENT_ENCRYPTION_VERSION,
+  ENCRYPTED_CONTENT_LABEL,
+  parseStoredSealedPayload,
+  requireSealedPayload,
+  requireUuid,
+  requireUuidArray,
+  serializeSealedPayload,
+  type SealedPayload,
+} from "./sealed";
 
-interface TopicSummaryRow {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  fragment_count: number;
-  active_puzzle_id: string | null;
-}
-
-interface TopicRow {
+interface StoredTopicRow {
   id: string;
   title: string;
   body: string;
+  encryption_version: number;
   created_at: string;
   updated_at: string;
   layout_version: number;
@@ -20,10 +23,16 @@ interface TopicRow {
   active_puzzle_id: string | null;
 }
 
-export interface TopicFragmentRow {
+interface StoredTopicSummaryRow extends StoredTopicRow {
+  fragment_count: number;
+}
+
+interface StoredTopicFragmentRow {
   id: string;
   title: string;
   body: string;
+  body_format: string;
+  encryption_version: number;
   created_at: string;
   updated_at: string;
   position: number;
@@ -34,15 +43,60 @@ export interface TopicFragmentRow {
   is_snapped: number;
 }
 
-export interface TopicDetail extends TopicRow {
-  fragments: TopicFragmentRow[];
+interface TopicMetadata {
+  id: string;
+  encryption_version: number;
+  created_at: string;
+  updated_at: string;
+  layout_version: number;
+  pattern_seed: string;
+  active_puzzle_id: string | null;
 }
 
-interface TopicPayload {
+export interface LegacyTopicRecord extends TopicMetadata {
+  encryption_version: 0;
   title: string;
   body: string;
-  fragmentIds: string[] | null;
 }
+
+export interface EncryptedTopicRecord extends TopicMetadata {
+  encryption_version: 1;
+  sealed_payload: SealedPayload;
+}
+
+export type TopicRecord = LegacyTopicRecord | EncryptedTopicRecord;
+
+interface FragmentLayout {
+  position: number;
+  canvas_x: number;
+  canvas_y: number;
+  z_index: number;
+  shape_variant: number;
+  is_snapped: number;
+}
+
+export type TopicFragmentRecord = (
+  | {
+    id: string;
+    encryption_version: 0;
+    title: string;
+    body: string;
+    excerpt: string;
+    body_format: string;
+    created_at: string;
+    updated_at: string;
+  }
+  | {
+    id: string;
+    encryption_version: 1;
+    sealed_payload: SealedPayload;
+    created_at: string;
+    updated_at: string;
+  }
+) & FragmentLayout;
+
+export type TopicSummaryRecord = TopicRecord & { fragment_count: number };
+export type TopicDetail = TopicRecord & { fragments: TopicFragmentRecord[] };
 
 interface TopicLayoutItem {
   fragmentId: string;
@@ -53,44 +107,82 @@ interface TopicLayoutItem {
   isSnapped: boolean;
 }
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_TOPIC_FRAGMENTS = 50;
 const PUZZLE_SLOT_COUNT = 50;
 
-function validateTopicPayload(payload: unknown): TopicPayload {
-  const record = requireRecord(payload);
-  const rawTitle = requireString(record, "title").trim();
-  const body = requireString(record, "body");
-  const fragmentIdsValue = record.fragment_ids;
-
-  if (!rawTitle) {
-    throw new ApiError(422, "topic_title_required", "请为主题命名。");
+function toTopicRecord(row: StoredTopicRow): TopicRecord {
+  const metadata = {
+    id: row.id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    layout_version: row.layout_version,
+    pattern_seed: row.pattern_seed,
+    active_puzzle_id: row.active_puzzle_id,
+  };
+  if (row.encryption_version === CLIENT_ENCRYPTION_VERSION) {
+    return {
+      ...metadata,
+      encryption_version: CLIENT_ENCRYPTION_VERSION,
+      sealed_payload: parseStoredSealedPayload(row.body),
+    };
   }
-  if (rawTitle.length > 120) {
-    throw new ApiError(422, "title_too_long", "主题标题不能超过 120 个字符。");
+  if (row.encryption_version !== 0) {
+    throw new ApiError(500, "unsupported_stored_encryption", "保存的主题加密版本无法读取。");
   }
-  if (body.length > 100_000) {
-    throw new ApiError(413, "topic_too_large", "主题笔记超过当前版本的大小限制。");
-  }
-  if (fragmentIdsValue !== undefined && !Array.isArray(fragmentIdsValue)) {
-    throw new ApiError(422, "invalid_fragment_ids", "fragment_ids 必须是数组。");
-  }
-  if (Array.isArray(fragmentIdsValue) && fragmentIdsValue.length > MAX_TOPIC_FRAGMENTS) {
-    throw new ApiError(422, "too_many_fragments", "一个主题最多整理 50 则碎片笔记。");
-  }
-  if (
-    Array.isArray(fragmentIdsValue)
-    && !fragmentIdsValue.every((id) => typeof id === "string" && UUID_PATTERN.test(id))
-  ) {
-    throw new ApiError(422, "invalid_fragment_ids", "碎片笔记标识无效。");
-  }
-
   return {
-    title: rawTitle,
-    body,
-    fragmentIds: Array.isArray(fragmentIdsValue)
-      ? [...new Set(fragmentIdsValue as string[])]
-      : null,
+    ...metadata,
+    encryption_version: 0,
+    title: row.title,
+    body: row.body,
+  };
+}
+
+function toTopicSummary(row: StoredTopicSummaryRow): TopicSummaryRecord {
+  return { ...toTopicRecord(row), fragment_count: row.fragment_count };
+}
+
+function toTopicFragment(row: StoredTopicFragmentRow): TopicFragmentRecord {
+  const metadata = {
+    id: row.id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    position: row.position,
+    canvas_x: row.canvas_x,
+    canvas_y: row.canvas_y,
+    z_index: row.z_index,
+    shape_variant: row.shape_variant,
+    is_snapped: row.is_snapped,
+  };
+  if (row.encryption_version === CLIENT_ENCRYPTION_VERSION) {
+    return {
+      ...metadata,
+      encryption_version: CLIENT_ENCRYPTION_VERSION,
+      sealed_payload: parseStoredSealedPayload(row.body),
+    };
+  }
+  if (row.encryption_version !== 0) {
+    throw new ApiError(500, "unsupported_stored_encryption", "保存的碎片加密版本无法读取。");
+  }
+  return {
+    ...metadata,
+    encryption_version: 0,
+    title: row.title,
+    body: row.body,
+    excerpt: row.body.slice(0, 180),
+    body_format: row.body_format,
+  };
+}
+
+function validateTopicPayload(payload: unknown, requireId: boolean): {
+  id: string | null;
+  sealedPayload: SealedPayload;
+  fragmentIds: string[] | null;
+} {
+  const record = requireRecord(payload);
+  return {
+    id: requireId ? requireUuid(record, "id") : null,
+    sealedPayload: requireSealedPayload(record),
+    fragmentIds: requireUuidArray(record, "fragment_ids", { maximum: MAX_TOPIC_FRAGMENTS }),
   };
 }
 
@@ -106,16 +198,13 @@ function validateTopicLayout(payload: unknown): TopicLayoutItem[] {
 
   const items = itemsValue.map((value): TopicLayoutItem => {
     const item = requireRecord(value);
-    const fragmentId = item.fragment_id;
+    const fragmentId = requireUuid(item, "fragment_id");
     const canvasX = item.canvas_x;
     const canvasY = item.canvas_y;
     const zIndex = item.z_index;
     const shapeVariant = item.shape_variant;
     const isSnapped = item.is_snapped;
 
-    if (typeof fragmentId !== "string" || !UUID_PATTERN.test(fragmentId)) {
-      throw new ApiError(422, "invalid_fragment_ids", "碎片笔记标识无效。");
-    }
     if (
       typeof canvasX !== "number"
       || !Number.isFinite(canvasX)
@@ -189,10 +278,11 @@ async function requireOwnedFragments(
   }
 }
 
-export async function listTopics(env: Env, userId: string): Promise<TopicSummaryRow[]> {
+export async function listTopics(env: Env, userId: string): Promise<TopicSummaryRecord[]> {
   const result = await env.DB.prepare(
-    `SELECT topics.id, topics.title, topics.created_at, topics.updated_at,
-            topics.active_puzzle_id,
+    `SELECT topics.id, topics.title, topics.body, topics.encryption_version,
+            topics.created_at, topics.updated_at, topics.layout_version,
+            topics.pattern_seed, topics.active_puzzle_id,
             COUNT(topic_fragments.fragment_id) AS fragment_count
      FROM topics
      LEFT JOIN topic_fragments ON topic_fragments.topic_id = topics.id
@@ -201,8 +291,8 @@ export async function listTopics(env: Env, userId: string): Promise<TopicSummary
      ORDER BY topics.updated_at DESC`,
   )
     .bind(userId)
-    .all<TopicSummaryRow>();
-  return result.results;
+    .all<StoredTopicSummaryRow>();
+  return result.results.map(toTopicSummary);
 }
 
 export async function getTopic(
@@ -211,19 +301,20 @@ export async function getTopic(
   topicId: string,
 ): Promise<TopicDetail> {
   const topic = await env.DB.prepare(
-    `SELECT id, title, body, created_at, updated_at, layout_version, pattern_seed,
-            active_puzzle_id
+    `SELECT id, title, body, encryption_version, created_at, updated_at,
+            layout_version, pattern_seed, active_puzzle_id
      FROM topics
      WHERE id = ?1 AND user_id = ?2`,
   )
     .bind(topicId, userId)
-    .first<TopicRow>();
+    .first<StoredTopicRow>();
   if (!topic) {
     throw new ApiError(404, "topic_not_found", "没有找到这则主题笔记。");
   }
 
   const fragments = await env.DB.prepare(
     `SELECT journal_entries.id, journal_entries.title, journal_entries.body,
+            journal_entries.body_format, journal_entries.encryption_version,
             journal_entries.created_at, journal_entries.updated_at,
             topic_fragments.position, topic_fragments.canvas_x,
             topic_fragments.canvas_y, topic_fragments.z_index,
@@ -234,9 +325,9 @@ export async function getTopic(
      ORDER BY topic_fragments.z_index ASC, topic_fragments.position ASC`,
   )
     .bind(topicId, userId)
-    .all<TopicFragmentRow>();
+    .all<StoredTopicFragmentRow>();
 
-  return { ...topic, fragments: fragments.results };
+  return { ...toTopicRecord(topic), fragments: fragments.results.map(toTopicFragment) };
 }
 
 export async function createTopic(
@@ -244,25 +335,35 @@ export async function createTopic(
   userId: string,
   payload: unknown,
 ): Promise<TopicDetail> {
-  const { title, body, fragmentIds } = validateTopicPayload(payload);
+  await requirePrivacyProfile(env, userId);
+  const { id, sealedPayload, fragmentIds } = validateTopicPayload(payload, true);
+  const topicId = id as string;
   const initialFragmentIds = fragmentIds ?? [];
   await requireOwnedFragments(env, userId, initialFragmentIds);
-  const id = crypto.randomUUID();
   const patternSeed = crypto.randomUUID();
   const now = new Date().toISOString();
   await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO topics
-         (id, user_id, title, body, created_at, updated_at, layout_version, pattern_seed)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?5, 1, ?6)`,
-    ).bind(id, userId, title, body, now, patternSeed),
+         (id, user_id, title, body, encryption_version, created_at, updated_at,
+          layout_version, pattern_seed)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, 1, ?7)`,
+    ).bind(
+      topicId,
+      userId,
+      ENCRYPTED_CONTENT_LABEL,
+      serializeSealedPayload(sealedPayload),
+      CLIENT_ENCRYPTION_VERSION,
+      now,
+      patternSeed,
+    ),
     ...initialFragmentIds.map((fragmentId, position) =>
       env.DB.prepare(
         `INSERT INTO topic_fragments
            (topic_id, fragment_id, position, canvas_x, canvas_y, z_index, shape_variant, is_snapped)
          VALUES (?1, ?2, ?3, ?4, ?5, ?3, ?6, 0)`,
       ).bind(
-        id,
+        topicId,
         fragmentId,
         position,
         0.06 + ((position % 4) * 0.30),
@@ -271,7 +372,7 @@ export async function createTopic(
       ),
     ),
   ]);
-  return getTopic(env, userId, id);
+  return getTopic(env, userId, topicId);
 }
 
 export async function updateTopic(
@@ -280,8 +381,9 @@ export async function updateTopic(
   topicId: string,
   payload: unknown,
 ): Promise<TopicDetail> {
+  await requirePrivacyProfile(env, userId);
   await getTopic(env, userId, topicId);
-  const { title, body, fragmentIds } = validateTopicPayload(payload);
+  const { sealedPayload, fragmentIds } = validateTopicPayload(payload, false);
   if (fragmentIds !== null) {
     await requireOwnedFragments(env, userId, fragmentIds);
   }
@@ -289,9 +391,16 @@ export async function updateTopic(
   const statements = [
     env.DB.prepare(
       `UPDATE topics
-       SET title = ?1, body = ?2, updated_at = ?3
-       WHERE id = ?4 AND user_id = ?5`,
-    ).bind(title, body, now, topicId, userId),
+       SET title = ?1, body = ?2, encryption_version = ?3, updated_at = ?4
+       WHERE id = ?5 AND user_id = ?6`,
+    ).bind(
+      ENCRYPTED_CONTENT_LABEL,
+      serializeSealedPayload(sealedPayload),
+      CLIENT_ENCRYPTION_VERSION,
+      now,
+      topicId,
+      userId,
+    ),
   ];
   if (fragmentIds !== null) {
     statements.push(
