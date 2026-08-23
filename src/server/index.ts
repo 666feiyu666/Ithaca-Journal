@@ -46,6 +46,7 @@ import {
   updateTopic,
   updateTopicLayout,
 } from "./topics";
+import { provideAccountVaultKey } from "./vault-keys";
 
 const ENTRY_PATH = /^\/api\/entries\/([0-9a-f-]{36})$/;
 const TOPIC_PATH = /^\/api\/topics\/([0-9a-f-]{36})$/;
@@ -104,6 +105,16 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       );
     }
     methodNotAllowed(["GET", "POST"]);
+  }
+
+  if (url.pathname === "/api/privacy/key") {
+    if (request.method !== "POST") {
+      methodNotAllowed(["POST"]);
+    }
+    const user = await requireAuthenticatedUser(request, env);
+    return jsonResponse(
+      await provideAccountVaultKey(env, user.id, await readJsonBody(request)),
+    );
   }
 
   if (url.pathname === "/api/journey") {

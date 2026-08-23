@@ -21,6 +21,11 @@
 			"migrations_dir": "./migrations"
 		}
 	],
+	"secrets": {
+		"required": [
+			"VAULT_KEY_ENCRYPTION_KEY"
+		]
+	},
 	"vars": {
 		"APP_ENV": "local",
 		"AUTH_MODE": "development",
@@ -41,6 +46,11 @@
 	"env": {
 		"staging": {
 			"name": "ithaca-journal-cloud-staging",
+			"secrets": {
+				"required": [
+					"VAULT_KEY_ENCRYPTION_KEY"
+				]
+			},
 			"d1_databases": [
 				{
 					"binding": "DB",
@@ -58,6 +68,11 @@
 		},
 		"production": {
 			"name": "ithaca-journal-cloud-production",
+			"secrets": {
+				"required": [
+					"VAULT_KEY_ENCRYPTION_KEY"
+				]
+			},
 			"d1_databases": [
 				{
 					"binding": "DB",

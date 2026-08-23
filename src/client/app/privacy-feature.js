@@ -1,4 +1,4 @@
-import { createDeviceSecret, PrivacyVaultError } from "./privacy-service.js";
+import { PrivacyVaultError } from "./privacy-service.js";
 
 const DEVICE_SECRET_STORAGE_PREFIX = "ithaca-journal:device-secret:v1:";
 const DEVICE_SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
@@ -40,7 +40,6 @@ export function createPrivacyFeature({
   api,
   vault,
   storage,
-  generateSecret = createDeviceSecret,
 }) {
   let privacyStatus = null;
   let deviceStorage = storage;
@@ -92,19 +91,32 @@ export function createPrivacyFeature({
     return secret;
   }
 
-  function persistDeviceSecret(user, secret) {
-    if (!DEVICE_SECRET_PATTERN.test(secret)) {
-      throw new PrivacyVaultError("invalid_device_key", "无法建立有效的浏览器本地密钥。");
-    }
+  function clearLegacyDeviceSecret(user) {
     try {
-      requireStorage().setItem(userStorageKey(user), secret);
-    } catch (error) {
+      const currentStorage = requireStorage();
+      if (typeof currentStorage.removeItem === "function") {
+        currentStorage.removeItem(userStorageKey(user));
+      }
+    } catch {
+      // The account-scoped copy is authoritative once migration succeeds.
+    }
+  }
+
+  async function requestAccountSecret(deviceSecret) {
+    const result = await api("/api/privacy/key", {
+      method: "POST",
+      body: JSON.stringify(deviceSecret ? { device_secret: deviceSecret } : {}),
+    });
+    if (
+      result?.key_custody !== "account"
+      || !DEVICE_SECRET_PATTERN.test(result?.device_secret ?? "")
+    ) {
       throw new PrivacyVaultError(
-        "device_storage_unavailable",
-        "当前浏览器无法保存本地密钥，请允许站点保存浏览器数据后重试。",
-        { cause: error },
+        "invalid_account_key",
+        "账户存档没有准备成功，请刷新页面后重试。",
       );
     }
+    return result.device_secret;
   }
 
   async function migrateLegacyContent() {
@@ -154,7 +166,7 @@ export function createPrivacyFeature({
     }
   }
 
-  async function createProfile(user, deviceSecret) {
+  async function createProfile(deviceSecret) {
     const profile = await vault.createProfile(deviceSecret);
     try {
       privacyStatus = await api("/api/privacy", {
@@ -168,32 +180,58 @@ export function createPrivacyFeature({
       privacyStatus = refreshedStatus;
       await vault.unlock(deviceSecret, privacyStatus.profile);
     }
-    persistDeviceSecret(user, deviceSecret);
   }
 
   async function ensureUnlocked(user) {
     lock();
-    privacyStatus = await api("/api/privacy");
-    let deviceSecret = readDeviceSecret(user);
+    try {
+      privacyStatus = await api("/api/privacy");
+      let deviceSecret;
+      let profileUnlocked = false;
 
-    if (!privacyStatus.profile) {
-      deviceSecret ??= generateSecret();
-      persistDeviceSecret(user, deviceSecret);
-      await createProfile(user, deviceSecret);
-    } else {
-      if (!deviceSecret) {
+      if (privacyStatus.key_custody === "account") {
+        deviceSecret = await requestAccountSecret();
+      } else if (privacyStatus.key_custody === "device") {
+        const legacyDeviceSecret = readDeviceSecret(user);
+        if (!legacyDeviceSecret) {
+          throw new PrivacyVaultError(
+            "account_key_migration_required",
+            "这个账号还没有完成多设备迁移，请先在原电脑打开一次。",
+          );
+        }
+        if (!privacyStatus.profile) {
+          throw new PrivacyVaultError(
+            "invalid_privacy_status",
+            "账户存档状态无效，请刷新页面后重试。",
+          );
+        }
+        await vault.unlock(legacyDeviceSecret, privacyStatus.profile);
+        deviceSecret = await requestAccountSecret(legacyDeviceSecret);
+        profileUnlocked = deviceSecret === legacyDeviceSecret;
+        clearLegacyDeviceSecret(user);
+      } else if (privacyStatus.key_custody === "none") {
+        deviceSecret = await requestAccountSecret();
+      } else {
         throw new PrivacyVaultError(
-          "missing_device_key",
-          "此浏览器没有打开现有手记所需的本地密钥。请使用原浏览器访问；清除站点数据后密钥无法恢复。",
+          "invalid_privacy_status",
+          "账户存档状态无效，请刷新页面后重试。",
         );
       }
-      await vault.unlock(deviceSecret, privacyStatus.profile);
-    }
 
-    if (privacyStatus.migration_required) {
-      await migrateLegacyContent();
+      if (!privacyStatus.profile) {
+        await createProfile(deviceSecret);
+      } else if (!profileUnlocked) {
+        await vault.unlock(deviceSecret, privacyStatus.profile);
+      }
+
+      if (privacyStatus.migration_required) {
+        await migrateLegacyContent();
+      }
+      state.privacyUnlocked = true;
+    } catch (error) {
+      lock();
+      throw error;
     }
-    state.privacyUnlocked = true;
   }
 
   async function exportPlaintext() {

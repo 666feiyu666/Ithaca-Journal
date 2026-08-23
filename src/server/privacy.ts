@@ -5,6 +5,7 @@ import {
   serializeSealedPayload,
   type SealedPayload,
 } from "./sealed";
+import { getKeyCustody, type KeyCustody } from "./vault-keys";
 
 const PRIVACY_PROFILE_VERSION = 1;
 const KDF_NAME = "PBKDF2-SHA256";
@@ -94,14 +95,23 @@ export async function requirePrivacyProfile(env: Env, userId: string): Promise<v
 export async function getPrivacyStatus(
   env: Env,
   userId: string,
-): Promise<{ profile: PrivacyProfile | null; migration_required: boolean }> {
+): Promise<{
+  profile: PrivacyProfile | null;
+  migration_required: boolean;
+  key_custody: KeyCustody;
+}> {
   const row = await privacyProfileRow(env, userId);
   if (!row) {
-    return { profile: null, migration_required: false };
+    return {
+      profile: null,
+      migration_required: false,
+      key_custody: await getKeyCustody(env, userId),
+    };
   }
   return {
     profile: toPrivacyProfile(row),
     migration_required: await hasLegacyContent(env, userId),
+    key_custody: await getKeyCustody(env, userId),
   };
 }
 
@@ -109,7 +119,11 @@ export async function createPrivacyProfile(
   env: Env,
   userId: string,
   payload: unknown,
-): Promise<{ profile: PrivacyProfile; migration_required: boolean }> {
+): Promise<{
+  profile: PrivacyProfile;
+  migration_required: boolean;
+  key_custody: KeyCustody;
+}> {
   const record = requireRecord(payload);
   if (record.version !== PRIVACY_PROFILE_VERSION) {
     throw new ApiError(422, "unsupported_privacy_profile", "隐私配置版本不受支持。");
@@ -161,5 +175,6 @@ export async function createPrivacyProfile(
   return {
     profile: toPrivacyProfile(saved),
     migration_required: await hasLegacyContent(env, userId),
+    key_custody: await getKeyCustody(env, userId),
   };
 }
