@@ -2,30 +2,46 @@
 
 ## 0.4.0 收敛新增：日记、语言设置与小彩蛋
 
-目标环境：staging（尚未发布）  
-当前状态：本地实现与验收完成，待产品负责人人工验收和发布授权  
+目标环境：staging（已发布）
+
+当前状态：实现、人工验收、远端迁移与 staging 发布完成；待已登录账户开展业务复查
+
 规格：`docs/0.4.0-writing-spaces-spec.md`  
 计划：`docs/0.4.0-implementation-plan.md`
 
 | 交付切片 | 状态 | 实现位置 | 验证层级 | 风险/偏差 | 下一步 |
 | --- | --- | --- | --- | --- | --- |
-| 日记分类 | 本地已完成 | `migrations/0012_convergence.sql`、`src/server/entries.ts`、书桌模块 | 单元、Worker 集成、真实浏览器创建/刷新恢复 | 0011 的旧 CHECK 不接受日记，故以`writing_category`为权威列并保留旧列回滚镜像 | 人工验收后再应用 staging 迁移 |
-| 设置与中英文 | 本地已完成 | `src/client/app/i18n.js`、`settings-feature.js`、标题页与时间服务 | 中英文即时切换、反向切换、刷新保持、动态时间文案、三档标题页 | 当前只翻译应用文案，用户内容保持原文；新增语言需补词典 | 人工校对英文语气 |
-| 小彩蛋与里程碑 | 本地已完成 | `src/server/achievements.ts`、`achievements-feature.js`、`achievements`表 | 达成计算单元测试、幂等/账户隔离/导出/删除集成测试、浏览器首次解锁与刷新 | 内容型条件只能在客户端解密后计算，服务端限制为固定键但不重复读取正文 | 人工验收面板与解锁节奏 |
-| 房间与走廊灯光 | 本地已完成 | `src/client/game/scene-state.js`、scene runtime/renderer、room/doorway 配置、`styles.css` | 状态存储与配置集成测试；1024×720/1920×1080 开关、场景往返、刷新和布置模式浏览器验收 | 状态按当前设备保存，不进入账户导出；复用原画并以 CSS 表达暖光 | 人工验收光照强度与点击区域 |
-| 整体回归 | 本地已完成 | 全部本轮变更 | 40 单元 + 46 集成 + check + build；1024×720、1440×900、1920×1080 浏览器检查 | Wrangler 仍会在受限沙箱提示个人日志目录 EPERM，但各命令退出码为 0 | 获授权后备份 staging D1、应用 0012、发布 Worker 并复查 |
+| 日记分类 | 已完成 | `migrations/0012_convergence.sql`、`src/server/entries.ts`、书桌模块 | 单元、Worker 集成、真实浏览器创建/刷新恢复、staging 迁移与结构复查 | 0011 的旧 CHECK 不接受日记，故以`writing_category`为权威列并保留旧列回滚镜像 | 收集 staging 反馈 |
+| 设置与中英文 | 已完成 | `src/client/app/i18n.js`、`settings-feature.js`、标题页与时间服务 | 中英文即时切换、反向切换、刷新保持、动态时间文案、三档标题页、staging Worker 发布 | 当前只翻译应用文案，用户内容保持原文；新增语言需补词典 | 已登录账户复查英文语气 |
+| 小彩蛋与里程碑 | 已完成 | `src/server/achievements.ts`、`achievements-feature.js`、`achievements`表 | 达成计算单元测试、幂等/账户隔离/导出/删除集成测试、浏览器首次解锁与刷新、staging 表结构验证 | 内容型条件只能在客户端解密后计算，服务端限制为固定键但不重复读取正文 | 已登录账户复查解锁节奏 |
+| 房间与走廊灯光 | 已完成 | `src/client/game/scene-state.js`、scene runtime/renderer、room/doorway 配置、`styles.css` | 状态存储与配置集成测试；1024×720/1920×1080 开关、场景往返、刷新和布置模式浏览器验收；新壁灯资源上传 staging | 状态按当前设备保存，不进入账户导出；走廊关闭态使用独立洋红底色键素材，开启态与环境暖光分层 | 收集 staging 反馈 |
+| 整体回归 | 已完成 | 全部本轮变更 | 40 单元 + 47 集成 + check + build；1024×720、1440×900、1920×1080 浏览器检查；staging D1 与 Worker 发布 | Access 边界已验证；本轮没有可用的已登录远端浏览器会话 | 已登录账户执行 staging 业务冒烟 |
 
 ### 本地收敛验收证据（2026-08-24）
 
 - `npm test`：40/40 通过。
-- `npm run test:integration`：46/46 通过。
+- `npm run test:integration`：47/47 通过。
 - `npm run check`：通过。
-- `npm run build`：Cloudflare Worker dry-run 通过，共读取 81 个静态资源。
+- `npm run build`：Cloudflare Worker dry-run 通过，共读取 82 个静态资源。
 - 真实浏览器确认标题页三项纵向入口在三档桌面尺寸无溢出，中英文即时/可逆切换并在刷新后保持。
 - 真实浏览器创建`日记`纸页并刷新恢复，独立分类计数、编辑器选择、英文动态保存时间均正确。
 - 小彩蛋从 5/8 更新为 6/8，首篇日记里程碑只解锁一次并在刷新后保留；控制台无 error/warn。
 - 房间台灯与走廊壁灯分别完成开关视觉、动态中英文操作名称、`aria-pressed`、场景往返和刷新保持；1024×720 与 1920×1080 无溢出，布置模式未误触灯光。
-- 0012 仅应用于本地 D1；staging 与 production 均未变更。
+- 0012 已应用于本地与 staging D1；production 未变更。
+
+### staging 收敛发布证据（2026-08-24）
+
+- 产品负责人明确授权将 0.4.0 收敛版本推送到远端 staging。
+- Git：提交`55ce6deb53ea9579308ce25bdbd59893284b1a47`已存在于`origin/main`。
+- 发布前备份：`.artifacts/staging-backups/before-0.4.0-convergence-2026-08-24.sql`，43,824 字节，SHA-256 `60B85C478BCFE3201F772524CF46A0E99C463DAA58859FAE6F2387654C1C9EBE`。
+- 远端迁移：`0012_convergence.sql`成功执行 7 条语句；复查无待执行迁移。
+- 结构验证：`journal_entries.writing_category`、`achievements`表以及两个新增索引均存在。
+- Worker：`ithaca-journal-cloud-staging`版本`986d56f1-816a-4e0e-832d-18719d45849f`（版本号 13）。
+- 静态资源：读取 82 个文件，上传 29 个新增或变更资源，包括走廊壁灯 OFF/ON 图层。
+- 流量：部署`081a4b6f-82b9-407d-af8c-7f3fae7210e0`将 100% 流量指向新版本。
+- Access：未登录访问首页、健康端点和壁灯资源均返回 302 并进入预期登录页；保护边界正常。
+- staging：<https://ithaca-journal-cloud-staging.feiyut666.workers.dev>。
+- production：未迁移、未部署。
 
 ## 0.4.0 写作空间重构（此前 staging 基线）
 
