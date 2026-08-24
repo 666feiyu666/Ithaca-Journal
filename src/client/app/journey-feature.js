@@ -12,6 +12,7 @@ export function createJourneyFeature({
   showIntro,
   ensurePrivacy,
   handleError,
+  onJourneyEntered = () => {},
 }) {
   async function enterCurrentJourney() {
     if (state.busy) {
@@ -26,6 +27,7 @@ export function createJourneyFeature({
       });
       state.journey = data.journey;
       state.letters = [];
+      onJourneyEntered(data.journey);
       if (data.journey.intro_completed_at) {
         showScene("room");
       } else {

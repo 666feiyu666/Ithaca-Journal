@@ -10,6 +10,7 @@ import {
   listBooks,
   updateBook,
 } from "./books";
+import { listAchievements, unlockAchievement } from "./achievements";
 import {
   createEntry,
   deleteEntry,
@@ -33,6 +34,12 @@ import { completeIntro, enterJourney, getJourney } from "./journey";
 import { listAvailableLetters, openLetter } from "./letters";
 import { createPrivacyProfile, getPrivacyStatus } from "./privacy";
 import {
+  createSentLetter,
+  exportSentLetters,
+  getSentLetter,
+  listSentLetters,
+} from "./sent-letters";
+import {
   exportOwnedPuzzles,
   listPuzzleShop,
   purchasePuzzle,
@@ -55,6 +62,7 @@ const TOPIC_PUZZLE_PATH = /^\/api\/topics\/([0-9a-f-]{36})\/puzzle$/;
 const PUZZLE_PURCHASE_PATH = /^\/api\/puzzles\/([a-z0-9-]+)\/purchase$/;
 const BOOK_PATH = /^\/api\/books\/([0-9a-f-]{36})$/;
 const LETTER_OPEN_PATH = /^\/api\/letters\/(\d{1,2})\/open$/;
+const SENT_LETTER_PATH = /^\/api\/sent-letters\/([0-9a-f-]{36})$/;
 
 function routeLabel(pathname: string): string {
   return pathname
@@ -64,7 +72,8 @@ function routeLabel(pathname: string): string {
     .replace(PUZZLE_PURCHASE_PATH, "/api/puzzles/:id/purchase")
     .replace(TOPIC_PATH, "/api/topics/:id")
     .replace(BOOK_PATH, "/api/books/:id")
-    .replace(LETTER_OPEN_PATH, "/api/letters/:day/open");
+    .replace(LETTER_OPEN_PATH, "/api/letters/:day/open")
+    .replace(SENT_LETTER_PATH, "/api/sent-letters/:id");
 }
 
 function entryIdFromPath(pathname: string): string | null {
@@ -309,17 +318,40 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ letter: await openLetter(env, user.id, Number(letterDay)) });
   }
 
+  if (url.pathname === "/api/sent-letters") {
+    const user = await requireAuthenticatedUser(request, env);
+    if (request.method === "GET") {
+      return jsonResponse({ letters: await listSentLetters(env, user.id) });
+    }
+    if (request.method === "POST") {
+      const letter = await createSentLetter(env, user.id, await readJsonBody(request));
+      return jsonResponse({ letter }, 201);
+    }
+    methodNotAllowed(["GET", "POST"]);
+  }
+
+  const sentLetterId = SENT_LETTER_PATH.exec(url.pathname)?.[1];
+  if (sentLetterId) {
+    if (request.method !== "GET") {
+      methodNotAllowed(["GET"]);
+    }
+    const user = await requireAuthenticatedUser(request, env);
+    return jsonResponse({ letter: await getSentLetter(env, user.id, sentLetterId) });
+  }
+
   if (url.pathname === "/api/export") {
     if (request.method !== "GET") {
       methodNotAllowed(["GET"]);
     }
     const user = await requireAuthenticatedUser(request, env);
-    const [entries, topicSummaries, books, journey, puzzles] = await Promise.all([
+    const [entries, topicSummaries, books, journey, puzzles, sentLetters, achievements] = await Promise.all([
       exportEntries(env, user.id),
       listTopics(env, user.id),
       exportBooks(env, user.id),
       getJourney(env, user.id),
       exportOwnedPuzzles(env, user.id),
+      exportSentLetters(env, user.id),
+      listAchievements(env, user.id),
     ]);
     const topics = await Promise.all(
       topicSummaries.map((topic) => getTopic(env, user.id, topic.id)),
@@ -330,7 +362,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return jsonResponse(
       {
         format: "ithaca-journal-export",
-        version: 4,
+        version: 6,
         exported_at: new Date().toISOString(),
         user: { email: user.email },
         entries,
@@ -338,10 +370,24 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
         books,
         journey,
         letters,
+        sent_letters: sentLetters,
         puzzles,
+        achievements,
       },
       200,
     );
+  }
+
+  if (url.pathname === "/api/achievements") {
+    const user = await requireAuthenticatedUser(request, env);
+    if (request.method === "GET") {
+      return jsonResponse({ achievements: await listAchievements(env, user.id) });
+    }
+    if (request.method === "POST") {
+      const achievement = await unlockAchievement(env, user.id, await readJsonBody(request));
+      return jsonResponse({ achievement }, 201);
+    }
+    methodNotAllowed(["GET", "POST"]);
   }
 
   if (url.pathname === "/api/account") {

@@ -32,10 +32,23 @@ export const doorwayScene = Object.freeze({
     {
       id: "lamp",
       label: "走廊壁灯",
-      kind: "decor",
-      interactive: false,
-      visualSource: sceneAssets.doorway.lamp,
+      kind: "light",
+      visualSource: sceneAssets.doorway.lampOff,
       hitArea: { x: 67.08, y: 24.15, width: 5.05, height: 11.55 },
+      toggleState: {
+        key: "light",
+        defaultValue: false,
+        off: {
+          actionLabel: "打开走廊壁灯",
+          statusText: "照亮门边与信箱",
+          visualSource: sceneAssets.doorway.lampOff,
+        },
+        on: {
+          actionLabel: "关掉走廊壁灯",
+          statusText: "壁灯正亮着，再点一次让走廊暗下来",
+          visualSource: sceneAssets.doorway.lampOn,
+        },
+      },
       z: 20,
     },
     {
@@ -47,7 +60,7 @@ export const doorwayScene = Object.freeze({
       hintAnchor: { x: 69.65, y: 41.75 },
       hint: { title: "查看信箱", text: "里面似乎多了一封信" },
       dialogueId: "doorway.mailbox",
-      action: { type: "feature", target: "openLetter" },
+      action: { type: "feature", target: "openMailbox" },
       z: 30,
     },
   ],

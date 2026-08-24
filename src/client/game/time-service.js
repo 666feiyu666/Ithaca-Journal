@@ -12,38 +12,50 @@ export function getTimePhase(date = new Date()) {
   );
 }
 
-export function createTimeSnapshot(date = new Date()) {
+export function createTimeSnapshot(date = new Date(), locale = "zh-CN") {
   const phase = getTimePhase(date);
   const timeMode = DAY_TIME_PHASE_IDS.includes(phase.id) ? "day" : "night";
+  const english = String(locale).toLowerCase().startsWith("en");
+  const phaseLabels = {
+    morning: "Morning",
+    afternoon: "Afternoon",
+    dusk: "Dusk",
+    lateNight: "Late night",
+  };
+  const dateLocale = english ? "en" : "zh-CN";
   return {
     date,
-    dateLabel: new Intl.DateTimeFormat("zh-CN", {
+    dateLabel: new Intl.DateTimeFormat(dateLocale, {
       month: "numeric",
       day: "numeric",
     }).format(date),
-    fullDateLabel: new Intl.DateTimeFormat("zh-CN", {
+    fullDateLabel: new Intl.DateTimeFormat(dateLocale, {
       year: "numeric",
       month: "long",
       day: "numeric",
       weekday: "long",
     }).format(date),
-    weekdayLabel: new Intl.DateTimeFormat("zh-CN", {
+    weekdayLabel: new Intl.DateTimeFormat(dateLocale, {
       weekday: "short",
     }).format(date),
     phase: phase.id,
-    phaseLabel: phase.label,
+    phaseLabel: english ? phaseLabels[phase.id] : phase.label,
     timeMode,
-    timeModeLabel: timeMode === "day" ? "白天" : "夜晚",
+    timeModeLabel: english ? (timeMode === "day" ? "Daytime" : "Night") : (timeMode === "day" ? "白天" : "夜晚"),
   };
 }
 
-export function createTimeService({ now = () => new Date(), intervalMs = 60_000 } = {}) {
+export function createTimeService({
+  now = () => new Date(),
+  intervalMs = 60_000,
+  getLocale = () => globalThis.document?.documentElement?.lang ?? "zh-CN",
+} = {}) {
   const listeners = new Set();
-  let snapshot = createTimeSnapshot(now());
+  let snapshot = createTimeSnapshot(now(), getLocale());
   let timer = null;
 
   const notify = () => {
-    snapshot = createTimeSnapshot(now());
+    snapshot = createTimeSnapshot(now(), getLocale());
     for (const listener of listeners) listener(snapshot);
   };
 

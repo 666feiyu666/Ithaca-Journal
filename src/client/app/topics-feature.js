@@ -63,13 +63,12 @@ export function createTopicsFeature({
   api,
   vault,
   setBusy,
-  renderList,
-  showEmptyEditor,
+  showTopicsView,
+  openDesk,
   showMessage,
   handleError,
   canLeaveCurrentDraft,
-  closeTopicDirectory = () => {},
-  openTopicDirectory = () => {},
+  onSaved = () => {},
 }) {
   let resizeFrame = 0;
   let puzzleShop = [];
@@ -158,12 +157,13 @@ export function createTopicsFeature({
 
   function renderTray() {
     if (!state.currentTopic) return;
+    const fragments = state.entries.filter((entry) => entry.category === "fragment");
     const selectedIds = new Set(state.currentTopic.fragments.map((fragment) => fragment.id));
     refs.topicTrayList.replaceChildren();
-    refs.topicTrayCount.textContent = `${state.entries.length} 张纸 · ${selectedIds.size} 张已在画布`;
-    refs.topicTrayEmpty.hidden = state.entries.length !== 0;
+    refs.topicTrayCount.textContent = `${fragments.length} 张碎片 · ${selectedIds.size} 张已在画布`;
+    refs.topicTrayEmpty.hidden = fragments.length !== 0;
 
-    for (const fragment of state.entries) {
+    for (const fragment of fragments) {
       const inTopic = selectedIds.has(fragment.id);
       const card = document.createElement("article");
       card.className = "topic-tray-card";
@@ -504,11 +504,9 @@ export function createTopicsFeature({
     state.currentTopic = normalizeTopic(topic);
     puzzleShop = [];
     state.dirty = false;
-    state.workbenchMode = "topics";
-    closeTopicDirectory();
-    refs.editorEmpty.hidden = true;
-    refs.editorPanel.hidden = true;
+    refs.topicEmpty.hidden = true;
     refs.topicPanel.hidden = false;
+    refs.topicBringToDeskButton.disabled = false;
     window.scrollTo({ top: 0, left: 0 });
     refs.topicPanel.parentElement.scrollTop = 0;
     refs.topicDate.textContent = `最近整理：${formatDate(topic.updated_at)}`;
@@ -517,14 +515,42 @@ export function createTopicsFeature({
     setLayoutState("布局已保存");
     renderWorkspace();
     void loadPuzzleShop();
-    renderList();
+    renderTopicDirectory();
+  }
+
+  function renderTopicDirectory() {
+    refs.topicList.replaceChildren();
+    refs.topicListEmpty.hidden = state.topics.length !== 0;
+    for (const topic of state.topics) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "topic-list__item";
+      item.setAttribute("role", "listitem");
+      item.setAttribute("aria-current", String(state.currentTopic?.id === topic.id));
+      const title = document.createElement("strong");
+      title.dataset.i18nSkip = "";
+      title.textContent = topic.title || "未命名主题";
+      const meta = document.createElement("small");
+      meta.textContent = `${topic.fragment_count} 张碎片 · ${formatDate(topic.updated_at)}`;
+      item.append(title, meta);
+      item.addEventListener("click", () => void openTopic(topic.id));
+      refs.topicList.append(item);
+    }
+  }
+
+  function showEmptyBoard() {
+    state.currentTopic = null;
+    refs.topicPanel.hidden = true;
+    refs.topicEmpty.hidden = false;
+    refs.topicBringToDeskButton.disabled = true;
+    renderTopicDirectory();
   }
 
   async function loadTopics() {
     const data = await api("/api/topics");
     state.topics = await Promise.all(data.topics.map((topic) => vault.openTopic(topic)));
     state.topicsLoaded = true;
-    renderList();
+    renderTopicDirectory();
   }
 
   async function openTopic(topicId, { force = false } = {}) {
@@ -574,10 +600,10 @@ export function createTopicsFeature({
       });
       const topic = await vault.openTopic(data.topic);
       refs.topicDialog.close();
-      state.workbenchMode = "topics";
       state.currentTopic = topic;
       await loadTopics();
       showTopic(topic);
+      onSaved({ created: !existingTopicId, topic });
       showMessage(existingTopicId ? "主题说明已经更新。" : "主题已经建立，从左侧取一张碎片开始吧。");
     } catch (error) {
       setTopicFormError(error instanceof Error ? error.message : "无法保存主题。");
@@ -801,8 +827,7 @@ export function createTopicsFeature({
         const data = await api(`/api/topics/${state.topics[0].id}`);
         showTopic(await vault.openTopic(data.topic));
       } else {
-        showEmptyEditor();
-        openTopicDirectory();
+        showEmptyBoard();
       }
       showMessage("主题已经删除，原始碎片仍然保留。");
     } catch (error) {
@@ -812,7 +837,67 @@ export function createTopicsFeature({
     }
   }
 
+  async function bringCurrentTopicToDesk() {
+    if (!state.currentTopic || state.busy || !canLeaveCurrentDraft()) return;
+    const existing = state.entries.find((entry) => (
+      entry.category === "theme" && entry.source_topic_id === state.currentTopic.id
+    ));
+    if (existing) {
+      await openDesk({ category: "theme", entryId: existing.id });
+      return;
+    }
+    const body = [
+      state.currentTopic.body,
+      ...state.currentTopic.fragments.map((fragment) => (
+        `## ${fragment.title || "没有题目的纸页"}\n\n${fragment.body || fragment.excerpt || ""}`
+      )),
+    ].filter(Boolean).join("\n\n---\n\n");
+    await openDesk({
+      category: "theme",
+      draft: {
+        title: state.currentTopic.title,
+        body,
+        source_topic_id: state.currentTopic.id,
+      },
+    });
+  }
+
+  async function open() {
+    if (!state.user || state.busy || !canLeaveCurrentDraft()) return;
+    showTopicsView();
+    setBusy(true);
+    try {
+      const requests = [];
+      if (!state.entriesLoaded) {
+        requests.push(api("/api/entries").then(async (data) => {
+          state.entries = await Promise.all(data.entries.map((entry) => vault.openEntry(entry)));
+          state.entriesLoaded = true;
+        }));
+      }
+      if (!state.topicsLoaded) requests.push(loadTopics());
+      await Promise.all(requests);
+      renderTopicDirectory();
+      if (state.currentTopic?.id) {
+        const data = await api(`/api/topics/${state.currentTopic.id}`);
+        showTopic(await vault.openTopic(data.topic));
+      } else if (state.topics[0]) {
+        const data = await api(`/api/topics/${state.topics[0].id}`);
+        showTopic(await vault.openTopic(data.topic));
+      } else {
+        showEmptyBoard();
+      }
+    } catch (error) {
+      handleError(error, "无法读取公告板。");
+      showEmptyBoard();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function bindEvents() {
+    refs.newTopicButton.addEventListener("click", () => openTopicDialog());
+    refs.emptyNewTopicButton.addEventListener("click", () => openTopicDialog());
+    refs.topicBringToDeskButton.addEventListener("click", () => void bringCurrentTopicToDesk());
     refs.editTopicButton.addEventListener("click", () => openTopicDialog(state.currentTopic));
     refs.openPuzzleShopButton.addEventListener("click", () => void openPuzzleShop());
     refs.autoArrangeTopicButton.addEventListener("click", () => void autoArrangeCurrentTopic());
@@ -831,6 +916,7 @@ export function createTopicsFeature({
 
   return Object.freeze({
     bindEvents,
+    open,
     loadTopics,
     openTopic,
     openTopicDialog,

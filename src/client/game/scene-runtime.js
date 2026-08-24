@@ -2,6 +2,7 @@ import { createSceneArrangement } from "./scene-arrangement.js";
 import { clampSceneObjectPosition, createSceneLayoutStore } from "./scene-layout.js";
 import { resolvePhaseValue } from "./scene-registry.js";
 import { createSceneRenderer, positionSceneObject } from "./scene-renderer.js";
+import { createSceneStateStore } from "./scene-state.js";
 
 function getBrowserStorage() {
   try {
@@ -36,6 +37,7 @@ export function createSceneRuntime({
   const arrangeReset = root.querySelector("[data-scene-arrange-reset]");
   const arrangeStatus = root.querySelector("[data-scene-arrange-status]");
   const layoutStore = createSceneLayoutStore({ storage: getBrowserStorage() });
+  const stateStore = createSceneStateStore({ storage: getBrowserStorage() });
 
   let currentSceneId = null;
   let mode = "explore";
@@ -45,12 +47,44 @@ export function createSceneRuntime({
 
   const isMovable = (sceneObject) => sceneObject.movable === true;
 
+  function getObjectState(sceneObject, sceneId = currentSceneId) {
+    if (!sceneId || !sceneObject.toggleState) return false;
+    return stateStore.get(
+      sceneId,
+      sceneObject.toggleState.key,
+      sceneObject.toggleState.defaultValue,
+    );
+  }
+
+  function getTogglePresentation(sceneObject) {
+    if (!sceneObject.toggleState) return null;
+    return sceneObject.toggleState[getObjectState(sceneObject) ? "on" : "off"];
+  }
+
+  function getObjectHintTitle(sceneObject) {
+    return (
+      getTogglePresentation(sceneObject)?.actionLabel ??
+      sceneObject.hint?.title ??
+      sceneObject.label
+    );
+  }
+
   function getObjectHintText(sceneObject) {
+    const toggleText = getTogglePresentation(sceneObject)?.statusText;
+    if (toggleText) return toggleText;
     return (
       resolvePhaseValue(sceneObject.hint?.textByPhase, timeSnapshot.phase) ??
       sceneObject.hint?.text ??
       ""
     );
+  }
+
+  function getObjectAccessibleLabel(sceneObject) {
+    const togglePresentation = getTogglePresentation(sceneObject);
+    if (togglePresentation) {
+      return [togglePresentation.actionLabel, togglePresentation.statusText].join("：");
+    }
+    return [sceneObject.label, getObjectHintText(sceneObject)].filter(Boolean).join("：");
   }
 
   function getSceneObjectRect(sceneObject, sceneId = currentSceneId) {
@@ -88,7 +122,7 @@ export function createSceneRuntime({
         "aria-label",
         arrangingObject
           ? `${sceneObject.label}：可拖动，也可使用方向键调整位置`
-          : [sceneObject.label, getObjectHintText(sceneObject)].filter(Boolean).join("："),
+          : getObjectAccessibleLabel(sceneObject),
       );
     }
   }
@@ -102,11 +136,8 @@ export function createSceneRuntime({
   function showHint(sceneObject) {
     if (mode !== "explore") return;
     activeHintObjectId = sceneObject.id;
-    hintTitle.textContent = sceneObject.hint?.title ?? sceneObject.label;
-    hintText.textContent =
-      resolvePhaseValue(sceneObject.hint?.textByPhase, timeSnapshot.phase) ??
-      sceneObject.hint?.text ??
-      "";
+    hintTitle.textContent = getObjectHintTitle(sceneObject);
+    hintText.textContent = getObjectHintText(sceneObject);
     const baseAnchor = sceneObject.hintAnchor ?? {
       x: sceneObject.hitArea.x + sceneObject.hitArea.width / 2,
       y: sceneObject.hitArea.y,
@@ -122,11 +153,16 @@ export function createSceneRuntime({
     hint.setAttribute("aria-hidden", "false");
   }
 
-  const getObjectVisualSource = (sceneObject) =>
-    resolvePhaseValue(
-      sceneObject.visualSourceByPhase ?? sceneObject.visualSource,
+  const getObjectVisualSource = (sceneObject) => {
+    const togglePresentation = getTogglePresentation(sceneObject);
+    return resolvePhaseValue(
+      togglePresentation?.visualSourceByPhase ??
+        togglePresentation?.visualSource ??
+        sceneObject.visualSourceByPhase ??
+        sceneObject.visualSource,
       timeSnapshot.phase,
     );
+  };
 
   const getSceneTitle = (scene) =>
     resolvePhaseValue(scene.titleByPhase, timeSnapshot.phase) ?? scene.title;
@@ -169,6 +205,18 @@ export function createSceneRuntime({
   function activateObject(sceneObject, button) {
     if (mode !== "explore") return;
     hideHint();
+    if (sceneObject.toggleState) {
+      stateStore.toggle(
+        currentSceneId,
+        sceneObject.toggleState.key,
+        sceneObject.toggleState.defaultValue,
+      );
+      const scene = getCurrentScene();
+      applySceneState(scene);
+      renderer.updateObjectStates(scene);
+      showHint(sceneObject);
+      return;
+    }
     const dialogue = dialogues[sceneObject.dialogueId];
     if (!dialogue) {
       executeAction(sceneObject.action, button);
@@ -241,7 +289,8 @@ export function createSceneRuntime({
     objectsRoot,
     getTimeSnapshot: () => timeSnapshot,
     resolvePhaseValue,
-    getObjectHintText,
+    getObjectAccessibleLabel,
+    getObjectState,
     getSceneObjectRect,
     getObjectVisualSource,
     isMovable,
@@ -253,12 +302,21 @@ export function createSceneRuntime({
     updateObjectAccessibility,
   });
 
+  function applySceneState(scene) {
+    const lightIsOn = scene.objects.some(
+      (sceneObject) =>
+        sceneObject.toggleState?.key === "light" && getObjectState(sceneObject, scene.id),
+    );
+    root.dataset.sceneLight = lightIsOn ? "on" : "off";
+  }
+
   function show(sceneId, { focus = true } = {}) {
     const scene = registry.get(sceneId);
     dialogueRuntime.close();
     window.scrollTo({ top: 0, left: 0 });
     currentSceneId = sceneId;
     root.dataset.sceneId = sceneId;
+    applySceneState(scene);
     world.style.setProperty("--scene-aspect", String(scene.aspectRatio ?? 16 / 9));
     eyebrow.textContent = scene.eyebrow ?? scene.title;
     heading.textContent = getSceneTitle(scene);

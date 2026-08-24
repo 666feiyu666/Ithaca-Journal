@@ -11,7 +11,7 @@ The room scene currently uses the shared 1456 × 816 source camera.
 | `bookshelf.png` | Yes, final art | Movable bookshelf and library interaction. |
 | `plant.png` | Yes, final art | Movable room decoration. |
 | `desk-closed.png` | Yes, final art | Movable writing desk and workbench interaction. |
-| `lamp-off.png` | Yes, final art | Movable desk-lamp decoration. |
+| `lamp-off.png` | Yes, final art | Movable, interactive desk lamp; the runtime adds its warm-light state without replacing the source art. |
 | `chair-back.png` | Yes, final art | Movable chair decoration above the desk layer. |
 | `room-placeholder-v01.png` | Historical fallback | Migrated 0.1.0 composite image; no longer loaded by the default scene. |
 

@@ -1,8 +1,9 @@
 export function formatDate(value) {
   if (!value) {
-    return "尚未保存";
+    return globalThis.document?.documentElement?.lang === "en" ? "Not saved yet" : "尚未保存";
   }
-  return new Intl.DateTimeFormat("zh-CN", {
+  const locale = globalThis.document?.documentElement?.lang === "en" ? "en" : "zh-CN";
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

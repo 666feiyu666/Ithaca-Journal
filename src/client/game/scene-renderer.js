@@ -10,7 +10,8 @@ export function createSceneRenderer({
   objectsRoot,
   getTimeSnapshot,
   resolvePhaseValue,
-  getObjectHintText,
+  getObjectAccessibleLabel,
+  getObjectState,
   getSceneObjectRect,
   getObjectVisualSource,
   isMovable,
@@ -21,6 +22,27 @@ export function createSceneRenderer({
   arrangement,
   updateObjectAccessibility,
 }) {
+  function applyObjectState(button, sceneObject) {
+    if (!sceneObject.toggleState) {
+      delete button.dataset.sceneObjectToggle;
+      delete button.dataset.sceneObjectState;
+      button.removeAttribute("aria-pressed");
+      return;
+    }
+    const enabled = getObjectState(sceneObject);
+    button.dataset.sceneObjectToggle = "true";
+    button.dataset.sceneObjectState = enabled ? "on" : "off";
+    button.setAttribute("aria-pressed", String(enabled));
+  }
+
+  function updateObjectVisual(button, sceneObject) {
+    const visual = button.querySelector("[data-scene-object-visual]");
+    const source = getObjectVisualSource(sceneObject);
+    if (visual && source && visual.getAttribute("src") !== source) {
+      visual.setAttribute("src", source);
+    }
+  }
+
   function renderLayers(scene) {
     layersRoot.replaceChildren();
     for (const layer of scene.layers) {
@@ -67,8 +89,9 @@ export function createSceneRenderer({
       button.style.zIndex = String(sceneObject.z ?? 0);
       button.setAttribute(
         "aria-label",
-        [sceneObject.label, getObjectHintText(sceneObject)].filter(Boolean).join("："),
+        getObjectAccessibleLabel(sceneObject),
       );
+      applyObjectState(button, sceneObject);
       const resolvedRect = getSceneObjectRect(sceneObject, scene.id);
       applyRect(button, resolvedRect);
       button.dataset.sceneObjectX = String(resolvedRect.x);
@@ -83,6 +106,9 @@ export function createSceneRenderer({
         visual.alt = "";
         visual.draggable = false;
         visual.style.objectFit = sceneObject.visualFit ?? "contain";
+        visual.addEventListener("load", () =>
+          button.classList.remove("scene-object--visual-failed"),
+        );
         visual.addEventListener("error", () =>
           button.classList.add("scene-object--visual-failed"),
         );
@@ -127,16 +153,22 @@ export function createSceneRenderer({
     for (const sceneObject of scene.objects) {
       const button = objectsRoot.querySelector(`[data-scene-object-id="${sceneObject.id}"]`);
       if (!button) continue;
-      const visual = button.querySelector("[data-scene-object-visual]");
-      const source = getObjectVisualSource(sceneObject);
-      if (visual && source && visual.getAttribute("src") !== source) {
-        visual.setAttribute("src", source);
-      }
+      updateObjectVisual(button, sceneObject);
     }
     updateObjectAccessibility();
   }
 
-  return Object.freeze({ renderLayers, renderObjects, updatePhaseObjects });
+  function updateObjectStates(scene) {
+    for (const sceneObject of scene.objects) {
+      const button = objectsRoot.querySelector(`[data-scene-object-id="${sceneObject.id}"]`);
+      if (!button) continue;
+      applyObjectState(button, sceneObject);
+      updateObjectVisual(button, sceneObject);
+    }
+    updateObjectAccessibility();
+  }
+
+  return Object.freeze({ renderLayers, renderObjects, updateObjectStates, updatePhaseObjects });
 }
 
 export function positionSceneObject(

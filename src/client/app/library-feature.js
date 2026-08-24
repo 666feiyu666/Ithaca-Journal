@@ -2,57 +2,38 @@ import { formatDate } from "./format.js";
 
 const MAX_SEALED_BOOK_BYTES = 1_100_000;
 
-function compileBookContent(title, preface, topics) {
-  const sections = topics.map((topic) => {
-    const fragments = topic.fragments
-      .map((fragment) => `### 素材｜${fragment.title}\n\n${fragment.body}`)
-      .join("\n\n");
-    return [`## ${topic.title}`, topic.body, fragments].filter(Boolean).join("\n\n");
-  });
-  return [`# ${title}`, preface, ...sections].filter(Boolean).join("\n\n---\n\n");
-}
-
 export function createLibraryFeature({
   state,
   refs,
   api,
   vault,
   setBusy,
+  showBooksView,
+  openDesk,
   showMessage,
   handleError,
   canLeaveCurrentDraft,
-  loadTopics,
+  onBound = () => {},
 }) {
-  function setCompileBookError(message = "") {
-    refs.compileBookError.textContent = message;
-    refs.compileBookError.hidden = !message;
-  }
-
-  function showBooksView() {
-    if (!state.user) return;
-    refs.authView.hidden = true;
-    refs.titleView.hidden = true;
-    refs.sceneView.hidden = true;
-    refs.appView.hidden = true;
-    refs.booksView.hidden = false;
-    window.scrollTo({ top: 0, left: 0 });
-    refs.booksEmail.textContent = state.user.email;
-  }
-
   function renderBookList() {
     refs.bookList.replaceChildren();
     refs.bookListEmpty.hidden = state.books.length !== 0;
     for (const book of state.books) {
       const item = document.createElement("button");
       item.type = "button";
-      item.className = "book-list__item";
+      item.className = "book-list__item book-cover";
       item.setAttribute("role", "listitem");
       item.setAttribute("aria-current", String(state.currentBook?.id === book.id));
+      const ornament = document.createElement("span");
+      ornament.className = "book-cover__ornament";
+      ornament.setAttribute("aria-hidden", "true");
+      ornament.textContent = "IJ";
       const title = document.createElement("strong");
+      title.dataset.i18nSkip = "";
       title.textContent = book.title;
       const date = document.createElement("small");
       date.textContent = formatDate(book.created_at);
-      item.append(title, date);
+      item.append(ornament, title, date);
       item.addEventListener("click", () => void openBook(book.id));
       refs.bookList.append(item);
     }
@@ -92,7 +73,6 @@ export function createLibraryFeature({
     state.currentBook = book;
     refs.bookEmpty.hidden = true;
     refs.bookReader.hidden = false;
-    window.scrollTo({ top: 0, left: 0 });
     refs.bookReader.parentElement.scrollTop = 0;
     refs.bookDate.textContent = formatDate(book.created_at);
     refs.bookTitle.textContent = book.title;
@@ -132,18 +112,12 @@ export function createLibraryFeature({
     showBooksView();
     setBusy(true);
     try {
-      await Promise.all([
-        state.booksLoaded ? Promise.resolve() : loadBooks(),
-        state.topicsLoaded ? Promise.resolve() : loadTopics(),
-      ]);
-      if (state.currentBook?.id) {
-        showBook(state.currentBook);
-      } else if (state.books[0]) {
+      if (!state.booksLoaded) await loadBooks();
+      if (state.currentBook?.id) showBook(state.currentBook);
+      else if (state.books[0]) {
         const data = await api(`/api/books/${state.books[0].id}`);
         showBook(await vault.openBook(data.book));
-      } else {
-        showEmptyBook();
-      }
+      } else showEmptyBook();
     } catch (error) {
       handleError(error, "无法读取书架。");
       showEmptyBook();
@@ -152,127 +126,63 @@ export function createLibraryFeature({
     }
   }
 
-  function renderBookTopicOptions() {
-    refs.bookTopicOptions.replaceChildren();
-    for (const topic of state.topics) {
-      const label = document.createElement("label");
-      label.className = "source-picker__option";
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.name = "book-topic";
-      input.value = topic.id;
-      input.disabled = topic.fragment_count === 0;
-      const copy = document.createElement("span");
-      const title = document.createElement("strong");
-      title.textContent = topic.title;
-      const count = document.createElement("small");
-      count.textContent = topic.fragment_count === 0
-        ? "画布为空，暂不能编纂"
-        : `${topic.fragment_count} 则碎片`;
-      copy.append(title, count);
-      label.append(input, copy);
-      refs.bookTopicOptions.append(label);
-    }
+  async function startBook() {
+    await openDesk({
+      category: "book",
+      draft: { title: "", body: "", tags: [] },
+    });
   }
 
-  async function openCompileBookDialog() {
-    if (!state.topicsLoaded) {
-      setBusy(true);
-      try {
-        await loadTopics();
-      } catch (error) {
-        handleError(error, "无法读取主题笔记。");
-        return;
-      } finally {
-        setBusy(false);
-      }
-    }
-    if (!state.topics.some((topic) => topic.fragment_count > 0)) {
-      showMessage("先为至少一则主题放入碎片，再开始编纂。", "error");
-      return;
-    }
-    setCompileBookError();
-    refs.bookTitleInput.value = "";
-    refs.bookPrefaceInput.value = "";
-    renderBookTopicOptions();
-    refs.compileBookDialog.showModal();
-    refs.bookTitleInput.focus();
-  }
-
-  async function compileBook(event) {
-    event.preventDefault();
-    if (state.busy) return;
-    const topicIds = [...refs.bookTopicOptions.querySelectorAll("input:checked")].map(
-      (input) => input.value,
-    );
-    if (!topicIds.length) {
-      setCompileBookError("请至少选择一则主题笔记。");
+  async function bindDraft(entry) {
+    if (!entry?.id || entry.category !== "book" || state.busy) return;
+    const contentSnapshot = [`# ${entry.title}`, entry.body].filter(Boolean).join("\n\n");
+    const bookContent = {
+      title: entry.title,
+      preface: "",
+      content_snapshot: contentSnapshot,
+      sources: [],
+    };
+    if (new TextEncoder().encode(JSON.stringify(bookContent)).byteLength > MAX_SEALED_BOOK_BYTES) {
+      showMessage("这份书稿超过当前版本的加密装订大小限制。", "error");
       return;
     }
     setBusy(true);
-    setCompileBookError();
+    let createdBookId = null;
     try {
-      const topics = await Promise.all(topicIds.map(async (topicId) => {
-        const data = await api(`/api/topics/${topicId}`);
-        return vault.openTopic(data.topic);
-      }));
-      const title = refs.bookTitleInput.value.trim();
-      const preface = refs.bookPrefaceInput.value;
-      const contentSnapshot = compileBookContent(title, preface, topics);
-      const sources = topics.map((topic) => ({
-        topic_id: topic.id,
-        title: topic.title,
-        updated_at: topic.updated_at,
-        fragment_ids: topic.fragments.map((fragment) => fragment.id),
-      }));
-      const bookContent = {
-        title,
-        preface,
-        content_snapshot: contentSnapshot,
-        sources,
-      };
-      if (new TextEncoder().encode(JSON.stringify(bookContent)).byteLength > MAX_SEALED_BOOK_BYTES) {
-        throw new Error("编纂结果超过当前版本的加密存储大小限制。");
-      }
-      const bookId = crypto.randomUUID();
-      const sealedPayload = await vault.seal("book", bookId, bookContent);
+      const id = crypto.randomUUID();
+      const sealedPayload = await vault.seal("book", id, bookContent);
       const data = await api("/api/books", {
         method: "POST",
-        body: JSON.stringify({
-          id: bookId,
-          sealed_payload: sealedPayload,
-          source_topic_ids: topicIds,
-        }),
+        body: JSON.stringify({ id, source_entry_id: entry.id, sealed_payload: sealedPayload }),
       });
       const book = await vault.openBook(data.book);
-      refs.compileBookDialog.close();
-      state.currentBook = book;
-      await loadBooks();
-      showBooksView();
-      showBook(book);
-      showMessage("新书已经装订并放上书架。 ");
+      createdBookId = book.id;
+      state.booksLoaded = false;
+      showMessage("书稿已经装订，并作为独立快照放上书架。");
     } catch (error) {
-      setCompileBookError(error instanceof Error ? error.message : "无法完成编纂。");
+      handleError(error, "无法装订这份书稿。");
     } finally {
       setBusy(false);
+    }
+    if (createdBookId) {
+      await open();
+      await openBook(createdBookId);
+      onBound(state.currentBook);
     }
   }
 
   async function removeCurrentBook() {
     if (!state.currentBook?.id || state.busy) return;
-    const bookId = state.currentBook.id;
     setBusy(true);
     try {
-      await api(`/api/books/${bookId}`, { method: "DELETE" });
+      await api(`/api/books/${state.currentBook.id}`, { method: "DELETE" });
       state.currentBook = null;
       await loadBooks();
       if (state.books[0]) {
         const data = await api(`/api/books/${state.books[0].id}`);
         showBook(await vault.openBook(data.book));
-      } else {
-        showEmptyBook();
-      }
-      showMessage("这本书已经从书架移除。 ");
+      } else showEmptyBook();
+      showMessage("这本书已经从书架移除，原书稿仍留在书桌。");
     } catch (error) {
       handleError(error, "无法移除这本书。");
     } finally {
@@ -281,13 +191,11 @@ export function createLibraryFeature({
   }
 
   function bindEvents() {
-    refs.compileBookButton.addEventListener("click", () => void openCompileBookDialog());
-    refs.emptyCompileBookButton.addEventListener("click", () => void openCompileBookDialog());
-    refs.compileBookForm.addEventListener("submit", (event) => void compileBook(event));
-    refs.cancelCompileBook.addEventListener("click", () => refs.compileBookDialog.close());
+    refs.compileBookButton.addEventListener("click", () => void startBook());
+    refs.emptyCompileBookButton.addEventListener("click", () => void startBook());
     refs.deleteBookButton.addEventListener("click", () => refs.deleteBookDialog.showModal());
     refs.confirmDeleteBook.addEventListener("click", () => void removeCurrentBook());
   }
 
-  return Object.freeze({ bindEvents, open });
+  return Object.freeze({ bindDraft, bindEvents, open, startBook });
 }

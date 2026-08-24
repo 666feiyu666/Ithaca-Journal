@@ -149,6 +149,7 @@ function withoutCiphertext(record) {
 function legacyEntry(record) {
   return {
     ...record,
+    tags: Array.isArray(record.tags) ? record.tags : [],
     excerpt: typeof record.excerpt === "string"
       ? record.excerpt
       : String(record.body ?? "").slice(0, 180),
@@ -212,12 +213,17 @@ export function createPrivacyVault() {
       return legacyEntry(record);
     }
     const content = await open("entry", record.id, record.sealed_payload);
-    const title = requireText(content, "title", "碎片");
-    const body = requireText(content, "body", "碎片");
+    const title = requireText(content, "title", "纸页");
+    const body = requireText(content, "body", "纸页");
+    const tags = Array.isArray(content?.tags)
+      ? [...new Set(content.tags.filter((tag) => typeof tag === "string").map((tag) => tag.trim()).filter(Boolean))]
+      : [];
     return {
       ...withoutCiphertext(record),
       title,
       body,
+      tags,
+      recipient: typeof content?.recipient === "string" ? content.recipient : "",
       excerpt: body.slice(0, 180),
       body_format: "plain",
     };
@@ -257,15 +263,26 @@ export function createPrivacyVault() {
     };
   }
 
+  async function openSentLetter(record) {
+    const content = await open("sent-letter", record.id, record.sealed_payload);
+    return {
+      ...withoutCiphertext(record),
+      title: requireText(content, "title", "寄件"),
+      recipient: requireText(content, "recipient", "寄件"),
+      body: requireText(content, "body", "寄件"),
+    };
+  }
+
   async function openArchive(archive) {
-    const [entries, topics, books] = await Promise.all([
+    const [entries, topics, books, sentLetters] = await Promise.all([
       Promise.all((archive.entries ?? []).map((entry) => openEntry(entry))),
       Promise.all((archive.topics ?? []).map((topic) => openTopic(topic))),
       Promise.all((archive.books ?? []).map((book) => openBook(book))),
+      Promise.all((archive.sent_letters ?? []).map((letter) => openSentLetter(letter))),
     ]);
     return {
       ...archive,
-      version: 4,
+      version: 6,
       exported_at: new Date().toISOString(),
       entries: entries.map(({ sealed_payload: _sealedPayload, ...entry }) => entry),
       topics: topics.map(({ sealed_payload: _sealedPayload, ...topic }) => ({
@@ -275,6 +292,7 @@ export function createPrivacyVault() {
         )) ?? [],
       })),
       books: books.map(({ sealed_payload: _sealedPayload, ...book }) => book),
+      sent_letters: sentLetters.map(({ sealed_payload: _sealedPayload, ...letter }) => letter),
     };
   }
 
@@ -290,6 +308,7 @@ export function createPrivacyVault() {
     openArchive,
     openBook,
     openEntry,
+    openSentLetter,
     openTopic,
     seal,
     unlock,

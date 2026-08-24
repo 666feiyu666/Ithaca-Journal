@@ -4,10 +4,15 @@ This directory is the production asset root for the 0.4.0 visual-novel scene sys
 
 ```text
 scenes/
+├── title/
+│   ├── title-morning.png      # morning master; also used for afternoon with a warm runtime grade
+│   ├── title-dusk.png         # dusk relighting of the morning master
+│   └── title-late-night.png   # late-night relighting of the morning master
 ├── doorway/
 │   ├── background-base.webp   # empty corridor shell and wall decoration
 │   ├── door.png               # room-entry interaction
-│   ├── lamp.png               # fixed corridor decoration
+│   ├── lamp.png               # interactive corridor lamp, off state
+│   ├── lamp-on.png            # interactive corridor lamp, on state
 │   └── mailbox.png            # letter interaction
 └── room/
     ├── background-base.webp   # empty room shell
@@ -32,3 +37,14 @@ The committed `room/room-placeholder-v01.png` is retained only as a historical f
 - Use lowercase kebab-case filenames and do not add version suffixes to final files.
 - Keep prompts, source files, third-party references, and local processing tools outside the runtime directory. Only production-cleared exports belong here.
 - Missing time-of-day variants must fall back to the base asset; do not duplicate the base image for every phase.
+
+## Title time mapping
+
+The title screen reads the same `data-time-phase` value produced by the shared time service as the room scene:
+
+- `morning` (05:00–11:59): `title-morning.png`
+- `afternoon` (12:00–16:59): `title-morning.png` with a restrained warm CSS grade
+- `dusk` (17:00–21:59): `title-dusk.png`
+- `lateNight` (22:00–04:59): `title-late-night.png`
+
+The three files preserve one camera, skyline, cloud layout, and central UI-safe region. They are decorative backgrounds; title content and controls remain semantic HTML above the artwork.

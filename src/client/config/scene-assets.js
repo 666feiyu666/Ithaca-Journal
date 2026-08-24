@@ -2,6 +2,12 @@ const SCENE_ASSET_ROOT = "/assets/scenes";
 
 export const sceneAssets = Object.freeze({
   root: SCENE_ASSET_ROOT,
+  title: Object.freeze({
+    morning: `${SCENE_ASSET_ROOT}/title/title-morning.png`,
+    afternoon: `${SCENE_ASSET_ROOT}/title/title-morning.png`,
+    dusk: `${SCENE_ASSET_ROOT}/title/title-dusk.png`,
+    lateNight: `${SCENE_ASSET_ROOT}/title/title-late-night.png`,
+  }),
   room: Object.freeze({
     placeholderBackground: `${SCENE_ASSET_ROOT}/room/room-placeholder-v01.png`,
     background: `${SCENE_ASSET_ROOT}/room/background-base.webp`,
@@ -17,7 +23,8 @@ export const sceneAssets = Object.freeze({
   doorway: Object.freeze({
     background: `${SCENE_ASSET_ROOT}/doorway/background-base.webp`,
     door: `${SCENE_ASSET_ROOT}/doorway/door.png`,
-    lamp: `${SCENE_ASSET_ROOT}/doorway/lamp.png`,
+    lampOff: `${SCENE_ASSET_ROOT}/doorway/lamp.png`,
+    lampOn: `${SCENE_ASSET_ROOT}/doorway/lamp-on.png`,
     mailbox: `${SCENE_ASSET_ROOT}/doorway/mailbox.png`,
   }),
 });

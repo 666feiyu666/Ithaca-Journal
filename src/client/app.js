@@ -1,12 +1,16 @@
 import { createAccountFeature } from "./app/account-feature.js";
+import { createAchievementsFeature } from "./app/achievements-feature.js";
 import { api, ApiClientError } from "./app/api-client.js";
 import { queryAppElements } from "./app/dom.js";
 import { createEntriesFeature } from "./app/entries-feature.js";
 import { focusWhenReady } from "./app/format.js";
 import { createJourneyFeature } from "./app/journey-feature.js";
+import { createI18n } from "./app/i18n.js";
 import { createLibraryFeature } from "./app/library-feature.js";
+import { createMailboxFeature } from "./app/mailbox-feature.js";
 import { createPrivacyFeature } from "./app/privacy-feature.js";
 import { createPrivacyVault } from "./app/privacy-service.js";
+import { createSettingsFeature } from "./app/settings-feature.js";
 import { createAppState } from "./app/state.js";
 import { createTopicsFeature } from "./app/topics-feature.js";
 import { createWorkbenchFeature } from "./app/workbench-feature.js";
@@ -20,12 +24,17 @@ import { createTimeService } from "./game/time-service.js";
 const state = createAppState();
 const refs = queryAppElements();
 const privacyVault = createPrivacyVault();
+const i18n = createI18n();
+i18n.start();
 
 let accountFeature;
+let achievementFeature;
 let entriesFeature;
 let journeyFeature;
 let libraryFeature;
+let mailboxFeature;
 let privacyFeature;
+let settingsFeature;
 let topicsFeature;
 let workbenchFeature;
 
@@ -40,7 +49,9 @@ function renderSceneTime(snapshot) {
   refs.scenePhase.textContent = snapshot.phaseLabel;
   refs.sceneTime.setAttribute(
     "aria-label",
-    `${snapshot.fullDateLabel}，${snapshot.phaseLabel}，${snapshot.timeModeLabel}模式`,
+    i18n.getLocale() === "en"
+      ? `${snapshot.fullDateLabel}, ${snapshot.phaseLabel}, ${snapshot.timeModeLabel} mode`
+      : `${snapshot.fullDateLabel}，${snapshot.phaseLabel}，${snapshot.timeModeLabel}模式`,
   );
 }
 
@@ -83,6 +94,8 @@ function showAuth({
   state.books = [];
   state.booksLoaded = false;
   state.letters = [];
+  state.sentLetters = [];
+  state.sentLettersLoaded = false;
   state.current = null;
   state.currentTopic = null;
   state.currentBook = null;
@@ -93,6 +106,8 @@ function showAuth({
   state.editorExpanded = false;
   state.dirty = false;
   refs.booksView.hidden = true;
+  refs.topicsView.hidden = true;
+  refs.mailboxView.hidden = true;
   refs.appView.hidden = true;
   refs.sceneView.hidden = true;
   refs.titleView.hidden = true;
@@ -111,6 +126,8 @@ function showTitle(user, journey) {
   refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
+  refs.topicsView.hidden = true;
+  refs.mailboxView.hidden = true;
   refs.titleView.hidden = false;
   refs.titleEmail.textContent = user.email;
   refs.titleLogoutButton.hidden = user.source !== "cloudflare-access";
@@ -138,6 +155,8 @@ function showScene(sceneId = "room", options = {}) {
   refs.titleView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
+  refs.topicsView.hidden = true;
+  refs.mailboxView.hidden = true;
   refs.sceneView.hidden = false;
   window.scrollTo({ top: 0, left: 0 });
   refs.sceneDay.textContent = journey.status === "completed" ? "旅程之后" : `第 ${journey.current_day} 天`;
@@ -154,11 +173,45 @@ function showApp(user) {
   refs.titleView.hidden = true;
   refs.sceneView.hidden = true;
   refs.booksView.hidden = true;
+  refs.topicsView.hidden = true;
+  refs.mailboxView.hidden = true;
   refs.appView.hidden = false;
-  refs.appView.dataset.workbenchMode = state.workbenchMode;
-  refs.appView.dataset.drawerOpen = String(state.fragmentDrawerOpen);
   window.scrollTo({ top: 0, left: 0 });
   updateConnectivity();
+}
+
+function showTopicsView() {
+  refs.authView.hidden = true;
+  refs.titleView.hidden = true;
+  refs.sceneView.hidden = true;
+  refs.appView.hidden = true;
+  refs.mailboxView.hidden = true;
+  refs.booksView.hidden = true;
+  refs.topicsView.hidden = false;
+  window.scrollTo({ top: 0, left: 0 });
+}
+
+function showMailboxView() {
+  refs.authView.hidden = true;
+  refs.titleView.hidden = true;
+  refs.sceneView.hidden = true;
+  refs.appView.hidden = true;
+  refs.topicsView.hidden = true;
+  refs.booksView.hidden = true;
+  refs.mailboxView.hidden = false;
+  window.scrollTo({ top: 0, left: 0 });
+}
+
+function showBooksView() {
+  refs.authView.hidden = true;
+  refs.titleView.hidden = true;
+  refs.sceneView.hidden = true;
+  refs.appView.hidden = true;
+  refs.topicsView.hidden = true;
+  refs.mailboxView.hidden = true;
+  refs.booksView.hidden = false;
+  refs.booksEmail.textContent = state.user?.email ?? "";
+  window.scrollTo({ top: 0, left: 0 });
 }
 
 function updateActions() {
@@ -166,20 +219,20 @@ function updateActions() {
   refs.deleteEntryButton.disabled = state.busy || !state.current?.id;
   refs.newEntryButton.disabled = state.busy;
   refs.newTopicButton.disabled = state.busy;
-  refs.fragmentDrawerButton.disabled = state.busy;
-  refs.fragmentTab.disabled = state.busy;
-  refs.topicTab.disabled = state.busy;
-  refs.workbenchBookButton.disabled = state.busy;
+  refs.emptyNewTopicButton.disabled = state.busy;
+  refs.topicBringToDeskButton.disabled = state.busy || !state.currentTopic;
+  refs.entryContextAction.disabled = state.busy;
   refs.saveTopic.disabled = state.busy;
   refs.compileBookButton.disabled = state.busy;
   refs.emptyCompileBookButton.disabled = state.busy;
-  refs.confirmCompileBook.disabled = state.busy;
 }
 
 function setBusy(busy) {
   state.busy = busy;
   refs.accessRetry.disabled = busy;
   refs.journeyAction.disabled = busy;
+  refs.titleSettingsButton.disabled = busy;
+  refs.titleEasterEggButton.disabled = busy;
   refs.confirmDeleteAccount.disabled = busy;
   updateActions();
 }
@@ -222,8 +275,9 @@ const sceneRuntime = createSceneRuntime({
   dialogueRuntime,
   timeService,
   actions: {
-    openLetter: () => journeyFeature.openLetter(),
+    openMailbox: () => mailboxFeature.open(),
     openWorkbench: () => workbenchFeature.open(),
+    openBoard: () => topicsFeature.open(),
     openBookshelf: () => libraryFeature.open(),
   },
   onError: (error) => handleAppError(error, "场景交互暂时无法继续。"),
@@ -235,6 +289,17 @@ privacyFeature = createPrivacyFeature({
   vault: privacyVault,
 });
 
+settingsFeature = createSettingsFeature({ refs, i18n });
+
+achievementFeature = createAchievementsFeature({
+  state,
+  refs,
+  api,
+  vault: privacyVault,
+  setBusy,
+  handleError: handleAppError,
+});
+
 entriesFeature = createEntriesFeature({
   state,
   refs,
@@ -244,9 +309,24 @@ entriesFeature = createEntriesFeature({
   setBusy,
   updateActions,
   renderList: () => workbenchFeature.renderList(),
+  showEmptyEditor: () => workbenchFeature?.showEmptyEditor(),
   showMessage,
   handleError: handleAppError,
-  onSaved: (info) => workbenchFeature?.handleEntrySaved(info),
+  translate: i18n.translate,
+  onSaved: (info) => {
+    workbenchFeature?.handleEntrySaved(info);
+    void achievementFeature.syncFromState();
+  },
+  onContextAction: async (entry) => {
+    if (entry.category === "theme" && entry.source_topic_id) {
+      await topicsFeature.open();
+      await topicsFeature.openTopic(entry.source_topic_id, { force: true });
+    } else if (entry.category === "letter") {
+      await mailboxFeature.sendDraft(entry);
+    } else if (entry.category === "book") {
+      await libraryFeature.bindDraft(entry);
+    }
+  },
 });
 
 topicsFeature = createTopicsFeature({
@@ -255,13 +335,12 @@ topicsFeature = createTopicsFeature({
   api,
   vault: privacyVault,
   setBusy,
-  renderList: () => workbenchFeature.renderList(),
-  showEmptyEditor: () => workbenchFeature.showEmptyEditor(),
+  showTopicsView,
+  openDesk: (options) => workbenchFeature.open(options),
   showMessage,
   handleError: handleAppError,
   canLeaveCurrentDraft: entriesFeature.canLeaveCurrentDraft,
-  closeTopicDirectory: () => workbenchFeature?.setTopicDirectoryOpen(false),
-  openTopicDirectory: () => workbenchFeature?.setTopicDirectoryOpen(true),
+  onSaved: () => void achievementFeature.syncFromState(),
 });
 
 workbenchFeature = createWorkbenchFeature({
@@ -271,7 +350,6 @@ workbenchFeature = createWorkbenchFeature({
   showApp,
   handleError: handleAppError,
   entries: entriesFeature,
-  topics: topicsFeature,
 });
 
 libraryFeature = createLibraryFeature({
@@ -280,10 +358,26 @@ libraryFeature = createLibraryFeature({
   api,
   vault: privacyVault,
   setBusy,
+  showBooksView,
+  openDesk: (options) => workbenchFeature.open(options),
   showMessage,
   handleError: handleAppError,
   canLeaveCurrentDraft: entriesFeature.canLeaveCurrentDraft,
-  loadTopics: topicsFeature.loadTopics,
+  onBound: () => void achievementFeature.syncFromState(),
+});
+
+mailboxFeature = createMailboxFeature({
+  state,
+  refs,
+  api,
+  vault: privacyVault,
+  setBusy,
+  showMailboxView,
+  openDesk: (options) => workbenchFeature.open(options),
+  showMessage,
+  handleError: handleAppError,
+  canLeaveCurrentDraft: entriesFeature.canLeaveCurrentDraft,
+  onSent: () => void achievementFeature.syncFromState(),
 });
 
 journeyFeature = createJourneyFeature({
@@ -297,6 +391,7 @@ journeyFeature = createJourneyFeature({
   showIntro,
   ensurePrivacy: privacyFeature.ensureUnlocked,
   handleError: handleAppError,
+  onJourneyEntered: () => void achievementFeature.syncFromState(),
 });
 
 accountFeature = createAccountFeature({
@@ -309,15 +404,19 @@ accountFeature = createAccountFeature({
 });
 
 entriesFeature.bindEvents();
+settingsFeature.bindEvents();
+achievementFeature.bindEvents();
 topicsFeature.bindEvents();
 workbenchFeature.bindEvents();
 libraryFeature.bindEvents();
+mailboxFeature.bindEvents();
 journeyFeature.bindEvents();
 accountFeature.bindEvents();
 
 refs.returnRoomButton.addEventListener("click", returnToRoom);
+refs.topicsReturnRoomButton.addEventListener("click", returnToRoom);
+refs.mailboxReturnRoomButton.addEventListener("click", returnToRoom);
 refs.booksReturnRoomButton.addEventListener("click", returnToRoom);
-refs.workbenchBookButton.addEventListener("click", () => void libraryFeature.open());
 window.addEventListener("online", updateConnectivity);
 window.addEventListener("offline", updateConnectivity);
 window.addEventListener("beforeunload", (event) => {
@@ -327,6 +426,7 @@ window.addEventListener("beforeunload", (event) => {
 });
 
 timeService.subscribe(renderSceneTime);
+document.addEventListener("ithaca:localechange", () => timeService.refresh());
 timeService.start();
 showAuth();
 void journeyFeature.restoreSession();

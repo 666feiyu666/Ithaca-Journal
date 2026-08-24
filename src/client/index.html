@@ -6,9 +6,13 @@
     <meta name="theme-color" content="#172231" />
     <meta
       name="description"
-      content="《伊萨卡手记》0.4.0：从一张随手笺出发，把碎片拼成主题，再把主题写成书。"
+      content="《伊萨卡手记》0.4.0：以纸页为基本单元，在书桌、公告板、信箱与书架之间继续书写。"
     />
     <title>伊萨卡手记｜0.4.0 开发版</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/favicon-48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/app.js"></script>
   </head>
@@ -56,6 +60,7 @@
     </main>
 
     <main id="title-view" class="title-screen" aria-labelledby="title-heading" hidden>
+      <div class="title-screen__background" aria-hidden="true"></div>
       <div class="title-screen__stars" aria-hidden="true"></div>
       <section class="title-screen__content">
         <p class="eyebrow">ITHACA JOURNAL · 0.4.0</p>
@@ -66,8 +71,16 @@
             <span id="journey-action-label">开始旅程</span>
             <small id="journey-meta">从抵达陌生城市的这一天开始</small>
           </button>
+          <button id="title-settings-button" class="title-menu-action" type="button">
+            <span>设置</span>
+            <small>语言与阅读偏好</small>
+          </button>
+          <button id="title-easter-egg-button" class="title-menu-action" type="button">
+            <span>小彩蛋</span>
+            <small>查看旅途中悄悄亮起的里程碑</small>
+          </button>
         </div>
-        <p id="title-email" class="title-screen__identity"></p>
+        <p id="title-email" class="title-screen__identity" data-i18n-skip></p>
       </section>
       <footer class="title-screen__footer">
         <span>小范围云端测试 · 0.4.0</span>
@@ -78,16 +91,74 @@
       </footer>
     </main>
 
+    <dialog id="settings-dialog" class="dialog settings-dialog">
+      <form method="dialog">
+        <p class="section-index">设置</p>
+        <h2>语言设置</h2>
+        <p>选择应用用于导航、按钮和状态提示的语言。</p>
+        <fieldset id="language-options" class="language-options">
+          <legend>界面语言</legend>
+          <label class="language-option">
+            <input type="radio" name="interface-language" value="zh-CN" />
+            <span><strong>简体中文</strong><small data-i18n-skip>简体中文</small></span>
+          </label>
+          <label class="language-option">
+            <input type="radio" name="interface-language" value="en" />
+            <span><strong>英语</strong><small>English</small></span>
+          </label>
+        </fieldset>
+        <p class="settings-dialog__note">语言包按独立字典组织，后续可以继续加入新的语言。</p>
+        <div class="dialog__actions">
+          <button class="button button--primary" value="close">关闭</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="achievements-dialog" class="dialog milestone-dialog">
+      <form method="dialog">
+        <header class="milestone-dialog__header">
+          <div>
+            <p class="section-index">小彩蛋</p>
+            <h2>旅途里程碑</h2>
+          </div>
+          <strong id="achievement-progress" class="milestone-dialog__progress">0 / 8 已解锁</strong>
+        </header>
+        <p>像翻开书页一样，看看哪些时刻已经被旅途记住。</p>
+        <p id="achievement-loading" class="milestone-dialog__loading" role="status">正在整理里程碑……</p>
+        <div id="achievement-list" class="achievement-list" role="list" hidden></div>
+        <div class="dialog__actions">
+          <button class="button button--primary" value="close">关闭</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="scene-view" class="scene-shell" hidden>
       <header class="scene-header">
         <div class="scene-header__brand">
-          <span class="app-brand__mark" aria-hidden="true">IJ</span>
-          <span>
-            <strong>伊萨卡手记</strong>
-            <small id="scene-day">第 1 天</small>
+          <span class="app-brand__mark scene-header__mark" aria-hidden="true">IJ</span>
+          <span class="scene-header__brand-copy">
+            <span class="scene-header__kicker">ITHACA JOURNAL</span>
+            <span class="scene-header__title-row">
+              <strong>伊萨卡手记</strong>
+              <small id="scene-day">第 1 天</small>
+            </span>
           </span>
+          <aside
+            class="scene-time"
+            data-scene-time
+            aria-label="当前日期与时段"
+          >
+            <span class="scene-time__calendar">
+              <span id="scene-date" class="scene-time__date">8月21日</span>
+              <span id="scene-weekday" class="scene-time__weekday">星期五</span>
+            </span>
+            <span class="scene-time__period">
+              <span class="scene-time__label">此刻</span>
+              <strong id="scene-phase" class="scene-time__phase">深夜</strong>
+            </span>
+          </aside>
         </div>
-        <p id="scene-email" class="scene-header__identity"></p>
+        <p id="scene-email" class="scene-header__identity" data-i18n-skip></p>
         <div class="scene-header__actions">
           <button
             id="arrange-room-button"
@@ -137,16 +208,6 @@
             </aside>
           </div>
 
-          <aside
-            class="scene-time"
-            data-scene-time
-            aria-label="当前日期与时段"
-          >
-            <span id="scene-date" class="scene-time__date">8月21日</span>
-            <span id="scene-weekday" class="scene-time__weekday">星期五</span>
-            <strong id="scene-phase" class="scene-time__phase">深夜</strong>
-          </aside>
-
           <p
             id="scene-arrange-status"
             class="scene-arrange-status"
@@ -183,13 +244,13 @@
       </main>
     </div>
 
-    <div id="app-view" class="app-shell" hidden>
+    <div id="app-view" class="desk-shell" hidden>
       <header class="app-header">
         <button id="return-room-button" class="app-brand app-brand--button" type="button" aria-label="返回房间">
           <span class="app-brand__mark" aria-hidden="true">IJ</span>
           <span>
             <strong>伊萨卡手记</strong>
-            <small>写作台 · 返回房间</small>
+            <small>书桌 · 返回房间</small>
           </span>
         </button>
 
@@ -204,79 +265,59 @@
           <button id="logout-button" class="text-button" type="button">退出</button>
         </div>
       </header>
-
-      <nav class="workbench-bar" aria-label="写作台功能">
-        <button id="fragment-tab" class="workbench-home" type="button" aria-pressed="true">
-          <span class="section-index">02 / 写作台</span>
-          <strong>随手笺</strong>
-          <small>写下此刻，收进碎片匣</small>
-        </button>
-        <div class="workbench-bar__routes">
-          <button
-            id="fragment-drawer-button"
-            class="workbench-route workbench-route--drawer"
-            type="button"
-            aria-expanded="false"
-            aria-controls="journal-nav"
-          >
-            <span>碎片匣</span>
-            <small><span id="fragment-count">0</span> 则纸页</small>
-          </button>
-          <button
-            id="topic-tab"
-            class="workbench-route"
-            type="button"
-            aria-pressed="false"
-            aria-expanded="false"
-            aria-controls="journal-nav"
-          >
-            <span>主题拼图</span>
-            <small><span id="topic-count">0</span> 个主题</small>
-          </button>
-          <button id="workbench-book-button" class="workbench-route" type="button">
-            <span>撰写书籍</span>
-            <small>把主题排成篇章</small>
-          </button>
-        </div>
-      </nav>
-
-      <aside id="journal-nav" class="journal-nav" aria-labelledby="journal-list-title" hidden>
-        <div class="journal-nav__heading">
+      <aside id="journal-nav" class="desk-browser" aria-labelledby="journal-list-title">
+        <div class="desk-browser__heading">
           <div>
-            <p id="journal-list-index" class="section-index">碎片匣</p>
-            <h2 id="journal-list-title">已经留下的纸页</h2>
+            <p class="section-index">02 / 书桌</p>
+            <h1 id="journal-list-title">我的纸页</h1>
           </div>
           <button id="new-entry-button" class="new-entry-button" type="button">
-            <span aria-hidden="true">＋</span>
-            <span>新纸页</span>
-          </button>
-          <button id="new-topic-button" class="new-entry-button" type="button" hidden>
-            <span aria-hidden="true">＋</span>
-            <span>新主题</span>
+            <span aria-hidden="true">＋</span><span>新纸页</span>
           </button>
         </div>
         <p id="signed-in-email" class="signed-in-email"></p>
-        <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
-        <p id="list-empty" class="list-empty" hidden>还没有保存的手记。</p>
+        <div class="desk-browser__modes" role="group" aria-label="纸页浏览方式">
+          <button id="browse-category-button" type="button" aria-pressed="true">按分类</button>
+          <button id="browse-tag-button" type="button" aria-pressed="false">按标签</button>
+        </div>
+        <nav id="category-list" class="desk-filter-list" aria-label="纸页分类">
+          <button type="button" data-category=""><span>未分类</span><small data-category-count=""></small></button>
+          <button type="button" data-category="fragment" aria-current="true"><span>碎片</span><small data-category-count="fragment"></small></button>
+          <button type="button" data-category="theme"><span>主题</span><small data-category-count="theme"></small></button>
+          <button type="button" data-category="letter"><span>书信</span><small data-category-count="letter"></small></button>
+          <button type="button" data-category="book"><span>书籍</span><small data-category-count="book"></small></button>
+          <button type="button" data-category="journal"><span>日记</span><small data-category-count="journal"></small></button>
+        </nav>
+        <nav id="tag-list" class="desk-filter-list desk-filter-list--tags" aria-label="纸页标签" hidden></nav>
+        <p id="tag-list-empty" class="desk-filter-empty" hidden>还没有标签。可以在纸页上写下第一个。</p>
+        <div class="desk-browser__results">
+          <div class="desk-browser__result-heading">
+            <p id="journal-list-index" class="section-index">碎片</p>
+            <span id="entry-result-count">0 张</span>
+          </div>
+          <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
+          <p id="list-empty" class="list-empty" hidden>这里还没有纸页。</p>
+        </div>
       </aside>
 
-      <main class="editor-stage" aria-labelledby="editor-heading">
+      <main class="editor-stage desk-stage" aria-labelledby="editor-heading">
         <section id="editor-empty" class="editor-empty">
-          <p class="editor-empty__number" aria-hidden="true">I</p>
-          <p id="editor-empty-index" class="section-index">从一则碎片开始</p>
-          <h2 id="editor-empty-title">今天想留下什么？</h2>
-          <p id="editor-empty-copy">写下一个片段、一段路途，或某件还没有名字的事。</p>
-          <button id="empty-new-button" class="button button--primary" type="button">写一则碎片</button>
+          <p class="editor-empty__number" aria-hidden="true">✦</p>
+          <p id="editor-empty-index" class="section-index">一张新的纸</p>
+          <h2 id="editor-empty-title">从这里继续写。</h2>
+          <p id="editor-empty-copy">纸页可以先只是碎片，也可以成为主题、书信或一本正在生长的书。</p>
+          <button id="empty-new-button" class="button button--primary" type="button">添加纸页</button>
         </section>
 
         <section id="editor-panel" class="editor-panel" hidden>
           <header class="editor-toolbar">
             <div>
-              <p class="section-index">一张尚未装订的纸</p>
+              <p id="entry-kind-label" class="section-index">碎片纸页</p>
               <p id="entry-date" class="entry-date">尚未保存</p>
             </div>
             <div class="editor-toolbar__actions">
               <span id="save-state" class="save-state" role="status" aria-live="polite">尚未保存</span>
+              <button id="entry-context-action" class="button button--ritual" type="button" hidden></button>
               <button
                 id="expand-editor-button"
                 class="button button--quiet"
@@ -286,14 +327,32 @@
               <button id="delete-entry-button" class="button button--danger-quiet" type="button" disabled>
                 删除
               </button>
-              <button id="save-button" class="button button--primary" type="button" disabled>收进碎片匣</button>
+              <button id="save-button" class="button button--primary" type="button" disabled>保存纸页</button>
             </div>
           </header>
 
           <div class="paper-editor">
             <div class="paper-editor__folio" aria-hidden="true">
-              <span>ITHACA · LOOSE NOTE</span>
-              <span>未装订</span>
+              <span>ITHACA · WRITING DESK</span>
+              <span>可继续书写</span>
+            </div>
+            <div class="paper-editor__metadata">
+              <label for="entry-category">分类
+                <select id="entry-category">
+                  <option value="">未分类</option>
+                  <option value="fragment">碎片</option>
+                  <option value="theme">主题</option>
+                  <option value="letter">书信</option>
+                  <option value="book">书籍</option>
+                  <option value="journal">日记</option>
+                </select>
+              </label>
+              <label for="entry-tags">标签
+                <input id="entry-tags" type="text" maxlength="300" placeholder="学术，伊萨卡手记" />
+              </label>
+              <label id="entry-recipient-field" for="entry-recipient" hidden>收信人
+                <input id="entry-recipient" type="text" maxlength="120" placeholder="写给谁？" />
+              </label>
             </div>
             <label class="sr-only" for="entry-title">手记标题</label>
             <input
@@ -318,15 +377,45 @@
           </div>
         </section>
 
+      </main>
+    </div>
+
+    <div id="topics-view" class="topic-shell" hidden>
+      <header class="app-header topic-header">
+        <button id="topics-return-room-button" class="app-brand app-brand--button" type="button" aria-label="返回房间">
+          <span class="app-brand__mark" aria-hidden="true">IJ</span>
+          <span><strong>伊萨卡手记</strong><small>公告板 · 返回房间</small></span>
+        </button>
+        <div class="topic-header__title"><span>把散落的纸页拼成一个问题</span></div>
+        <div class="topic-header__actions">
+          <button id="new-topic-button" class="button button--quiet" type="button">＋ 新主题板</button>
+          <button id="topic-bring-to-desk-button" class="button button--ritual" type="button" disabled>带回书桌继续写</button>
+        </div>
+      </header>
+      <aside class="topic-directory" aria-labelledby="topic-directory-title">
+        <p class="section-index">03 / 公告板</p>
+        <h1 id="topic-directory-title">主题板</h1>
+        <p class="topic-directory__copy">每块板保存一组碎片及其空间关系。</p>
+        <div id="topic-list" class="topic-list" role="list"></div>
+        <p id="topic-list-empty" class="list-empty">还没有主题板。</p>
+      </aside>
+      <main class="topic-stage">
+        <section id="topic-empty" class="editor-empty">
+          <p class="editor-empty__number" aria-hidden="true">⌗</p>
+          <p class="section-index">从散页到关系</p>
+          <h2>哪些碎片正在谈论同一个问题？</h2>
+          <p>建立一块主题板，再从素材托盘把碎片放进画布。</p>
+          <button id="empty-new-topic-button" class="button button--primary" type="button">建立第一块主题板</button>
+        </section>
         <section id="topic-panel" class="topic-panel" hidden>
           <header class="topic-panel__header">
             <div class="topic-panel__identity">
               <p class="section-index">03 / 主题映射</p>
               <div class="topic-panel__title-row">
-                <h2 id="topic-title"></h2>
+              <h2 id="topic-title" data-i18n-skip></h2>
                 <p id="topic-date" class="entry-date"></p>
               </div>
-              <p id="topic-body" class="topic-panel__body"></p>
+              <p id="topic-body" class="topic-panel__body" data-i18n-skip></p>
             </div>
             <div class="editor-toolbar__actions topic-panel__actions">
               <span id="topic-layout-state" class="save-state" role="status" aria-live="polite">布局已保存</span>
@@ -349,9 +438,9 @@
                 <h3 id="topic-tray-title">从纸匣取用素材</h3>
                 <p id="topic-tray-count" class="topic-fragment-tray__count"></p>
               </header>
-              <p class="topic-fragment-tray__hint">拖到右侧，或使用“加入主题”。原始碎片仍留在碎片匣中。</p>
+              <p class="topic-fragment-tray__hint">只显示碎片分类。拖到右侧，或使用“加入主题”；原纸页仍留在书桌。</p>
               <div id="topic-tray-list" class="topic-tray-list" role="list"></div>
-              <p id="topic-tray-empty" class="topic-tray-empty" hidden>碎片匣还是空的。先回到随手笺，留下一张纸。</p>
+              <p id="topic-tray-empty" class="topic-tray-empty" hidden>还没有碎片纸页。先回书桌留下一张纸。</p>
             </aside>
 
             <section class="topic-board-shell" aria-labelledby="topic-board-title">
@@ -382,7 +471,43 @@
           </div>
         </section>
       </main>
+    </div>
 
+    <div id="mailbox-view" class="mailbox-shell" hidden>
+      <header class="app-header mailbox-header">
+        <button id="mailbox-return-room-button" class="app-brand app-brand--button" type="button" aria-label="返回房间">
+          <span class="app-brand__mark" aria-hidden="true">IJ</span>
+          <span><strong>伊萨卡手记</strong><small>信箱 · 返回房间</small></span>
+        </button>
+        <div class="mailbox-header__title"><span>收下抵达的信，也留下寄出的回声</span></div>
+        <button id="write-letter-button" class="button button--ritual" type="button">写一封信</button>
+      </header>
+      <aside class="mailbox-nav" aria-labelledby="mailbox-title">
+        <p class="section-index">04 / 信箱</p>
+        <h1 id="mailbox-title">往来信件</h1>
+        <div class="mailbox-tabs" role="tablist" aria-label="信箱文件夹">
+          <button id="inbox-tab" role="tab" type="button" aria-selected="true">收件箱</button>
+          <button id="sent-tab" role="tab" type="button" aria-selected="false">寄件箱</button>
+        </div>
+        <div id="mail-list" class="mail-list" role="list"></div>
+        <p id="mail-list-empty" class="list-empty" hidden>这里还没有信。</p>
+      </aside>
+      <main class="mail-stage">
+        <section id="mail-empty" class="editor-empty">
+          <p class="editor-empty__number" aria-hidden="true">✉</p>
+          <p class="section-index">纸上的往来</p>
+          <h2>选择一封信。</h2>
+          <p>收件箱保存旅途中抵达的来信，寄件箱保存已经寄出的快照。</p>
+        </section>
+        <article id="mail-reader" class="mail-reader" hidden>
+          <header class="mail-reader__header">
+            <div><p id="mail-reader-meta" class="section-index"></p><h1 id="mail-reader-title" data-i18n-skip></h1></div>
+            <button id="mail-reader-action" class="button button--ritual" type="button">回信</button>
+          </header>
+          <p id="mail-reader-party" class="mail-reader__party"></p>
+          <div id="mail-reader-content" class="mail-reader__content" data-i18n-skip></div>
+        </article>
+      </main>
     </div>
 
     <div id="books-view" class="library-shell" hidden>
@@ -395,39 +520,47 @@
           </span>
         </button>
         <div class="library-header__title">
-          <span>把主题装订成可以返回的书</span>
+          <span>这里陈列已经完成的书，书稿仍留在书桌</span>
         </div>
-        <button id="compile-book-button" class="button button--gold" type="button">编纂新书</button>
+        <button id="compile-book-button" class="button button--gold" type="button">＋ 开始一本书</button>
       </header>
       <aside class="library-nav" aria-labelledby="book-list-title">
         <p class="section-index">05 / 书架</p>
         <h2 id="book-list-title">我的成书</h2>
         <p id="books-email" class="signed-in-email"></p>
         <div id="book-list" class="book-list" role="list"></div>
-        <p id="book-list-empty" class="list-empty">书架还空着。先去书桌整理出一则主题。</p>
+        <p id="book-list-empty" class="list-empty">书架还空着。可以从一份空白书稿开始。</p>
       </aside>
       <main class="book-stage">
         <section id="book-empty" class="editor-empty">
-          <p class="editor-empty__number" aria-hidden="true">II</p>
-          <p class="section-index">从素材到书</p>
-          <h2>为散落的笔记建立次序。</h2>
-          <p>选择一则或多则主题，编纂结果会保存为独立快照；之后修改素材，不会悄悄改写已经完成的书。</p>
-          <button id="empty-compile-book-button" class="button button--primary" type="button">编纂第一本书</button>
+          <p class="editor-empty__number" aria-hidden="true">▥</p>
+          <p class="section-index">从书稿到成书</p>
+          <h2>一本书可以从空白开始。</h2>
+          <p>在书桌写作，完成后装订成独立快照。之后修改书稿，也不会悄悄改写已经上架的书。</p>
+          <button id="empty-compile-book-button" class="button button--primary" type="button">开始第一本书</button>
         </section>
         <section id="book-reader" class="book-reader" hidden>
           <header class="book-reader__header">
             <div>
               <p class="section-index">完成于 <span id="book-date"></span></p>
-              <h1 id="book-title"></h1>
+              <h1 id="book-title" data-i18n-skip></h1>
             </div>
             <button id="delete-book-button" class="button button--danger-quiet" type="button">从书架移除</button>
           </header>
-          <article id="book-content" class="book-content"></article>
+          <article id="book-content" class="book-content" data-i18n-skip></article>
         </section>
       </main>
     </div>
 
     <div id="app-message" class="app-message" role="status" aria-live="polite" hidden></div>
+
+    <aside id="achievement-toast" class="achievement-toast" role="status" aria-live="polite" hidden>
+      <span class="achievement-toast__mark" aria-hidden="true">✦</span>
+      <span>
+        <small>里程碑已解锁</small>
+        <strong id="achievement-toast-title"></strong>
+      </span>
+    </aside>
 
     <dialog id="topic-dialog" class="dialog dialog--wide">
       <form id="topic-form">
@@ -467,34 +600,14 @@
         <header class="piece-detail-dialog__header">
           <div>
             <p id="piece-detail-meta" class="section-index"></p>
-            <h2 id="piece-detail-title"></h2>
+            <h2 id="piece-detail-title" data-i18n-skip></h2>
           </div>
           <button class="button button--quiet" value="cancel">关闭</button>
         </header>
-        <article id="piece-detail-body" class="piece-detail-dialog__body"></article>
+        <article id="piece-detail-body" class="piece-detail-dialog__body" data-i18n-skip></article>
         <div class="dialog__actions">
           <button id="piece-detail-remove" class="button button--danger-quiet" type="button">移出当前主题</button>
           <button class="button button--primary" value="cancel">返回拼图</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="compile-book-dialog" class="dialog dialog--wide">
-      <form id="compile-book-form">
-        <p class="section-index">编纂成书</p>
-        <h2>为主题建立次序</h2>
-        <label for="book-title-input">书名</label>
-        <input id="book-title-input" type="text" maxlength="120" placeholder="例如：雨夜手记" required />
-        <label for="book-preface-input">序言（可选）</label>
-        <textarea id="book-preface-input" rows="4" maxlength="20000" placeholder="为什么要在此刻把这些主题收拢起来？"></textarea>
-        <fieldset class="source-picker">
-          <legend>选择要收录的主题（按列表顺序）</legend>
-          <div id="book-topic-options" class="source-picker__options"></div>
-        </fieldset>
-        <p id="compile-book-error" class="form-error" role="alert" hidden></p>
-        <div class="dialog__actions">
-          <button id="cancel-compile-book" class="button button--quiet" type="button">取消</button>
-          <button id="confirm-compile-book" class="button button--primary" type="submit">完成编纂</button>
         </div>
       </form>
     </dialog>
@@ -504,7 +617,7 @@
         <header class="letter-dialog__header">
           <div>
             <p id="letter-day" class="section-index">第 1 天来信</p>
-            <h2 id="letter-title"></h2>
+            <h2 id="letter-title" data-i18n-skip></h2>
             <p id="letter-sender" class="letter-dialog__sender"></p>
           </div>
           <label for="letter-select">
@@ -512,7 +625,7 @@
             <select id="letter-select"></select>
           </label>
         </header>
-        <div id="letter-content" class="letter-dialog__content"></div>
+        <div id="letter-content" class="letter-dialog__content" data-i18n-skip></div>
         <div class="dialog__actions">
           <button class="button button--primary" value="close">收起信件</button>
         </div>

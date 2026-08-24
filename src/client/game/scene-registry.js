@@ -40,6 +40,29 @@ function assertPhaseText(value, path) {
   }
 }
 
+function assertToggleState(value, path) {
+  if (!value || typeof value !== "object") {
+    throw new TypeError(`${path} 必须提供可切换状态配置。`);
+  }
+  assertText(value.key, `${path}.key`);
+  if (value.defaultValue !== undefined && typeof value.defaultValue !== "boolean") {
+    throw new TypeError(`${path}.defaultValue 必须是布尔值。`);
+  }
+  for (const state of ["off", "on"]) {
+    if (!value[state] || typeof value[state] !== "object") {
+      throw new TypeError(`${path}.${state} 必须提供状态文案。`);
+    }
+    assertText(value[state].actionLabel, `${path}.${state}.actionLabel`);
+    assertText(value[state].statusText, `${path}.${state}.statusText`);
+    if ("visualSource" in value[state] || "visualSourceByPhase" in value[state]) {
+      assertPhaseSource(
+        value[state].visualSourceByPhase ?? value[state].visualSource,
+        `${path}.${state}.visualSource`,
+      );
+    }
+  }
+}
+
 function deepFreeze(value) {
   if (!value || typeof value !== "object") return value;
   for (const child of Object.values(value)) deepFreeze(child);
@@ -88,6 +111,12 @@ function validateScene(scene) {
         object.visualSourceByPhase ?? object.visualSource,
         `${scene.id}.${object.id}.visualSource`,
       );
+    }
+    if (object.toggleState) {
+      assertToggleState(object.toggleState, `${scene.id}.${object.id}.toggleState`);
+      if (object.interactive === false) {
+        throw new TypeError(`${scene.id}.${object.id} 的可切换状态需要可交互对象。`);
+      }
     }
     if (object.action) {
       if (!new Set(["close", "feature", "scene"]).has(object.action.type)) {

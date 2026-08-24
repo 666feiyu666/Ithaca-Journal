@@ -17,6 +17,7 @@ interface StoredBookRow {
   preface: string;
   content_snapshot: string;
   source_snapshot: string;
+  source_entry_id: string | null;
   encryption_version: number;
   created_at: string;
 }
@@ -31,6 +32,7 @@ interface BookSourceSnapshot {
 interface BookMetadata {
   id: string;
   encryption_version: number;
+  source_entry_id: string | null;
   created_at: string;
 }
 
@@ -49,11 +51,6 @@ export interface EncryptedBookRecord extends BookMetadata {
 }
 
 export type BookRecord = LegacyBookRecord | EncryptedBookRecord;
-
-interface OwnedTopicRow {
-  id: string;
-  fragment_count: number;
-}
 
 const MAX_BOOK_TOPICS = 20;
 
@@ -88,7 +85,11 @@ function parseEncryptedSourceIds(serialized: string): string[] {
 }
 
 function toBookRecord(row: StoredBookRow): BookRecord {
-  const metadata = { id: row.id, created_at: row.created_at };
+  const metadata = {
+    id: row.id,
+    source_entry_id: row.source_entry_id,
+    created_at: row.created_at,
+  };
   if (row.encryption_version === CLIENT_ENCRYPTION_VERSION) {
     return {
       ...metadata,
@@ -114,45 +115,62 @@ function validateBookPayload(payload: unknown, requireId: boolean): {
   id: string | null;
   sealedPayload: SealedPayload;
   sourceTopicIds: string[];
+  sourceEntryId: string | null;
 } {
   const record = requireRecord(payload);
   const sourceTopicIds = requireUuidArray(record, "source_topic_ids", {
-    required: true,
     maximum: MAX_BOOK_TOPICS,
   });
+  const sourceEntryValue = record.source_entry_id;
+  const sourceEntryId = sourceEntryValue === undefined || sourceEntryValue === null
+    ? null
+    : requireUuid(record, "source_entry_id");
   return {
     id: requireId ? requireUuid(record, "id") : null,
     sealedPayload: requireSealedPayload(record),
     sourceTopicIds: sourceTopicIds ?? [],
+    sourceEntryId,
   };
 }
 
-async function requireCompilableTopics(
+async function requireOwnedTopics(
   env: Env,
   userId: string,
   topicIds: string[],
 ): Promise<void> {
+  if (topicIds.length === 0) return;
   const placeholders = topicIds.map((_, index) => `?${index + 2}`).join(", ");
   const result = await env.DB.prepare(
-    `SELECT topics.id, COUNT(topic_fragments.fragment_id) AS fragment_count
+    `SELECT id
      FROM topics
-     LEFT JOIN topic_fragments ON topic_fragments.topic_id = topics.id
-     WHERE topics.user_id = ?1 AND topics.id IN (${placeholders})
-     GROUP BY topics.id`,
+     WHERE user_id = ?1 AND id IN (${placeholders})`,
   )
     .bind(userId, ...topicIds)
-    .all<OwnedTopicRow>();
+    .all<{ id: string }>();
   if (result.results.length !== topicIds.length) {
     throw new ApiError(422, "topic_not_found", "所选主题不存在或不属于当前账户。");
   }
-  if (result.results.some((topic) => topic.fragment_count === 0)) {
-    throw new ApiError(422, "empty_topic", "空白主题还不能编纂成书，请先放入至少一则碎片。");
+}
+
+async function requireBookDraft(
+  env: Env,
+  userId: string,
+  sourceEntryId: string | null,
+): Promise<void> {
+  if (!sourceEntryId) return;
+  const entry = await env.DB.prepare(
+    `SELECT id
+     FROM journal_entries
+     WHERE id = ?1 AND user_id = ?2 AND category = 'book'`,
+  ).bind(sourceEntryId, userId).first<{ id: string }>();
+  if (!entry) {
+    throw new ApiError(422, "book_draft_not_found", "来源书稿不存在、不属于当前账户或不是书籍分类。");
   }
 }
 
 async function storedBook(env: Env, userId: string, bookId: string): Promise<StoredBookRow> {
   const row = await env.DB.prepare(
-    `SELECT id, title, preface, content_snapshot, source_snapshot,
+    `SELECT id, title, preface, content_snapshot, source_snapshot, source_entry_id,
             encryption_version, created_at
      FROM books
      WHERE id = ?1 AND user_id = ?2`,
@@ -167,7 +185,7 @@ async function storedBook(env: Env, userId: string, bookId: string): Promise<Sto
 
 export async function listBooks(env: Env, userId: string): Promise<BookRecord[]> {
   const result = await env.DB.prepare(
-    `SELECT id, title, preface, content_snapshot, source_snapshot,
+    `SELECT id, title, preface, content_snapshot, source_snapshot, source_entry_id,
             encryption_version, created_at
      FROM books
      WHERE user_id = ?1
@@ -192,15 +210,16 @@ export async function createBook(
   payload: unknown,
 ): Promise<BookRecord> {
   await requirePrivacyProfile(env, userId);
-  const { id, sealedPayload, sourceTopicIds } = validateBookPayload(payload, true);
+  const { id, sealedPayload, sourceTopicIds, sourceEntryId } = validateBookPayload(payload, true);
   const bookId = id as string;
-  await requireCompilableTopics(env, userId, sourceTopicIds);
+  await requireOwnedTopics(env, userId, sourceTopicIds);
+  await requireBookDraft(env, userId, sourceEntryId);
   const now = new Date().toISOString();
   await env.DB.prepare(
     `INSERT INTO books
        (id, user_id, title, preface, content_snapshot, source_snapshot,
-        encryption_version, created_at)
-     VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, ?7)`,
+        source_entry_id, encryption_version, created_at)
+     VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, ?7, ?8)`,
   )
     .bind(
       bookId,
@@ -208,6 +227,7 @@ export async function createBook(
       ENCRYPTED_CONTENT_LABEL,
       serializeSealedPayload(sealedPayload),
       JSON.stringify({ topic_ids: sourceTopicIds }),
+      sourceEntryId,
       CLIENT_ENCRYPTION_VERSION,
       now,
     )
@@ -223,17 +243,20 @@ export async function updateBook(
 ): Promise<BookRecord> {
   await requirePrivacyProfile(env, userId);
   await storedBook(env, userId, bookId);
-  const { sealedPayload, sourceTopicIds } = validateBookPayload(payload, false);
+  const { sealedPayload, sourceTopicIds, sourceEntryId } = validateBookPayload(payload, false);
+  await requireOwnedTopics(env, userId, sourceTopicIds);
+  await requireBookDraft(env, userId, sourceEntryId);
   const result = await env.DB.prepare(
     `UPDATE books
      SET title = ?1, preface = '', content_snapshot = ?2, source_snapshot = ?3,
-         encryption_version = ?4
-     WHERE id = ?5 AND user_id = ?6`,
+         source_entry_id = ?4, encryption_version = ?5
+     WHERE id = ?6 AND user_id = ?7`,
   )
     .bind(
       ENCRYPTED_CONTENT_LABEL,
       serializeSealedPayload(sealedPayload),
       JSON.stringify({ topic_ids: sourceTopicIds }),
+      sourceEntryId,
       CLIENT_ENCRYPTION_VERSION,
       bookId,
       userId,
@@ -262,7 +285,7 @@ export async function deleteBook(
 
 export async function exportBooks(env: Env, userId: string): Promise<BookRecord[]> {
   const result = await env.DB.prepare(
-    `SELECT id, title, preface, content_snapshot, source_snapshot,
+    `SELECT id, title, preface, content_snapshot, source_snapshot, source_entry_id,
             encryption_version, created_at
      FROM books
      WHERE user_id = ?1

@@ -10,7 +10,7 @@ export const roomScene = Object.freeze({
     lateNight: "深夜想从哪里开始？",
   },
   eyebrow: "你的房间",
-  description: "书桌保存书写，书架收藏成书；房门通向门外的信箱。",
+  description: "书桌保存书写，公告板拼接主题，书架收藏成书；房门通向门外的信箱。",
   aspectRatio: 1456 / 816,
   initialFocusObjectId: "desk",
   layers: [
@@ -47,10 +47,12 @@ export const roomScene = Object.freeze({
     {
       id: "bulletin-board",
       label: "公告板",
-      kind: "decor",
-      interactive: false,
+      kind: "feature",
       visualSource: sceneAssets.room.bulletinBoard,
       hitArea: { x: 35.3022, y: 19.4853, width: 27.9533, height: 28.4314 },
+      hintAnchor: { x: 49.2, y: 19.2 },
+      hint: { title: "打开公告板", text: "把碎片摆成一个主题" },
+      action: { type: "feature", target: "openBoard" },
       z: 30,
     },
     {
@@ -92,11 +94,22 @@ export const roomScene = Object.freeze({
     {
       id: "desk-lamp",
       label: "台灯",
-      kind: "decor",
-      interactive: false,
+      kind: "light",
       movable: true,
       visualSource: sceneAssets.room.lampOff,
       hitArea: { x: 56.5247, y: 47.3039, width: 6.7995, height: 15.4412 },
+      toggleState: {
+        key: "light",
+        defaultValue: false,
+        off: {
+          actionLabel: "打开台灯",
+          statusText: "让暖光落在书桌上",
+        },
+        on: {
+          actionLabel: "关掉台灯",
+          statusText: "暖光正亮着，再点一次让房间暗下来",
+        },
+      },
       z: 70,
     },
     {
