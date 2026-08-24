@@ -72,7 +72,11 @@ export function createSceneRuntime({
       const button = objectsRoot.querySelector(`[data-scene-object-id="${sceneObject.id}"]`);
       if (!button) continue;
       const arrangingObject = mode === "arrange" && isMovable(sceneObject);
-      button.tabIndex = mode === "arrange" && !arrangingObject ? -1 : 0;
+      const interactiveObject = sceneObject.interactive !== false;
+      const exploringObject = mode === "explore" && interactiveObject;
+      const availableObject = arrangingObject || exploringObject;
+      button.tabIndex = availableObject ? 0 : -1;
+      button.toggleAttribute("aria-hidden", !availableObject);
       button.toggleAttribute("aria-keyshortcuts", arrangingObject);
       if (arrangingObject) {
         button.setAttribute("aria-keyshortcuts", "ArrowUp ArrowDown ArrowLeft ArrowRight");

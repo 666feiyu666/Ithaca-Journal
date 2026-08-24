@@ -2308,6 +2308,11 @@ html[data-time-mode="day"] .title-link:hover {
   transition: filter 400ms ease;
 }
 
+.scene-shell:not([data-interaction-mode="arrange"])
+  .scene-object[data-scene-object-interactive="false"] {
+  pointer-events: none;
+}
+
 .scene-object__marker {
   position: relative;
   z-index: 1;

@@ -63,6 +63,8 @@ export function createSceneRenderer({
       button.dataset.sceneObjectKind = sceneObject.kind ?? "ambient";
       button.dataset.sceneObjectLabel = sceneObject.label;
       button.dataset.sceneObjectMovable = String(isMovable(sceneObject));
+      button.dataset.sceneObjectInteractive = String(sceneObject.interactive !== false);
+      button.style.zIndex = String(sceneObject.z ?? 0);
       button.setAttribute(
         "aria-label",
         [sceneObject.label, getObjectHintText(sceneObject)].filter(Boolean).join("："),

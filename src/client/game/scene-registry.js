@@ -77,6 +77,12 @@ function validateScene(scene) {
     if (object.movable !== undefined && typeof object.movable !== "boolean") {
       throw new TypeError(`${scene.id}.${object.id}.movable 必须是布尔值。`);
     }
+    if (object.interactive !== undefined && typeof object.interactive !== "boolean") {
+      throw new TypeError(`${scene.id}.${object.id}.interactive 必须是布尔值。`);
+    }
+    if (object.z !== undefined && !Number.isFinite(object.z)) {
+      throw new TypeError(`${scene.id}.${object.id}.z 必须是有限数字。`);
+    }
     if (object.visualSource || object.visualSourceByPhase) {
       assertPhaseSource(
         object.visualSourceByPhase ?? object.visualSource,

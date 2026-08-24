@@ -1,4 +1,4 @@
-export const SCENE_LAYOUT_STORAGE_KEY = "ithaca-journal.scene-layout.v1";
+export const SCENE_LAYOUT_STORAGE_KEY = "ithaca-journal.scene-layout.v2";
 
 function isFiniteCoordinate(value) {
   return Number.isFinite(value) && value >= 0 && value <= 100;
