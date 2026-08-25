@@ -18,6 +18,11 @@ export interface AchievementRecord {
   unlocked_at: string;
 }
 
+export interface AchievementUnlockResult {
+  achievement: AchievementRecord;
+  created: boolean;
+}
+
 function requireAchievementKey(payload: unknown): AchievementKey {
   const value = requireString(requireRecord(payload), "key");
   if (!ACHIEVEMENT_KEYS.includes(value as AchievementKey)) {
@@ -45,10 +50,10 @@ export async function unlockAchievement(
   env: Env,
   userId: string,
   payload: unknown,
-): Promise<AchievementRecord> {
+): Promise<AchievementUnlockResult> {
   const key = requireAchievementKey(payload);
   const unlockedAt = new Date().toISOString();
-  await env.DB.prepare(
+  const insertion = await env.DB.prepare(
     `INSERT OR IGNORE INTO achievements (user_id, achievement_key, unlocked_at)
      VALUES (?1, ?2, ?3)`,
   )
@@ -64,5 +69,8 @@ export async function unlockAchievement(
   if (!achievement) {
     throw new ApiError(500, "achievement_not_saved", "里程碑暂时没有存好，请稍后重试。");
   }
-  return achievement;
+  return {
+    achievement,
+    created: Number(insertion.meta.changes ?? 0) > 0,
+  };
 }

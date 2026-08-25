@@ -384,8 +384,8 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       return jsonResponse({ achievements: await listAchievements(env, user.id) });
     }
     if (request.method === "POST") {
-      const achievement = await unlockAchievement(env, user.id, await readJsonBody(request));
-      return jsonResponse({ achievement }, 201);
+      const result = await unlockAchievement(env, user.id, await readJsonBody(request));
+      return jsonResponse(result, result.created ? 201 : 200);
     }
     methodNotAllowed(["GET", "POST"]);
   }

@@ -77,7 +77,18 @@ export function createAchievementsFeature({
   handleError,
 }) {
   let unlocked = new Map();
+  let activeUser = null;
+  let pending = new Set();
   let toastTimer = null;
+
+  function ensureCurrentUser() {
+    if (activeUser === state.user) return state.user;
+    activeUser = state.user;
+    unlocked = new Map();
+    pending = new Set();
+    render();
+    return state.user;
+  }
 
   function render() {
     refs.achievementList.replaceChildren();
@@ -124,25 +135,37 @@ export function createAchievementsFeature({
   }
 
   async function persist(keys, { announce = false } = {}) {
-    const additions = keys.filter((key) => !unlocked.has(key));
+    const user = ensureCurrentUser();
+    if (!user) return;
+    const currentPending = pending;
+    const additions = keys.filter((key) => !unlocked.has(key) && !currentPending.has(key));
     if (!additions.length) return;
-    const records = await Promise.all(additions.map(async (key) => {
-      const data = await api("/api/achievements", {
-        method: "POST",
-        body: JSON.stringify({ key }),
-      });
-      return data.achievement;
-    }));
-    for (const record of records) unlocked.set(record.key, record);
-    render();
-    if (announce) {
-      const newest = [...ACHIEVEMENTS].reverse().find(({ key }) => additions.includes(key));
-      showToast(newest);
+    for (const key of additions) currentPending.add(key);
+    try {
+      const results = await Promise.all(additions.map(async (key) => {
+        const data = await api("/api/achievements", {
+          method: "POST",
+          body: JSON.stringify({ key }),
+        });
+        return { record: data.achievement, created: data.created === true };
+      }));
+      if (state.user !== user) return;
+      for (const { record } of results) unlocked.set(record.key, record);
+      render();
+      if (announce) {
+        const createdKeys = results
+          .filter(({ created }) => created)
+          .map(({ record }) => record.key);
+        const newest = [...ACHIEVEMENTS].reverse().find(({ key }) => createdKeys.includes(key));
+        showToast(newest);
+      }
+    } finally {
+      for (const key of additions) currentPending.delete(key);
     }
   }
 
   async function unlock(key, { announce = true } = {}) {
-    if (!ACHIEVEMENTS.some((achievement) => achievement.key === key) || unlocked.has(key)) return;
+    if (!ACHIEVEMENTS.some((achievement) => achievement.key === key)) return;
     try {
       await persist([key], { announce });
     } catch (error) {
@@ -167,6 +190,7 @@ export function createAchievementsFeature({
 
   async function open() {
     if (!state.user || state.busy) return;
+    const user = ensureCurrentUser();
     if (!refs.achievementsDialog.open) refs.achievementsDialog.showModal();
     refs.achievementLoading.hidden = false;
     refs.achievementList.hidden = true;
@@ -174,6 +198,7 @@ export function createAchievementsFeature({
     try {
       const encryptedArchive = await api("/api/export");
       const archive = await vault.openArchive(encryptedArchive);
+      if (state.user !== user) return;
       unlocked = new Map((archive.achievements ?? []).map((record) => [record.key, record]));
       const reached = reachedAchievementKeys(archive);
       await persist(reached, { announce: true });
