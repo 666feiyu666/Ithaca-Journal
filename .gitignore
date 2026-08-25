@@ -38,3 +38,6 @@ migrations/*
 scripts/*
 tests/*
 art-source/*
+
+# 8. 本地知识库原始资料（可能包含版权摘录或私人批注）
+docs/knowledge-base
