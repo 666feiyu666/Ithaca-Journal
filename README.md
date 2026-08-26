@@ -2,17 +2,17 @@
 
 > Research through Design 工作说明
 >
-> 研究记录：`DE-02`
+> 研究记录：`DE-002`
 >
 > 当前 artifact：`0.4.0` 工具型写作空间
 >
-> 关联问题：`RQ-01`
+> 关联问题：`RQ-002`
 >
 > 当前阶段：从开放式写作工具转向围绕“自主性”与“共融性”的互动叙事旅程
 >
 > 最后更新：2026-08-26
 
-## DE-02：从开放工具到主题旅程
+## DE-002：从开放工具到主题旅程
 
 《伊萨卡手记》是一个用于开展 Research through Design（RtD）的互动书写 artifact。项目关注人如何借助书写、整理与通信讲述自己的生活，并在叙述中理解和协商“我是谁”。
 
@@ -23,15 +23,15 @@
 - **信箱**：阅读旅程来信、写回信并保存寄件；
 - **书架**：装订、陈列和回顾已经完成的书。
 
-`DE-02` 的直接触发来自研究者在完成并回看 `0.4.0` 后的遭遇：这些空间共同构成了一个灵活的 interactive journaling system，却也使系统更像一组可自由使用的工具。研究者因此难以指出下一轮究竟要探查记日记、形成主题、给他人写信，还是其他叙事实践，也无法清楚限定其中所建构的 life story。
+`DE-002` 的直接触发来自研究者在完成并回看 `0.4.0` 后的遭遇：这些空间共同构成了一个灵活的 interactive journaling system，却也使系统更像一组可自由使用的工具。研究者因此难以指出下一轮究竟要探查记日记、形成主题、给他人写信，还是其他叙事实践，也无法清楚限定其中所建构的 life story。
 
 这是一次制作后的研究者反思与设计判断，不是参与者 situated use 的观察。它促成的设计动作，是将下一阶段从“继续扩展工具功能”转向“通过自主性与共融性旅程重新编排已有空间”，让设计意图成为可以被体验、比较和质疑的叙事邀请。
 
-本 README 是 `DE-02` 的当前反思记录，包含研究者对 artifact 的理解、研究问题的收窄、设计转向、working propositions 与下一轮 probe。它不是已经得到参与者证据支持的研究结论，也不替代后续的产品规格与实现计划。
+本 README 是 `DE-002` 的当前反思记录，包含研究者对 artifact 的理解、研究问题的收窄、设计转向、working propositions 与下一轮 probe。它不是已经得到参与者证据支持的研究结论，也不替代后续的产品规格与实现计划。
 
 ## 1. 当前 Research Question 及其张力
 
-### RQ-01：长期母问题
+### RQ-002：长期母问题
 
 > **How does an interactive journaling system mediate life-story construction and the negotiation of narrative identity through the relationship between intended design and situated use?**
 
@@ -55,27 +55,27 @@
 
 要研究 intended design 与 situated use 的关系，首先需要让设计意图在 artifact 中变得具体。开放工具可以支持多种用途，但也可能让研究者难以判断用户是在接受、改写、绕开还是拒绝某一种叙事邀请。
 
-因此，`RQ-01` 暂时保留为长期母问题；下一阶段通过更小的 sub-question 和 design probe 来回应它，而不直接宣称整个系统已经回答了这个问题。
+因此，`RQ-002` 暂时保留为长期母问题；下一阶段通过更小的 sub-question 和 design probe 来回应它，而不直接宣称整个系统已经回答了这个问题。
 
 ## 2. 候选子问题
 
-### SQ-A：自主性旅程
+### SQ-002：自主性旅程
 
 > **How does a bounded interactive journaling journey around a concrete plan or decision mediate the construction and negotiation of a life story oriented toward autonomy?**
 
 关注用户如何围绕一个具体的打算或决定——例如找工作、从事学术、离开或开始一段生活——叙述自己想做什么、为何如此选择、受到了什么限制，以及如何理解自己的行动方向。
 
-### SQ-C：共融性旅程
+### SQ-003：共融性旅程
 
 > **How does a correspondence-centred interactive journaling journey mediate the construction and negotiation of a life story oriented toward communion?**
 
 关注用户如何通过书信、回应与关系性的书写，叙述自己与他人、群体或某段关系之间的归属、距离、责任和彼此影响。
 
-### PQ-01：下一轮优先探查的问题
+### PQ-001：下一轮优先探查的问题
 
 > **How is the intended narrative invitation of an autonomy-oriented journey taken up, reinterpreted, resisted, or left behind in situated use?**
 
-`PQ-01` 建议作为下一轮最小完整 probe 的直接问题。它把研究范围暂时收窄到一条旅程、一个具体生活议题和一组可观察的设计邀请，同时保留原问题中 intended design 与 situated use 之间的张力。
+`PQ-001` 建议作为下一轮最小完整 probe 的直接问题。它把研究范围暂时收窄到一条旅程、一个具体生活议题和一组可观察的设计邀请，同时保留原问题中 intended design 与 situated use 之间的张力。
 
 > 术语说明：“自主性”目前是工作名称。它与 narrative identity 文献中的 `autonomy`、`agency` 及其中文译法之间的关系仍需进一步澄清，不应在理论核对之前默认它们完全等同。“自主性 / 共融性”也不预设为穷尽生活故事的二分法。
 
@@ -141,15 +141,15 @@
 
 以下内容来自研究者对当前 artifact 的反思，尚无参与者使用材料支持，因此只作为下一轮制作要探查的 working propositions。
 
-### CL-01：有边界的旅程可能让设计中介更可辨认
+### WP-001：有边界的旅程可能让设计中介更可辨认
 
 把书桌、主题板或信箱组织成一条有明确主题和进程的旅程，可能比完全开放的工具模式更容易显现：artifact 在邀请用户如何讲述，而用户又如何接受、改写或拒绝这种邀请。
 
-### CL-02：同一功能可能因叙事情境而成为不同的媒介
+### WP-002：同一功能可能因叙事情境而成为不同的媒介
 
 一张纸页在工具模式中可以只是记录，在自主性旅程中可能成为对行动方向的解释，在共融性旅程中则可能成为对他人的回应。研究价值不只来自新增功能，也可能来自既有功能被重新编排后产生的不同体验。
 
-### CL-03：用户跨越或混合两条路径不一定是设计失败
+### WP-003：用户跨越或混合两条路径不一定是设计失败
 
 真实生活故事可能同时包含自主性与共融性。用户如果拒绝二选一、在旅程之间切换，或以设计者未预期的方式理解某条路径，这些遭遇可能反过来挑战研究问题和二分结构。
 
@@ -188,3 +188,16 @@
 - 旅程内容与“伊萨卡小屋”中的自由纸页如何共享、引用、退出和恢复？
 - 书架最终保存的是旅程全文、经过选择的片段、反思性总结，还是其他形式的 artifact？
 - 研究将如何记录 intended design 与 situated use 的差异，而不把偏离自动归为可用性问题？
+
+## 9. 研究文档与代码版本管理
+
+研究、设计和开发过程文档统一维护在 Notion 的 [Ithaca Journal 项目页面](https://app.notion.com/p/3c2bb2de56728146ac1adee3b0db8198) 中。代码仓库只保留理解、运行和追踪 artifact 版本所必需的说明；`docs/` 不再作为远端文档源，也不在两个位置维护相互竞争的副本。
+
+从本次转向开始，仓库采用三条清晰的版本线：
+
+- **`tool-artifact` 分支**：冻结 `0.4.0` 工具型写作空间，作为 Journey 重构前可返回、可比较的 artifact；
+- **`tool-artifact-v0.4.0` 标签**：为该冻结点提供稳定标识，不随后续开发移动；
+- **`journey` 分支**：用于 Journey 的设计与开发，先完成自主性旅程的最小完整 probe，再根据概念与伦理边界推进共融性旅程；
+- **`main` 分支**：作为当前集成线跟随 Journey；每个通过验证的完整切片从 `journey` 同步到 `main`，而 `tool-artifact` 保持冻结。
+
+本节记录的是版本管理约束，不是 Journey 的完整产品规格。旅程流程、状态、数据归属、退出与恢复方式等内容，应在进入实现前继续在 Notion 中细化。

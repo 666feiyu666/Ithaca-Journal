@@ -39,8 +39,8 @@ scripts/*
 tests/*
 art-source/*
 
-# 8. 本地知识库原始资料
-docs/knowledge-base
+# 8. 研究与设计文档（统一在 Notion 管理，不提交到代码仓库）
+docs/
 
 # 9. 其他不需要上传的文件
 AGENTS.md
