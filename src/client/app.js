@@ -225,6 +225,12 @@ function updateActions() {
   refs.saveTopic.disabled = state.busy;
   refs.compileBookButton.disabled = state.busy;
   refs.emptyCompileBookButton.disabled = state.busy;
+  refs.writeLetterButton.disabled = state.busy;
+  refs.mailReaderAction.disabled = state.busy;
+  refs.editSentLetterButton.disabled = state.busy || !state.currentSentLetter;
+  refs.deleteSentLetterButton.disabled = state.busy || !state.currentSentLetter;
+  refs.saveSentLetter.disabled = state.busy;
+  refs.confirmDeleteSentLetter.disabled = state.busy;
 }
 
 function setBusy(busy) {

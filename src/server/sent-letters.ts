@@ -122,6 +122,44 @@ export async function createSentLetter(
   return getSentLetter(env, userId, id);
 }
 
+export async function updateSentLetter(
+  env: Env,
+  userId: string,
+  letterId: string,
+  payload: unknown,
+): Promise<SentLetterRecord> {
+  await requirePrivacyProfile(env, userId);
+  const sealedPayload = requireSealedPayload(requireRecord(payload));
+  const result = await env.DB.prepare(
+    `UPDATE sent_letters
+     SET title = ?1, content_snapshot = ?2, encryption_version = ?3
+     WHERE id = ?4 AND user_id = ?5`,
+  ).bind(
+    ENCRYPTED_CONTENT_LABEL,
+    serializeSealedPayload(sealedPayload),
+    CLIENT_ENCRYPTION_VERSION,
+    letterId,
+    userId,
+  ).run();
+  if (result.meta.changes !== 1) {
+    throw new ApiError(404, "sent_letter_not_found", "没有找到这封寄件。");
+  }
+  return getSentLetter(env, userId, letterId);
+}
+
+export async function deleteSentLetter(
+  env: Env,
+  userId: string,
+  letterId: string,
+): Promise<void> {
+  const result = await env.DB.prepare(
+    "DELETE FROM sent_letters WHERE id = ?1 AND user_id = ?2",
+  ).bind(letterId, userId).run();
+  if (result.meta.changes < 1) {
+    throw new ApiError(404, "sent_letter_not_found", "没有找到这封寄件。");
+  }
+}
+
 export async function exportSentLetters(
   env: Env,
   userId: string,

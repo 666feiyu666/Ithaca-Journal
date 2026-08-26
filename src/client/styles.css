@@ -4008,6 +4008,13 @@ html[data-time-mode="day"] .title-link:hover {
   font-weight: 500;
 }
 
+.mail-reader__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
 .mail-reader__party {
   margin: 1.2rem 0 2rem;
   color: var(--rust-700);
@@ -4023,6 +4030,34 @@ html[data-time-mode="day"] .title-link:hover {
 
 .mail-reader__content p {
   white-space: pre-wrap;
+}
+
+.sent-letter-dialog {
+  max-height: calc(100svh - 2rem);
+  overflow-y: auto;
+}
+
+.sent-letter-dialog form {
+  gap: 0.7rem;
+  padding-block: 1.25rem;
+}
+
+.sent-letter-editor {
+  min-height: 8rem;
+  font-family: var(--reading-font);
+  line-height: 1.8;
+}
+
+@media (max-width: 70rem) {
+  .mail-reader__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mail-reader__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .library-nav {

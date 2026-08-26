@@ -54,6 +54,7 @@ export function createMailboxFeature({
       copy.append(title, meta);
       item.append(marker, copy);
       item.addEventListener("click", () => {
+        if (state.busy) return;
         if (inbox) void openIncoming(letter.day);
         else showSent(letter);
       });
@@ -70,6 +71,8 @@ export function createMailboxFeature({
     refs.mailReaderTitle.textContent = letter.title;
     refs.mailReaderParty.textContent = `To: ${letter.recipient || "未署名收信人"}`;
     refs.mailReaderAction.textContent = "由此建立新草稿";
+    refs.editSentLetterButton.hidden = false;
+    refs.deleteSentLetterButton.hidden = false;
     renderBody(letter.body);
     renderList();
   }
@@ -83,6 +86,8 @@ export function createMailboxFeature({
     refs.mailReaderTitle.textContent = letter.title;
     refs.mailReaderParty.textContent = `From: ${letter.sender}`;
     refs.mailReaderAction.textContent = "回信";
+    refs.editSentLetterButton.hidden = true;
+    refs.deleteSentLetterButton.hidden = true;
     renderBody(letter.content);
     renderList();
   }
@@ -92,7 +97,83 @@ export function createMailboxFeature({
     state.currentSentLetter = null;
     refs.mailReader.hidden = true;
     refs.mailEmpty.hidden = false;
+    refs.editSentLetterButton.hidden = true;
+    refs.deleteSentLetterButton.hidden = true;
     renderList();
+  }
+
+  function setEditSentLetterError(message = "") {
+    refs.editSentLetterError.textContent = message;
+    refs.editSentLetterError.hidden = !message;
+  }
+
+  function openEditSentLetter() {
+    const letter = state.currentSentLetter;
+    if (!letter || state.busy) return;
+    setEditSentLetterError();
+    refs.editSentLetterTitle.value = letter.title ?? "";
+    refs.editSentLetterRecipient.value = letter.recipient ?? "";
+    refs.editSentLetterBody.value = letter.body ?? "";
+    refs.editSentLetterDialog.showModal();
+    refs.editSentLetterTitle.focus();
+  }
+
+  async function saveEditedSentLetter(event) {
+    event.preventDefault();
+    const letterId = state.currentSentLetter?.id;
+    if (!letterId || state.busy) return;
+    const recipient = refs.editSentLetterRecipient.value.trim();
+    if (!recipient) {
+      setEditSentLetterError("请填写收信人。");
+      refs.editSentLetterRecipient.focus();
+      return;
+    }
+    setBusy(true);
+    setEditSentLetterError();
+    try {
+      const sealedPayload = await vault.seal("sent-letter", letterId, {
+        title: refs.editSentLetterTitle.value.trim(),
+        recipient,
+        body: refs.editSentLetterBody.value,
+      });
+      const data = await api(`/api/sent-letters/${letterId}`, {
+        method: "PUT",
+        body: JSON.stringify({ sealed_payload: sealedPayload }),
+      });
+      const letter = await vault.openSentLetter(data.letter);
+      const index = state.sentLetters.findIndex((candidate) => candidate.id === letterId);
+      if (index >= 0) state.sentLetters[index] = letter;
+      else state.sentLetters.unshift(letter);
+      refs.editSentLetterDialog.close();
+      showSent(letter);
+      showMessage("寄件记录已经更新。");
+    } catch (error) {
+      setEditSentLetterError(error instanceof Error ? error.message : "无法保存这封寄件记录。");
+      handleError(error, "无法保存这封寄件记录。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeCurrentSentLetter() {
+    const letterId = state.currentSentLetter?.id;
+    if (!letterId || state.busy) return;
+    const currentIndex = state.sentLetters.findIndex((letter) => letter.id === letterId);
+    setBusy(true);
+    try {
+      await api(`/api/sent-letters/${letterId}`, { method: "DELETE" });
+      state.sentLetters = state.sentLetters.filter((letter) => letter.id !== letterId);
+      state.currentSentLetter = null;
+      const nextIndex = currentIndex < 0 ? 0 : Math.min(currentIndex, state.sentLetters.length - 1);
+      const nextLetter = state.sentLetters[nextIndex];
+      if (nextLetter) showSent(nextLetter);
+      else showEmpty();
+      showMessage("寄件记录已经删除，现实中的寄送不会受到影响。");
+    } catch (error) {
+      handleError(error, "无法删除这封寄件记录。");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function loadInbox() {
@@ -210,7 +291,7 @@ export function createMailboxFeature({
       const letter = await vault.openSentLetter(data.letter);
       sentLetterId = letter.id;
       state.sentLettersLoaded = false;
-      showMessage("信已经寄出，并作为快照放进寄件箱。");
+      showMessage("信已经寄出，并作为寄件记录放进寄件箱。");
     } catch (error) {
       handleError(error, "无法寄出这封信。");
     } finally {
@@ -227,6 +308,13 @@ export function createMailboxFeature({
     refs.inboxTab.addEventListener("click", () => void open({ mode: "inbox" }));
     refs.sentTab.addEventListener("click", () => void open({ mode: "sent" }));
     refs.mailReaderAction.addEventListener("click", () => void answerCurrent());
+    refs.editSentLetterButton.addEventListener("click", openEditSentLetter);
+    refs.deleteSentLetterButton.addEventListener("click", () => {
+      if (state.currentSentLetter && !state.busy) refs.deleteSentLetterDialog.showModal();
+    });
+    refs.editSentLetterForm.addEventListener("submit", (event) => void saveEditedSentLetter(event));
+    refs.cancelEditSentLetter.addEventListener("click", () => refs.editSentLetterDialog.close());
+    refs.confirmDeleteSentLetter.addEventListener("click", () => void removeCurrentSentLetter());
   }
 
   return Object.freeze({ bindEvents, open, sendDraft, writeLetter });

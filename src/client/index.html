@@ -497,12 +497,16 @@
           <p class="editor-empty__number" aria-hidden="true">✉</p>
           <p class="section-index">纸上的往来</p>
           <h2>选择一封信。</h2>
-          <p>收件箱保存旅途中抵达的来信，寄件箱保存已经寄出的快照。</p>
+          <p>收件箱保存旅途中抵达的来信；寄件箱记录现实中已经寄出的信，仍可继续整理。</p>
         </section>
         <article id="mail-reader" class="mail-reader" hidden>
           <header class="mail-reader__header">
             <div><p id="mail-reader-meta" class="section-index"></p><h1 id="mail-reader-title" data-i18n-skip></h1></div>
-            <button id="mail-reader-action" class="button button--ritual" type="button">回信</button>
+            <div class="mail-reader__actions">
+              <button id="mail-reader-action" class="button button--ritual" type="button">回信</button>
+              <button id="edit-sent-letter-button" class="button button--quiet" type="button" hidden>编辑记录</button>
+              <button id="delete-sent-letter-button" class="button button--danger-quiet" type="button" hidden>删除记录</button>
+            </div>
           </header>
           <p id="mail-reader-party" class="mail-reader__party"></p>
           <div id="mail-reader-content" class="mail-reader__content" data-i18n-skip></div>
@@ -608,6 +612,37 @@
         <div class="dialog__actions">
           <button id="piece-detail-remove" class="button button--danger-quiet" type="button">移出当前主题</button>
           <button class="button button--primary" value="cancel">返回拼图</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="edit-sent-letter-dialog" class="dialog dialog--wide sent-letter-dialog">
+      <form id="edit-sent-letter-form" novalidate>
+        <p class="section-index">管理寄件</p>
+        <h2>修正寄件记录</h2>
+        <p>“寄出”记录现实中的寄送。修改这里只整理应用中的记录，不会改变寄出时间或原始草稿。</p>
+        <label for="edit-sent-letter-title">标题（可选）</label>
+        <input id="edit-sent-letter-title" name="title" type="text" placeholder="这封信的题目" />
+        <label for="edit-sent-letter-recipient">收信人</label>
+        <input id="edit-sent-letter-recipient" name="recipient" type="text" required />
+        <label for="edit-sent-letter-body">正文</label>
+        <textarea id="edit-sent-letter-body" class="sent-letter-editor" name="body" rows="5"></textarea>
+        <p id="edit-sent-letter-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog__actions">
+          <button id="cancel-edit-sent-letter" class="button button--quiet" type="button">取消</button>
+          <button id="save-sent-letter" class="button button--primary" type="submit">保存寄件记录</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-sent-letter-dialog" class="dialog">
+      <form method="dialog">
+        <p class="section-index">危险操作</p>
+        <h2>删除这封寄件记录？</h2>
+        <p>只会从寄件箱移除应用中的记录，不会删除原始草稿，也不会改变现实中已经寄出的信。删除后无法恢复。</p>
+        <div class="dialog__actions">
+          <button class="button button--quiet" value="cancel">取消</button>
+          <button id="confirm-delete-sent-letter" class="button button--danger" value="confirm">确认删除</button>
         </div>
       </form>
     </dialog>

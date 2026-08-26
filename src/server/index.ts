@@ -35,9 +35,11 @@ import { listAvailableLetters, openLetter } from "./letters";
 import { createPrivacyProfile, getPrivacyStatus } from "./privacy";
 import {
   createSentLetter,
+  deleteSentLetter,
   exportSentLetters,
   getSentLetter,
   listSentLetters,
+  updateSentLetter,
 } from "./sent-letters";
 import {
   exportOwnedPuzzles,
@@ -332,11 +334,24 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 
   const sentLetterId = SENT_LETTER_PATH.exec(url.pathname)?.[1];
   if (sentLetterId) {
-    if (request.method !== "GET") {
-      methodNotAllowed(["GET"]);
-    }
     const user = await requireAuthenticatedUser(request, env);
-    return jsonResponse({ letter: await getSentLetter(env, user.id, sentLetterId) });
+    if (request.method === "GET") {
+      return jsonResponse({ letter: await getSentLetter(env, user.id, sentLetterId) });
+    }
+    if (request.method === "PUT") {
+      const letter = await updateSentLetter(
+        env,
+        user.id,
+        sentLetterId,
+        await readJsonBody(request),
+      );
+      return jsonResponse({ letter });
+    }
+    if (request.method === "DELETE") {
+      await deleteSentLetter(env, user.id, sentLetterId);
+      return emptyResponse(204);
+    }
+    methodNotAllowed(["GET", "PUT", "DELETE"]);
   }
 
   if (url.pathname === "/api/export") {
