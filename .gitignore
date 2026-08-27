@@ -33,29 +33,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# 7. 数据迁移、测试与自动化脚本文件与图片素材
-migrations/*
-scripts/*
-tests/*
+# 7. 本地派生清单、待重新建立基线的旧场景工具与外部美术源文件
+scripts/asset-manifest.local.json
+scripts/build-scene-assets.mjs
+scripts/scene-assets.config.json
+scripts/visual-smoke.mjs
 art-source/*
-
-# Journey 作者源编译器与定向验证属于正式运行时的一部分
-!migrations/0013_story_journeys.sql
-!scripts/build-journey-story.mjs
-!scripts/lib/
-scripts/lib/*
-!scripts/lib/twee-parser.mjs
-!tests/integration/
-tests/integration/*
-!tests/integration/worker.spec.ts
-!tests/unit/
-tests/unit/*
-!tests/unit/journey-feature.test.js
-!tests/unit/journey-story.test.js
 
 # 8. 研究与设计文档(暂时不上传)
 docs/
 prototypes/
-
-# 9. 其他不需要上传的文件
-AGENTS.md
