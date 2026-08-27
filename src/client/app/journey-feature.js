@@ -1,5 +1,13 @@
 import { ApiClientError } from "./api-client.js";
-import { localDateString } from "./format.js";
+import {
+  getJourneyPassage,
+  journeyStory,
+} from "../config/generated/journey-story.zh-CN.js";
+
+const LAYER_LABELS = Object.freeze({
+  reality: "现实",
+  design: "《伊萨卡手记》设计稿",
+});
 
 export function createJourneyFeature({
   state,
@@ -9,11 +17,66 @@ export function createJourneyFeature({
   showAuth,
   showTitle,
   showScene,
-  showIntro,
+  showJourney,
   ensurePrivacy,
   handleError,
-  onJourneyEntered = () => {},
 }) {
+  let choiceButtons = [];
+
+  function setChoiceButtonsDisabled(disabled) {
+    for (const button of choiceButtons) button.disabled = disabled;
+  }
+
+  function returnToTitle() {
+    if (state.user) showTitle(state.user, state.storyJourney);
+  }
+
+  function renderPassage(storyJourney) {
+    const passage = getJourneyPassage(storyJourney.current_passage);
+    const chapter = journeyStory.chapters[passage.section];
+    refs.journeyPassageLabel.textContent = chapter.label;
+    refs.journeyLayerLabel.textContent = LAYER_LABELS[passage.layer];
+    refs.storyStage.dataset.storyLayer = passage.layer;
+    refs.storyHeading.textContent = chapter.title;
+    refs.storyDialogue.dataset.storyKind = passage.kind;
+    refs.storyDialogue.dataset.storyScene = passage.scene;
+    const visibleSpeaker = passage.kind === "chapter-card" ? "" : passage.speaker;
+    refs.storySpeaker.textContent = visibleSpeaker;
+    refs.storySpeaker.hidden = !visibleSpeaker;
+
+    const paragraphs = passage.paragraphs.map((content) => {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = content;
+      return paragraph;
+    });
+    refs.storyCopy.replaceChildren(...paragraphs);
+
+    choiceButtons = passage.choices.map((choice) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "story-dialogue__choice";
+      button.textContent = choice.label;
+      button.addEventListener("click", () => void advanceTo(choice.target));
+      return button;
+    });
+
+    if (passage.kind === "ending") {
+      const returnButton = document.createElement("button");
+      returnButton.type = "button";
+      returnButton.className = "story-dialogue__choice story-dialogue__choice--ending";
+      returnButton.textContent = "回到标题页";
+      returnButton.addEventListener("click", returnToTitle);
+      choiceButtons.push(returnButton);
+    }
+    refs.storyChoices.replaceChildren(...choiceButtons);
+  }
+
+  function presentJourney(storyJourney) {
+    state.storyJourney = storyJourney;
+    renderPassage(storyJourney);
+    showJourney(storyJourney);
+  }
+
   async function enterCurrentJourney() {
     if (state.busy) {
       return;
@@ -21,18 +84,10 @@ export function createJourneyFeature({
 
     setBusy(true);
     try {
-      const data = await api("/api/journey", {
+      const data = await api("/api/story-journey", {
         method: "POST",
-        body: JSON.stringify({ local_date: localDateString() }),
       });
-      state.journey = data.journey;
-      state.letters = [];
-      onJourneyEntered(data.journey);
-      if (data.journey.intro_completed_at) {
-        showScene("room");
-      } else {
-        showIntro();
-      }
+      presentJourney(data.story_journey);
     } catch (error) {
       handleError(error, "暂时无法进入旅程，请稍后重试。");
     } finally {
@@ -40,50 +95,22 @@ export function createJourneyFeature({
     }
   }
 
-  async function completeIntro() {
-    setBusy(true);
-    try {
-      const data = await api("/api/journey/intro", { method: "PUT" });
-      state.journey = data.journey;
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function loadLetters() {
-    const data = await api("/api/letters");
-    state.letters = data.letters;
-  }
-
-  function renderLetterSelect(selectedDay) {
-    refs.letterSelect.replaceChildren();
-    for (const letter of state.letters) {
-      const option = document.createElement("option");
-      option.value = String(letter.day);
-      option.textContent = `第 ${letter.day} 天 · ${letter.title}${letter.opened_at ? "" : " · 新"}`;
-      option.selected = letter.day === selectedDay;
-      refs.letterSelect.append(option);
-    }
-  }
-
-  async function openLetter(day = state.journey?.current_day ?? 1) {
+  async function advanceTo(passage) {
     if (state.busy) return;
+
     setBusy(true);
+    setChoiceButtonsDisabled(true);
     try {
-      if (!state.letters.length) await loadLetters();
-      const data = await api(`/api/letters/${day}/open`, { method: "PUT" });
-      const summary = state.letters.find((letter) => letter.day === day);
-      if (summary) summary.opened_at = data.letter.opened_at;
-      refs.letterDay.textContent = `第 ${data.letter.day} 天来信`;
-      refs.letterTitle.textContent = data.letter.title;
-      refs.letterSender.textContent = `From: ${data.letter.sender}`;
-      refs.letterContent.textContent = data.letter.content;
-      renderLetterSelect(data.letter.day);
-      if (!refs.letterDialog.open) refs.letterDialog.showModal();
+      const data = await api("/api/story-journey", {
+        method: "PUT",
+        body: JSON.stringify({ passage }),
+      });
+      presentJourney(data.story_journey);
     } catch (error) {
-      handleError(error, "无法打开今天的来信。");
+      handleError(error, "暂时无法保存剧情进度，请稍后重试。");
     } finally {
       setBusy(false);
+      setChoiceButtonsDisabled(false);
     }
   }
 
@@ -93,8 +120,8 @@ export function createJourneyFeature({
     try {
       const session = await api("/api/session");
       await ensurePrivacy(session.user);
-      const journeyData = await api("/api/journey");
-      showTitle(session.user, journeyData.journey);
+      const journeyData = await api("/api/story-journey");
+      showTitle(session.user, journeyData.story_journey);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         showAuth({
@@ -118,8 +145,9 @@ export function createJourneyFeature({
   function bindEvents() {
     refs.accessRetry.addEventListener("click", () => void restoreSession());
     refs.journeyAction.addEventListener("click", () => void enterCurrentJourney());
-    refs.letterSelect.addEventListener("change", () => void openLetter(Number(refs.letterSelect.value)));
+    refs.toolsetAction.addEventListener("click", () => showScene("room"));
+    refs.journeyReturnTitleButton.addEventListener("click", returnToTitle);
   }
 
-  return Object.freeze({ bindEvents, completeIntro, openLetter, restoreSession });
+  return Object.freeze({ bindEvents, restoreSession, renderPassage });
 }

@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#172231" />
     <meta
       name="description"
-      content="《伊萨卡手记》0.4.0：以纸页为基本单元，在书桌、公告板、信箱与书架之间继续书写。"
+      content="《伊萨卡手记》0.4.1：在现实求职与项目设计稿之间展开的初步视觉小说。"
     />
-    <title>伊萨卡手记｜0.4.0 开发版</title>
+    <title>伊萨卡手记｜0.4.1 开发版</title>
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/favicon-48.png" />
@@ -20,7 +20,7 @@
     <main id="auth-view" class="auth-shell" aria-labelledby="auth-title" hidden>
       <section class="auth-brand" aria-label="伊萨卡手记介绍">
         <div class="brand-mark" aria-hidden="true">IJ</div>
-        <p class="eyebrow">ITHACA JOURNAL · 0.4.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.4.1</p>
         <h1 id="auth-title">给尚未抵达的地方，<br />留下一页手记。</h1>
         <p class="auth-brand__copy">
           这是《伊萨卡手记》的小范围云端测试。它保存书写，也保存一次设计如何被使用、被质疑、再被改变的过程。
@@ -63,32 +63,67 @@
       <div class="title-screen__background" aria-hidden="true"></div>
       <div class="title-screen__stars" aria-hidden="true"></div>
       <section class="title-screen__content">
-        <p class="eyebrow">ITHACA JOURNAL · 0.4.0</p>
+        <p class="eyebrow">ITHACA JOURNAL · 0.4.1</p>
         <h1 id="title-heading">伊萨卡手记</h1>
         <p class="title-screen__tagline">在生活的碎片中，写下可以返回的地方。</p>
         <div class="title-screen__actions">
-          <button id="journey-action" class="journey-action" type="button">
-            <span id="journey-action-label">开始旅程</span>
-            <small id="journey-meta">从抵达陌生城市的这一天开始</small>
-          </button>
-          <button id="title-settings-button" class="title-menu-action" type="button">
-            <span>设置</span>
-            <small>语言与阅读偏好</small>
-          </button>
-          <button id="title-easter-egg-button" class="title-menu-action" type="button">
-            <span>小彩蛋</span>
-            <small>查看旅途中悄悄亮起的里程碑</small>
-          </button>
+          <div class="title-screen__entries">
+            <button id="journey-action" class="title-entry-action title-entry-action--journey" type="button">
+              <span class="title-entry-action__mode">视觉小说</span>
+              <strong id="journey-action-label">开始旅程</strong>
+              <small id="journey-meta">一则故事</small>
+              <span class="title-entry-action__enter" aria-hidden="true">进入故事&nbsp; →</span>
+            </button>
+            <button id="toolset-action" class="title-entry-action title-entry-action--toolset" type="button">
+              <span class="title-entry-action__mode">写作工具</span>
+              <strong>伊萨卡手记</strong>
+              <small>进入书桌、主题板、信箱与书架</small>
+              <span class="title-entry-action__enter" aria-hidden="true">打开工具&nbsp; →</span>
+            </button>
+          </div>
+          <div class="title-screen__secondary-actions">
+            <button id="title-settings-button" class="title-menu-action" type="button">
+              <span>设置</span>
+              <small>语言与阅读偏好</small>
+            </button>
+            <button id="title-easter-egg-button" class="title-menu-action" type="button">
+              <span>小彩蛋</span>
+              <small>查看使用中悄悄亮起的里程碑</small>
+            </button>
+          </div>
         </div>
         <p id="title-email" class="title-screen__identity" data-i18n-skip></p>
       </section>
       <footer class="title-screen__footer">
-        <span>小范围云端测试 · 0.4.0</span>
+        <span>小范围云端测试 · 0.4.1</span>
         <div>
           <button id="title-account-button" class="title-link" type="button">删除数据</button>
           <button id="title-logout-button" class="title-link" type="button">退出</button>
         </div>
       </footer>
+    </main>
+
+    <main id="journey-view" class="story-screen" aria-labelledby="story-heading" hidden>
+      <div class="title-screen__background" aria-hidden="true"></div>
+      <div class="title-screen__stars" aria-hidden="true"></div>
+      <header class="story-screen__header">
+        <button id="journey-return-title-button" class="story-screen__back" type="button">← 返回标题</button>
+        <span class="story-screen__brand" data-i18n-skip>ITHACA JOURNAL · JOURNEY</span>
+      </header>
+      <section id="story-stage" class="story-screen__stage" data-story-layer="reality">
+        <div class="story-screen__chapter">
+          <div class="story-screen__context">
+            <p id="journey-passage-label" class="eyebrow">序章</p>
+            <span id="journey-layer-label" class="story-screen__layer">现实</span>
+          </div>
+          <h1 id="story-heading">陌生城市与设计稿</h1>
+        </div>
+        <article id="story-dialogue" class="story-dialogue" tabindex="-1" aria-live="polite">
+          <div id="story-speaker" class="story-dialogue__speaker">旁白</div>
+          <div id="story-copy" class="story-dialogue__copy"></div>
+          <div id="story-choices" class="story-dialogue__choices" aria-label="剧情选择"></div>
+        </article>
+      </section>
     </main>
 
     <dialog id="settings-dialog" class="dialog settings-dialog">
@@ -119,11 +154,11 @@
         <header class="milestone-dialog__header">
           <div>
             <p class="section-index">小彩蛋</p>
-            <h2>旅途里程碑</h2>
+            <h2>使用里程碑</h2>
           </div>
-          <strong id="achievement-progress" class="milestone-dialog__progress">0 / 8 已解锁</strong>
+          <strong id="achievement-progress" class="milestone-dialog__progress">0 / 6 已解锁</strong>
         </header>
-        <p>像翻开书页一样，看看哪些时刻已经被旅途记住。</p>
+        <p>像翻开书页一样，看看哪些使用时刻已经被记住。</p>
         <p id="achievement-loading" class="milestone-dialog__loading" role="status">正在整理里程碑……</p>
         <div id="achievement-list" class="achievement-list" role="list" hidden></div>
         <div class="dialog__actions">
@@ -140,7 +175,7 @@
             <span class="scene-header__kicker">ITHACA JOURNAL</span>
             <span class="scene-header__title-row">
               <strong>伊萨卡手记</strong>
-              <small id="scene-day">第 1 天</small>
+              <small id="scene-day">写作工具</small>
             </span>
           </span>
           <aside
@@ -160,6 +195,7 @@
         </div>
         <p id="scene-email" class="scene-header__identity" data-i18n-skip></p>
         <div class="scene-header__actions">
+          <button id="scene-home-button" class="text-button text-button--night" type="button">返回标题</button>
           <button
             id="arrange-room-button"
             class="scene-control scene-control--primary"
@@ -187,7 +223,7 @@
             <p class="section-index" data-scene-eyebrow>场景</p>
             <h1 id="scene-heading" data-scene-heading>正在准备场景</h1>
           </div>
-          <p data-scene-description>选择场景中的物件，继续你的旅程。</p>
+          <p data-scene-description>选择场景中的物件，打开对应的书写工具。</p>
         </div>
 
         <div class="scene-frame" data-scene-frame>
@@ -479,15 +515,15 @@
           <span class="app-brand__mark" aria-hidden="true">IJ</span>
           <span><strong>伊萨卡手记</strong><small>信箱 · 返回房间</small></span>
         </button>
-        <div class="mailbox-header__title"><span>收下抵达的信，也留下寄出的回声</span></div>
+        <div class="mailbox-header__title"><span>整理写下与寄出的信</span></div>
         <button id="write-letter-button" class="button button--ritual" type="button">写一封信</button>
       </header>
       <aside class="mailbox-nav" aria-labelledby="mailbox-title">
         <p class="section-index">04 / 信箱</p>
-        <h1 id="mailbox-title">往来信件</h1>
+        <h1 id="mailbox-title">寄件记录</h1>
         <div class="mailbox-tabs" role="tablist" aria-label="信箱文件夹">
-          <button id="inbox-tab" role="tab" type="button" aria-selected="true">收件箱</button>
-          <button id="sent-tab" role="tab" type="button" aria-selected="false">寄件箱</button>
+          <button id="inbox-tab" role="tab" type="button" aria-selected="false" hidden>收件箱</button>
+          <button id="sent-tab" role="tab" type="button" aria-selected="true">寄件箱</button>
         </div>
         <div id="mail-list" class="mail-list" role="list"></div>
         <p id="mail-list-empty" class="list-empty" hidden>这里还没有信。</p>
@@ -496,8 +532,8 @@
         <section id="mail-empty" class="editor-empty">
           <p class="editor-empty__number" aria-hidden="true">✉</p>
           <p class="section-index">纸上的往来</p>
-          <h2>选择一封信。</h2>
-          <p>收件箱保存旅途中抵达的来信；寄件箱记录现实中已经寄出的信，仍可继续整理。</p>
+          <h2>这里还没有寄件。</h2>
+          <p>寄件箱保存已经寄出的信，也可以从这里继续整理和书写。</p>
         </section>
         <article id="mail-reader" class="mail-reader" hidden>
           <header class="mail-reader__header">

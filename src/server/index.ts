@@ -42,6 +42,11 @@ import {
   updateSentLetter,
 } from "./sent-letters";
 import {
+  advanceStoryJourney,
+  enterStoryJourney,
+  getStoryJourney,
+} from "./story-journey";
+import {
   exportOwnedPuzzles,
   listPuzzleShop,
   purchasePuzzle,
@@ -146,6 +151,30 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     }
     const user = await requireAuthenticatedUser(request, env);
     return jsonResponse({ journey: await completeIntro(env, user.id) });
+  }
+
+  if (url.pathname === "/api/story-journey") {
+    const user = await requireAuthenticatedUser(request, env);
+    if (request.method === "GET") {
+      return jsonResponse({ story_journey: await getStoryJourney(env, user.id) });
+    }
+    if (request.method === "POST") {
+      const result = await enterStoryJourney(env, user.id);
+      return jsonResponse(
+        { story_journey: result.storyJourney },
+        result.created ? 201 : 200,
+      );
+    }
+    if (request.method === "PUT") {
+      return jsonResponse({
+        story_journey: await advanceStoryJourney(
+          env,
+          user.id,
+          await readJsonBody(request),
+        ),
+      });
+    }
+    methodNotAllowed(["GET", "POST", "PUT"]);
   }
 
   if (url.pathname === "/api/entries") {
@@ -359,11 +388,21 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       methodNotAllowed(["GET"]);
     }
     const user = await requireAuthenticatedUser(request, env);
-    const [entries, topicSummaries, books, journey, puzzles, sentLetters, achievements] = await Promise.all([
+    const [
+      entries,
+      topicSummaries,
+      books,
+      journey,
+      storyJourney,
+      puzzles,
+      sentLetters,
+      achievements,
+    ] = await Promise.all([
       exportEntries(env, user.id),
       listTopics(env, user.id),
       exportBooks(env, user.id),
       getJourney(env, user.id),
+      getStoryJourney(env, user.id),
       exportOwnedPuzzles(env, user.id),
       exportSentLetters(env, user.id),
       listAchievements(env, user.id),
@@ -377,13 +416,14 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return jsonResponse(
       {
         format: "ithaca-journal-export",
-        version: 6,
+        version: 7,
         exported_at: new Date().toISOString(),
         user: { email: user.email },
         entries,
         topics,
         books,
         journey,
+        story_journey: storyJourney,
         letters,
         sent_letters: sentLetters,
         puzzles,

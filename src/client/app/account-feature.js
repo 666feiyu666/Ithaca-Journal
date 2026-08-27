@@ -11,19 +11,19 @@ export function createAccountFeature({
     refs.deleteAccountError.hidden = !message;
   }
 
-  function configureControls(user = state.user, journey = state.journey) {
+  function configureControls(user = state.user) {
     const isDevelopment = user?.source === "development";
-    const accountLabel = isDevelopment ? "重新体验 0.4.0" : "删除数据";
+    const accountLabel = isDevelopment ? "重置本地数据" : "删除数据";
     refs.titleAccountButton.textContent = accountLabel;
     refs.sceneAccountButton.textContent = isDevelopment ? "重置测试" : "删除数据";
     refs.accountButton.textContent = isDevelopment ? "重置测试" : "删除数据";
-    refs.titleAccountButton.hidden = isDevelopment && !journey;
+    refs.titleAccountButton.hidden = false;
 
     if (isDevelopment) {
       refs.deleteAccountIndex.textContent = "本地验收工具";
-      refs.deleteAccountTitle.textContent = "重新体验完整流程？";
+      refs.deleteAccountTitle.textContent = "清除本地测试数据？";
       refs.deleteAccountCopy.textContent =
-        "这会清除当前本地开发身份的旅程、来信阅读状态、全部纸页（含日记）、主题、寄件、成书和里程碑，然后自动回到“开始旅程”。它不会影响 staging、production 或 Cloudflare Access 允许名单。";
+        "这会清除当前本地开发身份的视觉小说进度、工具数据和里程碑，然后回到一份全新的本地存档。它不会影响 staging、production 或 Cloudflare Access 允许名单。";
       refs.deleteAccountLabel.innerHTML = "输入 <strong>RESET</strong> 以重新开始";
       refs.deleteConfirmation.placeholder = "RESET";
       refs.confirmDeleteAccount.textContent = "清除并重新开始";
@@ -33,7 +33,7 @@ export function createAccountFeature({
     refs.deleteAccountIndex.textContent = "永久删除";
     refs.deleteAccountTitle.textContent = "删除全部云端数据？";
     refs.deleteAccountCopy.textContent =
-      "这将删除当前应用账户、旅程、来信阅读状态、全部纸页（含日记）、主题、寄件、成书和里程碑，但不会修改 Cloudflare Access 的邮箱允许名单。再次登录会建立一个空账户。该操作无法撤销。";
+      "这将删除当前应用账户、视觉小说进度、全部纸页（含日记）、主题、寄件、成书和里程碑，但不会修改 Cloudflare Access 的邮箱允许名单。再次登录会建立一个空账户。该操作无法撤销。";
     refs.deleteAccountLabel.innerHTML = "输入 <strong>DELETE</strong> 以继续";
     refs.deleteConfirmation.placeholder = "DELETE";
     refs.confirmDeleteAccount.textContent = "永久删除";

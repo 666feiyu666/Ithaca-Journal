@@ -1,12 +1,5 @@
 export const ACHIEVEMENTS = Object.freeze([
   Object.freeze({
-    key: "arrival",
-    mark: "I",
-    title: "抵达",
-    description: "开始第一天的旅程",
-    reached: (archive) => Boolean(archive.journey),
-  }),
-  Object.freeze({
     key: "first_page",
     mark: "✦",
     title: "留下一页",
@@ -47,13 +40,6 @@ export const ACHIEVEMENTS = Object.freeze([
     title: "积跬步",
     description: "纸页正文累计写下 1,000 个字符",
     reached: (archive) => totalWrittenCharacters(archive.entries) >= 1_000,
-  }),
-  Object.freeze({
-    key: "journey_complete",
-    mark: "21",
-    title: "这就是伊萨卡手记",
-    description: "完成二十一天的旅程",
-    reached: (archive) => archive.journey?.status === "completed",
   }),
 ]);
 
@@ -175,7 +161,6 @@ export function createAchievementsFeature({
 
   async function syncFromState({ announce = true } = {}) {
     const snapshot = {
-      journey: state.journey,
       entries: state.entries,
       topics: state.topics,
       books: state.books,
@@ -199,7 +184,12 @@ export function createAchievementsFeature({
       const encryptedArchive = await api("/api/export");
       const archive = await vault.openArchive(encryptedArchive);
       if (state.user !== user) return;
-      unlocked = new Map((archive.achievements ?? []).map((record) => [record.key, record]));
+      const activeKeys = new Set(ACHIEVEMENTS.map(({ key }) => key));
+      unlocked = new Map(
+        (archive.achievements ?? [])
+          .filter((record) => activeKeys.has(record.key))
+          .map((record) => [record.key, record]),
+      );
       const reached = reachedAchievementKeys(archive);
       await persist(reached, { announce: true });
       render();

@@ -2,7 +2,7 @@ export function createAppState() {
   return {
     user: null,
     privacyUnlocked: false,
-    journey: null,
+    storyJourney: null,
     entries: [],
     entriesLoaded: false,
     topics: [],
@@ -20,7 +20,7 @@ export function createAppState() {
     browseMode: "category",
     selectedCategory: "fragment",
     selectedTag: null,
-    mailboxMode: "inbox",
+    mailboxMode: "sent",
     workbenchMode: "fragments",
     fragmentDrawerOpen: false,
     topicDirectoryOpen: false,

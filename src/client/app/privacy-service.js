@@ -282,7 +282,7 @@ export function createPrivacyVault() {
     ]);
     return {
       ...archive,
-      version: 6,
+      version: 7,
       exported_at: new Date().toISOString(),
       entries: entries.map(({ sealed_payload: _sealedPayload, ...entry }) => entry),
       topics: topics.map(({ sealed_payload: _sealedPayload, ...topic }) => ({
