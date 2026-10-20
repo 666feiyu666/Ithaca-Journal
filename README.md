@@ -1,8 +1,8 @@
 # The Ithaca Journal | 伊萨卡手记
 
-![The Ithaca Journal 0.4.1 development home screen](assets/readme/ithaca-journal-home-0.4.1.png)
+![The Ithaca Journal home screen](assets/readme/ithaca-journal-home.png)
 
-> Development build `0.4.1`: the left entrance opens the visual novel, the right one opens the interactive writing tool.
+> Development build: the left entrance opens the visual novel, the right one opens the interactive writing tool.
 
 *The Ithaca Journal* is a Research through Design project that couples a visual novel and an interactive writing tool inside one work. Current development focuses on finishing the novel's story, staging, and playable build.
 
@@ -33,7 +33,7 @@ The tool is inherited rather than invented for the story, and the inheritance is
 
 **Two layers that must stay apart.** Every narrative passage belongs to exactly one layer: `layer-reality` (the rental room, the city, the interview) or `layer-design` (the journal's design draft). The "Ithaca Cottage" exists only inside the design draft; Kafka in reality lives in an ordinary rented room. The two spaces must never merge, in text or in staging. That separation is what keeps the inherited tool honest: it is a designed object inside the story, not the world the character actually lives in.
 
-**Version and passage stability.** Three concepts stay distinct — the product release (`0.4.1`, owned by `package.json` and release records), the content revision of the Journey (`draft-01`, …), and the save schema (`story state schema 1`). Passage IDs express structural position only (`PROLOGUE_S01`, `CH01_S01`, `CH02_I06`, `CH03_END`, `CH04_END`); retitling or rewriting never renames them, and a passage already written into real saves is kept alive through redirects instead of deletion. The early desktop prototype also survives as the [`legacy`](https://github.com/666feiyu666/Ithaca-Journal/tree/legacy) branch — historical reference, not the development line.
+**Releases, revisions, and passage stability.** Three things stay distinct and none of them names the story: the product release (owned by `package.json` and release records), the content revision of the Journey, and the save schema. Passage IDs express structural position only (`PROLOGUE_S01`, `CH01_S01`, `CH02_I06`, `CH03_END`, `CH04_END`); retitling or rewriting never renames them, and a passage already written into real saves is kept alive through redirects instead of deletion. The early desktop prototype also survives as the [`legacy`](https://github.com/666feiyu666/Ithaca-Journal/tree/legacy) branch — historical reference, not the development line.
 
 The home screen keeps two independent entrances:
 
