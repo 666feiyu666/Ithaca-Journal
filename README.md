@@ -1,130 +1,90 @@
-# 🍍 伊萨卡手记 | The Ithaca Journal 
-![Version](https://img.shields.io/badge/version-1.0-blueviolet) ![Status](https://img.shields.io/badge/status-In%20Development-orange) ![Electron](https://img.shields.io/badge/Electron-28.0-9cf) ![License](https://img.shields.io/badge/license-MIT-green)
+# The Ithaca Journal | 伊萨卡手记
+
+![Status](https://img.shields.io/badge/status-prototype-orange) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-9cf)
+
+![The Ithaca Room](src/assets/images/room/room_goal.png)
+
+**The Ithaca Journal is a desktop journal that redesigns diary-keeping as a 21-day journey: you move into an empty room, receive letters, write, and bind those scattered notes into books — until the room slowly becomes a home.**
+
+It is not another habit tracker with points and leaderboards. It asks a different question: **when everything is in motion, how do we place ourselves back into a concrete situation — and tell a coherent story of our own?**
 
 ---
 
-## 📖 关于本项目 (About)
-![Ithaca Room](src/assets/images/room/room_goal.png)
+## Why we built it
 
-**《伊萨卡手记》** 是一款融合了**叙事理论**与**游戏化机制**的桌面端日记应用。
+Odysseus knew where he was going, and he always knew where he was coming home from — he had a coordinate called Ithaca. Most of us don't. We are thrown into a highly mobile, constantly shifting world, facing both large structural pressures and very specific everyday blows: a failed exam, a job that goes nowhere.
 
-我们试图回应一个古老而恒久的命题：**“我是谁？”**
+Many "empowerment" gamified self-help products answer this by translating those difficulties into numbers we can level up: resilience +1, mindset +1. They promise that if we keep optimizing ourselves, we will get past reality. But while we do that, the actual situation — the city you live in, the work you do, the people you meet — quietly leaves the frame. Problems are reduced to psychological ones, and people are left endlessly self-optimizing inside structural difficulties.
 
-> “知道我是谁，就是知道我站在何处。知道我是谁，就是知道我从哪里来，要到哪里去。”
+The Ithaca Journal takes the opposite route: **put the situation back first, and talk about growth after.** The self is not a container waiting to be filled with stats; it is something narratively built over time, through encounters with others and with the world. Writing is the plainest, most reliable way to do that building.
 
-在这个被碎片化信息裹挟的数字时代，我们常常迷失了那个存在的“坐标”。《伊萨卡手记》试图为你构建一个虚拟的“精神栖居地”。这不仅仅是一个支持 Markdown 的文本编辑器，更是一场为期 **21天** 的奥德赛——我们希望通过书写，帮助你**重构自我叙事**，在混乱的日常中重新确认自己的立足点，找到生活的节奏。
+## Design ideas: four decisions
 
-在这里，你不仅是探索世界、装饰房间的 **玩家**，也是记录生活、构建自我的 **作家**。
+**1. Situation before numbers.**
+The game doesn't start with "what is your goal?". It starts with *you just graduated, dragging a suitcase alone into a big unfamiliar city*. Loneliness, missing coordinates, uncertainty — those land first, so the room, the city and the light outside the window become perceptible. What you deal with is not an abstract self, but the self in this particular situation.
 
----
+**2. Model the practice before asking for it.**
+Once you move in, you begin receiving 21 letters from the previous tenant, "Sugar Pineapple" (糖水菠萝). They are not quest logs; they are a demonstration of narrative practice — how another person digests their own circumstances and answers the outside world by writing. What the letters mention maps onto the broken book on your shelf, *The Ithaca Journal*. Completing that book is the same act as completing the journey.
 
-### 📥 下载体验 (Download)
+**3. The interaction is the metaphor.**
+The real entry points grow on the objects in the room: the desk opens the writing desk, the bookshelf lets you look back, the mailbox delivers letters. More importantly, there is a path from fragment to whole — you jot down scattered days in separate **notebooks**, then select, reorder, and thread them together, **binding them into a book** that sits on the shelf. What is recreated at the level of interaction is narrative integration itself: weaving dispersed experience into a coherent story of the self.
 
-如果你不想配置开发环境，可以直接下载打包好的应用版本进行体验：
+**4. Rewards return to space, not to a leaderboard.**
+No points, badges, or friend rankings. Every entry and every finished book earns **ink**; ink buys furniture in the shop, and you place each piece yourself in the room that started out empty. Achievement is not a number but a space you can walk back into and look at — which is what "home" means here.
 
-👉 **[点击前往 Itch.io 下载](https://frank-don.itch.io/ithaca-journal)**
+## What playing it looks like
 
----
+1. Open the app, move in, read the first letter.
+2. Click the desk to open the **writing desk**: create a notebook ("daily fragments", "my thesis") and write whatever is on your mind.
+3. When you have enough material, enter **binding mode** to select, order, and compile it into a book.
+4. Look back at your books on the **bookshelf**, and **export any of them as Markdown**.
+5. Spend earned ink in the **furniture shop**, then enter **decoration mode** to arrange the room.
+6. Log in daily to unlock the next letter; after 21 days, *The Ithaca Journal* is complete.
 
-## ✨ 核心特性 
+Alongside that, the room keeps an achievement log and a city map (streets, the subway entrance, the shop street and more are open to wander). Saves can be exported and imported as a whole, and everything stays on your own machine.
 
-### 🎮 游戏：寻找失落的篇章
+## Project status
 
-* **📖 残缺的《伊萨卡手记》**：
-    * 游戏的名字并非巧合。在房间的书架上，你会找到一本名为 **《伊萨卡手记》** 的书。
-    * **它为什么是残缺的？** 起初，这本书只有第一部分。随着游戏的进行，你会将这本残缺的书一点点补齐，还原出它原本的模样。
-* **✉️ 神秘来信**：
-    * 故事始于一封寄错的信。“糖水菠萝”为何不断给你写信？
-    * Ta 的信中那些关于生活、关于叙事的探讨，似乎不仅是闲聊，更是与 **《伊萨卡手记》** 的内容直接挂钩。
-* **📅 21天旅程**：
-    * 这是一场设定好的短期旅行。每天登录，你都会解锁新的剧情碎片。
-    * 坚持完成全部 **21天** 的旅程，当那本《伊萨卡手记》最终被补全的那一刻，你将在终点收获一个意想不到的**专属彩蛋**。
-* **💧 墨水与装修**：
-    * 你的每一次书写都会转化为“墨水”能量。
-    * 使用墨水在商店购买家具，从零开始装扮这个空荡荡的房间，让它变成你理想中的样子。
-* **🏆 成就系统**：
-    * 记录你的每一个里程碑，无论是第一次写满1000字，还是成功出版属于你自己的第一部作品，都会被永久铭记。
+This repository branch (`legacy`) holds the early prototype: the room, the writing flow, the letters, and the binding loop. Active development continues on **[`main` on GitHub](https://github.com/666feiyu666/Ithaca-Journal)** — please look there for the current state, issues, and discussion.
 
-### 🛠️ 工具：所见即所得的交互
+Still being worked on:
 
-* **🪑 交互式家具**：
-    * 房间里的家具不仅仅是装饰，更是实用的功能入口。
-* **📝 写作台 (创作与编纂)**：
-    * **心流书写**：点击桌子进入无干扰的 Markdown 写作环境，专注于当下的思绪。
-    * **主题归档**：你可以自由创建特定的**手记本**（如“日常碎片”、“写毕业论文”），将日记分门别类地归档。
-    * **装订成书**：最独特的是**装订模式**。你可以像编辑一样，将某个主题下的零散日记重新挑选、排序、串联，最终汇集成一部完整的**个人故事**。
-* **📚 书架 (珍藏与回顾)**：
-    * 点击书架回顾往期作品。这里陈列着那本神秘的《伊萨卡手记》，也摆放着你亲手装订的每一部作品。
-    * 所有书籍均支持**导出为 Markdown**，让你的记忆触手可及。
-* **📫 信箱 (收件)**：
-    * 点击左上角的信箱查收系统来信。这里是你与游戏世界沟通的桥梁。
+- [ ] A smoother writing experience
+- [ ] Polishing the main story and writing the side stories
+- [ ] Finishing the city roaming and memory-fragment mechanics
 
-### 🔮 未来：城市漫游与相遇
+Issues and pull requests are welcome.
 
-* **🏙️ 城市漫游 (2.0计划)**：
-    * **视觉小说** 走出房间，去虚拟的城市街道散步。与不同的人物相遇，了解他们的故事。
-* **🧩 叙事合成 (2.0计划)**：
-    * **碎片收集**：留心收集散落在城市各处的神秘碎片。
-    * **重组解谜**：将碎片重组，你可能会还原出前任房客尘封的故事，拼凑出这个世界背后的真相。
+## Download & run it yourself
 
----
+**Prototype build.** A packaged prototype is available on itch.io for a quick look:
 
-## 🚀 开发运行 (Development)
+👉 **[Download on itch.io](https://frank-don.itch.io/ithaca-journal)**
 
-### 🛠️ 技术栈 (Tech Stack)
+**Full experience from source.** The itch.io build is a snapshot; running from source gives you the complete current experience. You need [Node.js](https://nodejs.org/) 20 or newer.
 
-本项目基于 **Electron** 框架构建。
-
-* **Core**: Electron (Main/Renderer Process)
-* **Frontend**: HTML5, CSS3 (Grid/Flexbox), Vanilla JavaScript (ES6+)
-* **Data Persistence**: Node.js File System (fs) & LocalStorage
-* **Markdown Engine**: `marked.js`
-
-如果你是开发者，或者想自己在本地运行源代码，请按照以下步骤操作：
-
-### 1. 环境准备
-确保你的电脑上安装了 [Node.js](https://nodejs.org/) (建议 v16+)。
-
-### 2. 获取代码
 ```bash
-git clone [https://github.com/your-username/ithaca-journal.git](https://github.com/your-username/ithaca-journal.git)
-cd ithaca-journal
-```
-
-### 3. 安装依赖
-```bash
+git clone https://github.com/666feiyu666/Ithaca-Journal.git
+cd Ithaca-Journal
 npm install
+npm start          # launch the app
+npm run dist       # package (Windows portable / macOS dmg)
 ```
 
-### 4. 启动伊萨卡
-```bash
-npm start
-```
+Saves live in your system application-data directory under `save_data` (`save_data_dev_test5` in development mode): `user_data.json`, `journal_data.json`, and `library_data.json`. You can also back them up with the import/export buttons in the app.
 
-目前项目仍在开发中，主要正在完善以下模块：
+The stack stays deliberately small: Electron (main + renderer process), plain HTML/CSS/JavaScript, `marked.js` for Markdown rendering, and local JSON files for storage.
 
-[ ] 写作体验的改善
+## References & thanks
 
-[ ] 故事主线的打磨
+The questions behind this journal come from Homer's *Odyssey* and Charles Segal's reading of it; the parts on the narrative self and identity draw on:
 
-[ ] 故事支线的撰写
-
-[ ] 城市探索
-
-如果你对叙事理论或独立游戏开发感兴趣，欢迎提交 Issue 或 PR！
-
----
-
-## 📖 参考书目 (References)
-
-《伊萨卡手记》的设计灵感起初源于荷马的《奥德赛》与西格尔对《奥德赛》的解读，之后也参阅了一些对叙事自我、伦理与现代性认同的书籍。
-以下是我们主要的参考书目：
-
-* **荷马** - 《奥德赛》
-* **查尔斯·西格尔** - 《奥德赛中的歌手、英雄与诸神》
-* **张容南** - 《叙事的自我：我们如何以叙事的方式理解自身》
-* **宋薇** - 《麦金太尔伦理叙事研究》
-* **安东尼·吉登斯** - 《现代性与自我认同：晚期现代中的自我与社会》
-* **查尔斯·泰勒** - 《自我的根源：现代认同的形成》
-* **阿拉斯戴尔·麦金太尔** - 《追寻美德》
-* ……
+- Homer — *Odyssey*
+- Charles Segal — *Singers, Heroes, and Gods in the Odyssey*
+- Zhang Rongnan — *The Narrative Self: How We Understand Ourselves Narratively*
+- Song Wei — *A Study of MacIntyre's Ethical Narrative*
+- Anthony Giddens — *Modernity and Self-Identity*
+- Charles Taylor — *Sources of the Self: The Making of the Modern Identity*
+- Alasdair MacIntyre — *After Virtue*
+- Paul Ricoeur — *Oneself as Another*
+- ...
