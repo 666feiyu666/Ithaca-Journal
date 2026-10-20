@@ -47,3 +47,7 @@ prototypes/
 # 9. 其他不需要上传的文件
 *.local
 AGENTS.md
+
+# 10. 由生成脚本重建的运行时产物 (npm run narrative:build)
+src/client/config/generated/
+src/server/generated/
