@@ -12,18 +12,8 @@ export const dialogues = Object.freeze({
   },
   "doorway.mailbox": {
     id: "doorway.mailbox",
-    lines: [
-      {
-        speaker: "我",
-        textByPhase: {
-          morning: "晨光落在信箱盖上。里面似乎多了一封信。",
-          afternoon: "午后的光落在信箱盖上。里面似乎多了一封信。",
-          dusk: "信箱被黄昏染成暗金色。里面似乎多了一封信。",
-          lateNight: "门外很安静。信箱里似乎有什么东西。",
-        },
-      },
-    ],
-    actionLabel: "拆开来信",
+    lines: [{ speaker: "我", text: "这里保存写下并寄出的信，也可以从寄件重新建立草稿。" }],
+    actionLabel: "打开寄件箱",
   },
   "doorway.enterRoom": {
     id: "doorway.enterRoom",
@@ -52,7 +42,7 @@ export const dialogues = Object.freeze({
   },
   "room.leave": {
     id: "room.leave",
-    lines: [{ speaker: "我", text: "要去检查一下信箱吗？" }],
+    lines: [{ speaker: "我", text: "信箱在门外，可以在那里整理寄件。" }],
     actionLabel: "走到门外",
   },
 });

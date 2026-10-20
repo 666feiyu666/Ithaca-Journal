@@ -86,7 +86,7 @@ function showAuth({
 } = {}) {
   state.user = null;
   privacyFeature?.lock();
-  state.journey = null;
+  state.storyJourney = null;
   state.entries = [];
   state.entriesLoaded = false;
   state.topics = [];
@@ -110,6 +110,7 @@ function showAuth({
   refs.mailboxView.hidden = true;
   refs.appView.hidden = true;
   refs.sceneView.hidden = true;
+  refs.journeyView.hidden = true;
   refs.titleView.hidden = true;
   refs.authView.hidden = false;
   refs.accessTitle.textContent = title;
@@ -119,10 +120,11 @@ function showAuth({
   setAccessError(error);
 }
 
-function showTitle(user, journey) {
+function showTitle(user, storyJourney) {
   state.user = user;
-  state.journey = journey;
+  state.storyJourney = storyJourney;
   refs.authView.hidden = true;
+  refs.journeyView.hidden = true;
   refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
@@ -131,27 +133,40 @@ function showTitle(user, journey) {
   refs.titleView.hidden = false;
   refs.titleEmail.textContent = user.email;
   refs.titleLogoutButton.hidden = user.source !== "cloudflare-access";
-  accountFeature.configureControls(user, journey);
+  accountFeature.configureControls(user);
 
-  if (!journey) {
+  if (!storyJourney) {
     refs.journeyActionLabel.textContent = "开始旅程";
-    refs.journeyMeta.textContent = "从抵达陌生城市的这一天开始";
-  } else if (journey.status === "completed") {
-    refs.journeyActionLabel.textContent = "回到房间";
-    refs.journeyMeta.textContent = "二十一天之后，书写仍在继续";
+  } else if (storyJourney.status === "completed") {
+    refs.journeyActionLabel.textContent = "重访旅程";
   } else {
     refs.journeyActionLabel.textContent = "继续旅程";
-    refs.journeyMeta.textContent = `第 ${journey.current_day} 天 · 回到你的房间`;
   }
+  refs.journeyMeta.textContent = "一则故事";
   focusWhenReady(refs.journeyAction);
 }
 
+function showJourney(storyJourney) {
+  if (!state.user || !storyJourney) return;
+  state.storyJourney = storyJourney;
+  refs.authView.hidden = true;
+  refs.titleView.hidden = true;
+  refs.sceneView.hidden = true;
+  refs.appView.hidden = true;
+  refs.booksView.hidden = true;
+  refs.topicsView.hidden = true;
+  refs.mailboxView.hidden = true;
+  refs.journeyView.hidden = false;
+  window.scrollTo({ top: 0, left: 0 });
+  focusWhenReady(refs.storyDialogue);
+}
+
 function showScene(sceneId = "room", options = {}) {
-  const journey = state.journey;
-  if (!state.user || !journey) {
+  if (!state.user) {
     return;
   }
   refs.authView.hidden = true;
+  refs.journeyView.hidden = true;
   refs.titleView.hidden = true;
   refs.appView.hidden = true;
   refs.booksView.hidden = true;
@@ -159,7 +174,7 @@ function showScene(sceneId = "room", options = {}) {
   refs.mailboxView.hidden = true;
   refs.sceneView.hidden = false;
   window.scrollTo({ top: 0, left: 0 });
-  refs.sceneDay.textContent = journey.status === "completed" ? "旅程之后" : `第 ${journey.current_day} 天`;
+  refs.sceneDay.textContent = "写作工具";
   refs.sceneEmail.textContent = state.user.email;
   refs.sceneLogoutButton.hidden = state.user.source !== "cloudflare-access";
   sceneRuntime.show(sceneId, options);
@@ -171,6 +186,7 @@ function showApp(user) {
   refs.logoutButton.hidden = user.source !== "cloudflare-access";
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
+  refs.journeyView.hidden = true;
   refs.sceneView.hidden = true;
   refs.booksView.hidden = true;
   refs.topicsView.hidden = true;
@@ -183,6 +199,7 @@ function showApp(user) {
 function showTopicsView() {
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
+  refs.journeyView.hidden = true;
   refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.mailboxView.hidden = true;
@@ -194,6 +211,7 @@ function showTopicsView() {
 function showMailboxView() {
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
+  refs.journeyView.hidden = true;
   refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.topicsView.hidden = true;
@@ -205,6 +223,7 @@ function showMailboxView() {
 function showBooksView() {
   refs.authView.hidden = true;
   refs.titleView.hidden = true;
+  refs.journeyView.hidden = true;
   refs.sceneView.hidden = true;
   refs.appView.hidden = true;
   refs.topicsView.hidden = true;
@@ -237,6 +256,8 @@ function setBusy(busy) {
   state.busy = busy;
   refs.accessRetry.disabled = busy;
   refs.journeyAction.disabled = busy;
+  refs.toolsetAction.disabled = busy;
+  refs.journeyReturnTitleButton.disabled = busy;
   refs.titleSettingsButton.disabled = busy;
   refs.titleEasterEggButton.disabled = busy;
   refs.confirmDeleteAccount.disabled = busy;
@@ -256,14 +277,6 @@ function handleAppError(error, fallbackMessage) {
   showMessage(error instanceof Error ? error.message : fallbackMessage, "error");
 }
 
-function showIntro() {
-  showScene("doorway", { focus: false });
-  sceneRuntime.openDialogue("journey.intro", {
-    onConfirm: journeyFeature.completeIntro,
-    onError: (error) => handleAppError(error, "暂时无法保存序章进度，请稍后重试。"),
-  });
-}
-
 function returnToRoom() {
   if (!entriesFeature.canLeaveCurrentDraft()) {
     return;
@@ -281,7 +294,7 @@ const sceneRuntime = createSceneRuntime({
   dialogueRuntime,
   timeService,
   actions: {
-    openMailbox: () => mailboxFeature.open(),
+    openMailbox: () => mailboxFeature.open({ mode: "sent" }),
     openWorkbench: () => workbenchFeature.open(),
     openBoard: () => topicsFeature.open(),
     openBookshelf: () => libraryFeature.open(),
@@ -394,10 +407,9 @@ journeyFeature = createJourneyFeature({
   showAuth,
   showTitle,
   showScene,
-  showIntro,
+  showJourney,
   ensurePrivacy: privacyFeature.ensureUnlocked,
   handleError: handleAppError,
-  onJourneyEntered: () => void achievementFeature.syncFromState(),
 });
 
 accountFeature = createAccountFeature({
@@ -423,6 +435,9 @@ refs.returnRoomButton.addEventListener("click", returnToRoom);
 refs.topicsReturnRoomButton.addEventListener("click", returnToRoom);
 refs.mailboxReturnRoomButton.addEventListener("click", returnToRoom);
 refs.booksReturnRoomButton.addEventListener("click", returnToRoom);
+refs.sceneHomeButton.addEventListener("click", () => {
+  if (state.user) showTitle(state.user, state.storyJourney);
+});
 window.addEventListener("online", updateConnectivity);
 window.addEventListener("offline", updateConnectivity);
 window.addEventListener("beforeunload", (event) => {

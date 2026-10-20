@@ -4,7 +4,7 @@ export const doorwayScene = Object.freeze({
   id: "doorway",
   title: "门外",
   eyebrow: "公寓门外",
-  description: "信件留在门外，推开房门才能回到书写的地方。",
+  description: "信箱保存寄件记录，推开房门可以回到其他写作工具。",
   aspectRatio: 1456 / 816,
   initialFocusObjectId: "mailbox",
   layers: [
@@ -58,7 +58,7 @@ export const doorwayScene = Object.freeze({
       visualSource: sceneAssets.doorway.mailbox,
       hitArea: { x: 66.48, y: 42.75, width: 6.35, height: 13.05 },
       hintAnchor: { x: 69.65, y: 41.75 },
-      hint: { title: "查看信箱", text: "里面似乎多了一封信" },
+      hint: { title: "查看信箱", text: "整理写下与寄出的信" },
       dialogueId: "doorway.mailbox",
       action: { type: "feature", target: "openMailbox" },
       z: 30,

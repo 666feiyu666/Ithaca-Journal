@@ -1,0 +1,23 @@
+{
+  "purpose": "Shared development workflows for restoring and operating the project on a new development machine.",
+  "gitPolicy": {
+    "tracked": true,
+    "ignoreRule": null
+  },
+  "setup": {
+    "command": "npm ci"
+  },
+  "workflows": {
+    "typecheckAll": "npm run types && npx tsc -p tsconfig.json --noEmit && npx tsc -p tests/tsconfig.json --noEmit",
+    "unitTests": "node --test tests/unit/*.test.js",
+    "integrationTests": "npm run types && npx vitest run --config tests/vitest.config.ts",
+    "allTests": "node --test tests/unit/*.test.js && npm run types && npx vitest run --config tests/vitest.config.ts",
+    "migrateLocalDatabase": "npx wrangler d1 migrations apply ithaca-journal-local --local",
+    "migrateStagingDatabase": "npx wrangler d1 migrations apply ithaca-journal-staging --remote --env staging",
+    "migrateProductionDatabase": "npx wrangler d1 migrations apply ithaca-journal-production --remote --env production",
+    "validateStagingAccess": "node ./scripts/validate-access-config.mjs staging",
+    "validateProductionAccess": "node ./scripts/validate-access-config.mjs production",
+    "deployStaging": "node ./scripts/validate-access-config.mjs staging && npx wrangler deploy --env staging",
+    "deployProduction": "node ./scripts/validate-access-config.mjs production && npx wrangler deploy --env production"
+  }
+}
