@@ -43,3 +43,7 @@ art-source/*
 # 8. 研究与设计文档(暂时不上传)
 docs/
 prototypes/
+
+# 9. 其他不需要上传的文件
+*.local
+AGENTS.md
