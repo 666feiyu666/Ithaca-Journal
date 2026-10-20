@@ -1,46 +1,56 @@
-# 伊萨卡手记 | The Ithaca Journal
+# The Ithaca Journal | 伊萨卡手记
 
-![《伊萨卡手记》0.4.1 开发版首页](assets/readme/ithaca-journal-home-0.4.1.png)
+![The Ithaca Journal 0.4.1 development home screen](assets/readme/ithaca-journal-home-0.4.1.png)
 
-> `0.4.1` 开发版：左侧进入视觉小说，右侧进入互动书写工具。
+> Development build `0.4.1`: the left entrance opens the visual novel, the right one opens the interactive writing tool.
 
-《伊萨卡手记》是一个将视觉小说与互动书写工具嵌合在同一作品中的 Research through Design 项目。当前开发重点是完成视觉小说的故事、演出与可运行版本。
+*The Ithaca Journal* is a Research through Design project that couples a visual novel and an interactive writing tool inside one work. Current development focuses on finishing the novel's story, staging, and playable build.
 
-## 1. 设计决策：用开发者元故事嵌合视觉小说与工具（DE-003）
+## 1. Design decision: a developer meta-story that couples the novel and the tool (DE-003)
 
-项目最初形成了书桌、主题板、信箱和书架等开放式写作空间。上一阶段曾尝试把这些工具重新编排为围绕“自主性”与“共融性”的主题旅程，但实际制作逐渐变成了对概念和功能的解释，仍然没有回答“这是一部什么故事”。
+The project first grew into an open writing space made of a desk, a topic board, a mailbox, and a bookshelf. An earlier phase tried to re-arrange those tools into a themed journey around "agency" and "communion", but the work drifted into explaining concepts and features — and still had no answer to "what story is this?".
 
-当前的设计决策，是把“为什么有人会创造《伊萨卡手记》”本身变成视觉小说：
+The current decision is to turn *why anyone would build The Ithaca Journal at all* into the visual novel itself:
 
 ```text
-玩家进入视觉小说
-  → 认识正在求职的年轻开发者
-    → 见证他重新打开并打磨《伊萨卡手记》
-      → 在故事中看见或体验写作工具
-        → 工具成为面试、评价与失败的一部分
-          → 项目停在没有下一版的位置
+The player enters the visual novel
+  → meets a young developer who is job-hunting
+    → watches him reopen and polish The Ithaca Journal
+      → sees or uses the writing tool inside the story
+        → the tool becomes part of an interview, an evaluation, a failure
+          → the project ends where there is no next version
 ```
 
-视觉小说讲述一名刚毕业的年轻人来到陌生城市求职，并准备把此前开发的《伊萨卡手记》作为面试作品。日记、碎片、主题、书信和书籍等功能从他的经历与制作回忆中出现；A/B/C 只是面试前形成的阶段性版本；故事最终停在项目无疾而终的位置，不用重新理解 C、继续开发或获得成长补偿来收束。
+The novel follows a recent graduate who arrives in an unfamiliar city to look for work, planning to present the journal he built earlier as his interview portfolio. Diaries, fragments, topics, letters, and books surface through his experience and his memories of making them; A/B/C are merely staged versions formed before the interview; the story ends where the project quietly comes to nothing — it does not resolve by re-reading C, by resuming development, or by handing out growth as compensation.
 
-因此，视觉小说不是工具外面增加的一层包装，工具也不是与故事无关的功能集合：开发者元故事解释工具为何出现、如何被赋予意义，又如何在现实压力中被搁置；工具则成为故事中可以操作、展示和质疑的具体作品。
+The novel is therefore not a wrapper layered on top of a tool, and the tool is not a feature set unrelated to the story: the developer meta-story explains why the tool appeared, how it was given meaning, and how it was set aside under real pressure, while the tool becomes a concrete work that the story can operate, display, and question.
 
-首页仍保留两个独立入口：
+## 2. Inheritance: what this version carries over, and where
 
-| 入口 | 作用 |
+The tool is inherited rather than invented for the story, and the inheritance is deliberately made visible in three places.
+
+**From prototype to story.** The desk, topic board, mailbox, and bookshelf — including the earlier agency/communion journey — are not thrown away. They are carried into the novel as *the developer's own design draft*, so that the previous version is not discarded history but something the story can look at, use, and doubt.
+
+**Two layers that must stay apart.** Every narrative passage belongs to exactly one layer: `layer-reality` (the rental room, the city, the interview) or `layer-design` (the journal's design draft). The "Ithaca Cottage" exists only inside the design draft; Kafka in reality lives in an ordinary rented room. The two spaces must never merge, in text or in staging. That separation is what keeps the inherited tool honest: it is a designed object inside the story, not the world the character actually lives in.
+
+**Version and passage stability.** Three concepts stay distinct — the product release (`0.4.1`, owned by `package.json` and release records), the content revision of the Journey (`draft-01`, …), and the save schema (`story state schema 1`). Passage IDs express structural position only (`PROLOGUE_S01`, `CH01_S01`, `CH02_I06`, `CH03_END`, `CH04_END`); retitling or rewriting never renames them, and a passage already written into real saves is kept alive through redirects instead of deletion. The early desktop prototype also survives as the [`legacy`](https://github.com/666feiyu666/Ithaca-Journal/tree/legacy) branch — historical reference, not the development line.
+
+The home screen keeps two independent entrances:
+
+| Entrance | What it opens |
 | --- | --- |
-| **视觉小说｜开始旅程** | 进入作者编排的开发者元故事。 |
-| **写作工具｜伊萨卡手记** | 独立使用书桌、主题板、信箱和书架。 |
+| **Visual novel: start the journey** | The authored developer meta-story. |
+| **Writing tool: The Ithaca Journal** | The desk, the topic board, the mailbox, and the bookshelf, used on their own. |
 
-这是当前正在制作的设计方向，不是已经得到参与者使用证据支持的研究结论。
+This is the design direction currently in production, not a research finding already backed by participant evidence.
 
-## 2. 在本地电脑运行本项目
+## 3. Running the project on your own machine
 
-这里的“迁移”是恢复一套可继续开发的本地环境：取得源码，安装锁定依赖，从迁移文件重建一个空的本地数据库，然后启动应用。它默认不搬运原电脑上的用户日记、账户数据、D1 本地状态或密钥。
+"Migration" here means restoring a local environment you can keep developing in: get the source, install the locked dependencies, rebuild an empty local database from the migration files, and start the app. It does not carry over the previous machine's user diaries, account data, local D1 state, or keys.
 
-### 2.1 获取源码并安装依赖
+### 3.1 Get the source and install dependencies
 
-先安装 Git、Node.js 和 npm，然后执行：
+Install Git, Node.js, and npm first, then run:
 
 ```bash
 git clone https://github.com/666feiyu666/Ithaca-Journal.git
@@ -49,11 +59,11 @@ git switch main
 npm ci
 ```
 
-`npm ci` 会严格按照 `package-lock.json` 恢复项目依赖。Cloudflare Wrangler 已作为开发依赖包含在项目中，不需要全局安装。
+`npm ci` restores dependencies exactly as pinned in `package-lock.json`. Cloudflare Wrangler is a development dependency of the project; there is no need to install it globally.
 
-### 2.2 创建这台电脑自己的本地密钥
+### 3.2 Create this machine's own local key
 
-复制环境变量示例：
+Copy the environment example:
 
 ```powershell
 # Windows PowerShell
@@ -65,39 +75,39 @@ Copy-Item .dev.vars.example .dev.vars
 cp .dev.vars.example .dev.vars
 ```
 
-生成一个新的 32 字节 Base64URL 值：
+Generate a fresh 32-byte Base64URL value:
 
 ```bash
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 ```
 
-把命令输出填入 `.dev.vars`：
+Put the output into `.dev.vars`:
 
 ```dotenv
-VAULT_KEY_ENCRYPTION_KEY=这里替换为刚才生成的值
+VAULT_KEY_ENCRYPTION_KEY=replace-with-the-value-you-just-generated
 ```
 
-为什么空数据库仍需要这个本地密钥：应用会为本地开发账户创建一个用于加密存档内容的账户密钥，再用 `VAULT_KEY_ENCRYPTION_KEY` 将它封装后保存到本地 D1。这个值不是云端凭据，也不是用户密码，只是这台开发机保护本地账户密钥所需的机器级密钥。缺少它时，应用可以加载静态页面，但账户存档服务无法创建或解封密钥，因而不能完整使用写作与存档功能。
+Why an empty database still needs this key: the app creates an account key that encrypts saved content, then wraps it with `VAULT_KEY_ENCRYPTION_KEY` and stores it in the local D1. The value is not a cloud credential and not a user password — it is only the machine-level key that protects the local account key. Without it the app still loads its static pages, but the account/vault service cannot create or unwrap keys, so writing and saving do not fully work.
 
-如果只是在新电脑上重建空数据库，应当生成一个新值。只有在明确迁移旧电脑的本地用户数据时，才需要把旧 D1 数据和旧 `.dev.vars` 一起安全迁移；只复制其中一个，原有加密数据将无法读取。`.dev.vars` 已被 Git 忽略，不会随仓库上传。
+If you are only rebuilding an empty database on a new machine, generate a new value. Only when you deliberately move a previous machine's local user data do you need to migrate the old D1 state and the old `.dev.vars` together; copying just one of them makes the existing encrypted data unreadable. `.dev.vars` is already Git-ignored and never leaves your machine.
 
-### 2.3 重建本地数据库
+### 3.3 Rebuild the local database
 
 ```bash
 npx wrangler d1 migrations apply DB --local
 ```
 
-Wrangler 会从 `migrations/0001_initial.sql` 开始应用完整迁移链。这条命令只创建或更新本机的 D1 状态，不连接 staging 或 production。
+Wrangler applies the whole chain starting at `migrations/0001_initial.sql`. This command only creates or updates D1 state on this machine; it never touches staging or production.
 
-### 2.4 启动应用
+### 3.4 Start the app
 
 ```bash
 npm run dev
 ```
 
-启动前会先编译并校验 `narrative/journey/story.zh-CN.twee`，随后由 Wrangler 在终端输出本地访问地址。
+Before starting, it compiles and validates `narrative/journey/story.zh-CN.twee`, then Wrangler prints the local address in the terminal.
 
-### 2.5 验证恢复结果
+### 3.5 Verify the restoration
 
 ```bash
 npm run check
@@ -106,6 +116,6 @@ npm run test:integration
 npm run build
 ```
 
-恢复完成的最低判断是：依赖安装成功、完整迁移链能够应用到空数据库、应用可以本地启动，并且类型检查、单元测试、集成测试与 dry-run 构建全部通过。
+The minimum bar for a restored environment: dependencies install, the full migration chain applies to an empty database, the app starts locally, and type checks, unit tests, integration tests, and the dry-run build all pass.
 
-通过 Git 恢复的是源码、迁移、生成脚本、测试、Journey 作者源和必要运行资源；不会恢复 `node_modules/`、`.dev.vars`、本地 D1、用户数据、日志、缓存、构建输出或仓库外的大型美术源文件。
+What Git restores is the source, the migrations, the generator scripts, the tests, the Journey authoring source, and the required runtime resources. It does not restore `node_modules/`, `.dev.vars`, local D1 state, user data, logs, caches, build output, or the large art source files kept outside the repository.
