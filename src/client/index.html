@@ -312,107 +312,135 @@
           </button>
         </div>
         <p id="signed-in-email" class="signed-in-email"></p>
-        <div class="desk-browser__modes" role="group" aria-label="纸页浏览方式">
-          <button id="browse-category-button" type="button" aria-pressed="true">按分类</button>
-          <button id="browse-tag-button" type="button" aria-pressed="false">按标签</button>
-        </div>
-        <nav id="category-list" class="desk-filter-list" aria-label="纸页分类">
-          <button type="button" data-category=""><span>未分类</span><small data-category-count=""></small></button>
-          <button type="button" data-category="fragment" aria-current="true"><span>碎片</span><small data-category-count="fragment"></small></button>
-          <button type="button" data-category="theme"><span>主题</span><small data-category-count="theme"></small></button>
-          <button type="button" data-category="letter"><span>书信</span><small data-category-count="letter"></small></button>
-          <button type="button" data-category="book"><span>书籍</span><small data-category-count="book"></small></button>
-          <button type="button" data-category="journal"><span>日记</span><small data-category-count="journal"></small></button>
-        </nav>
-        <nav id="tag-list" class="desk-filter-list desk-filter-list--tags" aria-label="纸页标签" hidden></nav>
-        <p id="tag-list-empty" class="desk-filter-empty" hidden>还没有标签。可以在纸页上写下第一个。</p>
-        <div class="desk-browser__results">
-          <div class="desk-browser__result-heading">
-            <p id="journal-list-index" class="section-index">碎片</p>
-            <span id="entry-result-count">0 张</span>
-          </div>
-          <div id="entry-list" class="entry-list" role="list" aria-live="polite"></div>
-          <p id="list-empty" class="list-empty" hidden>这里还没有纸页。</p>
+        <button
+          id="filter-toggle-button"
+          class="desk-browser__toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="desk-filter-body"
+        >浏览与筛选</button>
+        <div id="desk-filter-body" class="desk-browser__body" data-collapsed="true">
+          <nav class="desk-filter-list desk-filter-list--views" aria-label="纸页视图">
+            <button id="browse-all-button" type="button" aria-current="true">
+              <span>所有纸页</span><small id="browse-all-count">0</small>
+            </button>
+          </nav>
+          <p class="desk-browser__group-label">分类</p>
+          <nav id="category-list" class="desk-filter-list" aria-label="纸页分类">
+            <button type="button" data-category=""><span>未分类</span><small data-category-count=""></small></button>
+            <button type="button" data-category="fragment"><span>碎片</span><small data-category-count="fragment"></small></button>
+            <button type="button" data-category="theme"><span>主题</span><small data-category-count="theme"></small></button>
+            <button type="button" data-category="letter"><span>书信</span><small data-category-count="letter"></small></button>
+            <button type="button" data-category="book"><span>书籍</span><small data-category-count="book"></small></button>
+            <button type="button" data-category="journal"><span>日记</span><small data-category-count="journal"></small></button>
+          </nav>
+          <p class="desk-browser__group-label">标签</p>
+          <nav id="tag-list" class="desk-filter-list desk-filter-list--tags" aria-label="纸页标签"></nav>
+          <p id="tag-list-empty" class="desk-filter-empty" hidden>还没有标签。可以在纸页上写下第一个。</p>
         </div>
       </aside>
 
-      <main class="editor-stage desk-stage" aria-labelledby="editor-heading">
-        <section id="editor-empty" class="editor-empty">
-          <p class="editor-empty__number" aria-hidden="true">✦</p>
-          <p id="editor-empty-index" class="section-index">一张新的纸</p>
-          <h2 id="editor-empty-title">从这里继续写。</h2>
-          <p id="editor-empty-copy">纸页可以先只是碎片，也可以成为主题、书信或一本正在生长的书。</p>
-          <button id="empty-new-button" class="button button--primary" type="button">添加纸页</button>
-        </section>
-
-        <section id="editor-panel" class="editor-panel" hidden>
-          <header class="editor-toolbar">
-            <div>
-              <p id="entry-kind-label" class="section-index">碎片纸页</p>
-              <p id="entry-date" class="entry-date">尚未保存</p>
-            </div>
-            <div class="editor-toolbar__actions">
-              <span id="save-state" class="save-state" role="status" aria-live="polite">尚未保存</span>
-              <button id="entry-context-action" class="button button--ritual" type="button" hidden></button>
-              <button
-                id="expand-editor-button"
-                class="button button--quiet"
-                type="button"
-                aria-pressed="false"
-              >展开书写</button>
-              <button id="delete-entry-button" class="button button--danger-quiet" type="button" disabled>
-                删除
+      <main class="desk-stage desk-stage--flow" data-view="desk" aria-labelledby="capture-heading">
+        <div class="desk-flow">
+          <div id="draft-banner" class="draft-banner" role="status" hidden>
+            <p class="draft-banner__copy">
+              上一次离开时，这里还有一份没有写完的草稿。它只以加密形式留在这个浏览器里。
+            </p>
+            <div class="draft-banner__actions">
+              <button id="resume-draft-button" class="button button--quiet" type="button">继续草稿</button>
+              <button id="discard-draft-button" class="button button--danger-quiet" type="button">
+                舍弃草稿
               </button>
-              <button id="save-button" class="button button--primary" type="button" disabled>保存纸页</button>
             </div>
-          </header>
-
-          <div class="paper-editor">
-            <div class="paper-editor__folio" aria-hidden="true">
-              <span>ITHACA · WRITING DESK</span>
-              <span>可继续书写</span>
-            </div>
-            <div class="paper-editor__metadata">
-              <label for="entry-category">分类
-                <select id="entry-category">
-                  <option value="">未分类</option>
-                  <option value="fragment">碎片</option>
-                  <option value="theme">主题</option>
-                  <option value="letter">书信</option>
-                  <option value="book">书籍</option>
-                  <option value="journal">日记</option>
-                </select>
-              </label>
-              <label for="entry-tags">标签
-                <input id="entry-tags" type="text" maxlength="300" placeholder="学术，伊萨卡手记" />
-              </label>
-              <label id="entry-recipient-field" for="entry-recipient" hidden>收信人
-                <input id="entry-recipient" type="text" maxlength="120" placeholder="写给谁？" />
-              </label>
-            </div>
-            <label class="sr-only" for="entry-title">手记标题</label>
-            <input
-              id="entry-title"
-              class="entry-title"
-              type="text"
-              maxlength="120"
-              placeholder="题目（可选）"
-            />
-            <div class="paper-rule" aria-hidden="true"></div>
-            <label class="sr-only" for="entry-body">手记正文</label>
-            <textarea
-              id="entry-body"
-              class="entry-body"
-              maxlength="100000"
-              placeholder="今天想留下什么？"
-            ></textarea>
-            <footer class="editor-footer">
-              <span id="character-count">0 个字符</span>
-              <span>内容不会写入应用日志</span>
-            </footer>
           </div>
-        </section>
 
+          <section id="editor-panel" class="editor-panel">
+            <header class="editor-toolbar">
+              <div>
+                <p id="entry-kind-label" class="section-index">碎片纸页</p>
+                <p id="entry-date" class="entry-date">尚未保存</p>
+                <p id="entry-edited" class="entry-date" hidden></p>
+              </div>
+              <div class="editor-toolbar__actions">
+                <span id="save-state" class="save-state" role="status" aria-live="polite">尚未保存</span>
+                <button id="entry-context-action" class="button button--ritual" type="button" hidden></button>
+                <button id="back-to-feed-button" class="button button--quiet" type="button" hidden>
+                  返回时间线
+                </button>
+                <button
+                  id="expand-editor-button"
+                  class="button button--quiet"
+                  type="button"
+                  aria-pressed="false"
+                >展开书写</button>
+                <button id="delete-entry-button" class="button button--danger-quiet" type="button" disabled>
+                  删除
+                </button>
+                <button id="save-button" class="button button--primary" type="button" disabled>保存纸页</button>
+              </div>
+            </header>
+
+            <div class="paper-editor">
+              <p id="capture-heading" class="capture-prompt">今天想留下什么？</p>
+              <div class="paper-editor__folio" aria-hidden="true">
+                <span>ITHACA · WRITING DESK</span>
+                <span>可继续书写</span>
+              </div>
+              <details id="entry-details" class="entry-details">
+                <summary>纸页详情</summary>
+                <div class="paper-editor__metadata">
+                  <label for="entry-title">题目（可选）
+                    <input
+                      id="entry-title"
+                      class="entry-title"
+                      type="text"
+                      maxlength="120"
+                      placeholder="留空也可以"
+                    />
+                  </label>
+                  <label for="entry-category">分类
+                    <select id="entry-category">
+                      <option value="">未分类</option>
+                      <option value="fragment">碎片</option>
+                      <option value="theme">主题</option>
+                      <option value="letter">书信</option>
+                      <option value="book">书籍</option>
+                      <option value="journal">日记</option>
+                    </select>
+                  </label>
+                  <label for="entry-tags">标签
+                    <input id="entry-tags" type="text" maxlength="300" placeholder="学术，伊萨卡手记" />
+                  </label>
+                  <label id="entry-recipient-field" for="entry-recipient" hidden>收信人
+                    <input id="entry-recipient" type="text" maxlength="120" placeholder="写给谁？" />
+                  </label>
+                </div>
+              </details>
+              <div class="paper-rule" aria-hidden="true"></div>
+              <label class="sr-only" for="entry-body">手记正文</label>
+              <textarea
+                id="entry-body"
+                class="entry-body"
+                maxlength="100000"
+                placeholder="写下一句话…"
+              ></textarea>
+              <footer class="editor-footer">
+                <span id="character-count">0 个字符</span>
+                <span>Ctrl / ⌘ + Enter 保存 · 内容不会写入应用日志</span>
+              </footer>
+            </div>
+          </section>
+
+          <div id="feed-heading-row" class="feed-heading">
+            <p id="feed-heading" class="section-index">所有纸页</p>
+            <span id="entry-result-count">0 张</span>
+          </div>
+          <div id="entry-feed" class="entry-feed" role="list" aria-live="polite"></div>
+          <p id="list-empty" class="list-empty" hidden>
+            书桌还空着。
+            <button id="list-empty-new-button" class="button button--quiet" type="button">写下第一张</button>
+          </p>
+        </div>
       </main>
     </div>
 

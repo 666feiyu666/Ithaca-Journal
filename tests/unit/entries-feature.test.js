@@ -15,14 +15,13 @@ function createClassList() {
   };
 }
 
-function createHarness() {
+function createHarness({ draft = null } = {}) {
   const state = createAppState();
   const messages = [];
   const savedEvents = [];
   const apiCalls = [];
   const plaintextById = new Map();
   const refs = {
-    editorEmpty: { hidden: false },
     editorPanel: {
       hidden: true,
       classList: createClassList(),
@@ -33,6 +32,7 @@ function createHarness() {
     entryTags: { value: "", addEventListener() {} },
     entryRecipient: { value: "", focus() {}, addEventListener() {} },
     entryRecipientField: { hidden: true },
+    entryDetails: { open: false },
     entryKindLabel: { textContent: "" },
     entryContextAction: { textContent: "", hidden: true, addEventListener() {} },
     entryBody: {
@@ -42,6 +42,7 @@ function createHarness() {
       addEventListener() {},
     },
     entryDate: { textContent: "" },
+    entryEdited: { textContent: "", hidden: true },
     saveState: { textContent: "", dataset: {} },
     characterCount: { textContent: "" },
     saveButton: { textContent: "", addEventListener() {} },
@@ -69,6 +70,7 @@ function createHarness() {
           category: request.category,
           source_topic_id: request.source_topic_id,
           source_letter_day: request.source_letter_day,
+          created_at: "2026-08-21T12:00:00.000Z",
           updated_at: "2026-08-21T12:00:00.000Z",
         },
       };
@@ -87,6 +89,7 @@ function createHarness() {
           category: "fragment",
           source_topic_id: null,
           source_letter_day: null,
+          created_at: "2026-08-21T12:00:00.000Z",
           updated_at: "2026-08-21T12:00:00.000Z",
         }],
       };
@@ -120,17 +123,17 @@ function createHarness() {
     refs,
     api,
     vault,
+    draft,
     exportPlaintext: async () => {},
     setBusy: (busy) => { state.busy = busy; },
     updateActions() {},
     renderList() {},
-    showEmptyEditor() {},
     showMessage: (message, type) => messages.push({ message, type }),
     handleError: (error) => { throw error; },
     onSaved: (info) => savedEvents.push(info),
   });
 
-  return { apiCalls, feature, messages, refs, savedEvents, state };
+  return { apiCalls, feature, messages, plaintextById, refs, savedEvents, state };
 }
 
 test("new fragments begin as a compact, clean memo focused on the body", () => {
@@ -141,6 +144,7 @@ test("new fragments begin as a compact, clean memo focused on the body", () => {
   assert.equal(state.current.id, null);
   assert.equal(state.dirty, false);
   assert.equal(state.editorExpanded, false);
+  assert.equal(state.view, "desk");
   assert.equal(refs.editorPanel.classList.contains("editor-panel--expanded"), false);
   assert.equal(refs.entryBody.focused, true);
   assert.equal(refs.saveButton.textContent, "保存纸页");
@@ -167,13 +171,29 @@ test("saving a new paper reloads summaries and emits the drawer event", async ()
   await feature.saveCurrentEntry();
 
   assert.deepEqual(apiCalls.map(({ path }) => path), ["/api/entries", "/api/entries"]);
-  assert.match(state.current.id, /^[0-9a-f-]{36}$/u);
+  assert.match(savedEvents[0].entry.id, /^[0-9a-f-]{36}$/u);
   assert.equal(state.entries[0].excerpt, "风从港口吹过来。");
   assert.equal(apiCalls[0].options.body.includes("海边的风"), false);
   assert.equal(apiCalls[0].options.body.includes("风从港口吹过来"), false);
   assert.equal(state.dirty, false);
-  assert.equal(refs.saveButton.textContent, "保存修改");
+  assert.equal(refs.saveButton.textContent, "保存纸页");
   assert.equal(savedEvents.length, 1);
   assert.equal(savedEvents[0].created, true);
   assert.equal(JSON.parse(apiCalls[0].options.body).category, "fragment");
+});
+
+test("a body-only page saves without a title and clears the capture surface", async () => {
+  const { plaintextById, feature, refs, state } = createHarness();
+  feature.beginNewEntry();
+  refs.entryBody.value = "只写一句话。";
+  state.dirty = true;
+
+  const saved = await feature.saveCurrentEntry();
+
+  assert.equal(saved.title, "");
+  assert.equal(plaintextById.get(saved.id).title, "");
+  assert.equal(state.view, "desk");
+  assert.equal(state.current.id, null);
+  assert.equal(refs.entryBody.value, "");
+  assert.equal(refs.entryBody.focused, true);
 });

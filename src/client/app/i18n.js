@@ -376,6 +376,29 @@ const ENGLISH = Object.freeze({
   "无法删除这封寄件记录。": "This sent-letter record could not be deleted.",
   "书稿已经装订，并作为独立快照放上书架。": "The manuscript has been bound and shelved as an independent snapshot.",
   "这本书已经从书架移除，原书稿仍留在书桌。": "The book has been removed from the shelf; its manuscript remains on the desk.",
+  "所有纸页": "All pages",
+  "浏览与筛选": "Browse and filter",
+  "纸页详情": "Page details",
+  "题目（可选）": "Title (optional)",
+  "留空也可以": "Leave it blank",
+  "写下一句话…": "Write one sentence…",
+  "今天想留下什么？": "What would you like to keep?",
+  "今天": "Today",
+  "昨天": "Yesterday",
+  "保存纸页": "Save page",
+  "纸页已经保存。": "Page saved.",
+  "纸页的修改已经保存。": "Page changes saved.",
+  "返回时间线": "Back to timeline",
+  "继续草稿": "Resume draft",
+  "舍弃草稿": "Discard draft",
+  "上一次离开时，这里还有一份没有写完的草稿。它只以加密形式留在这个浏览器里。": "There is an unfinished draft from your last visit. It stays in this browser only as encrypted data.",
+  "现在的书写面上还有内容。载入草稿会替换它，确定继续吗？": "The writing surface already has content. Loading the draft replaces it. Continue?",
+  "无法打开这份草稿对应的纸页。": "The page this draft belongs to could not be opened.",
+  "这张纸只留下了标签。": "Only tags were left on this page.",
+  "这张纸还没有写下内容。": "Nothing has been written on this page yet.",
+  "书桌还空着。": "The desk is still empty.",
+  "书桌还空着。写下第一句话，它就会出现在今天。": "The desk is still empty. Write one sentence and it will appear under today.",
+  "写下第一张": "Write the first page",
 });
 
 function normalizeLocale(locale) {
@@ -403,6 +426,14 @@ function translatePattern(value) {
   if (match) return `There are no pages in ${translateText(match[1], "en").toLowerCase()} yet.`;
   match = value.match(/^最近保存：(.*)$/u);
   if (match) return `Last saved: ${translatePattern(match[1])}`;
+  match = value.match(/^写于\s*(.*)$/u);
+  if (match) return `Written ${translatePattern(match[1])}`;
+  match = value.match(/^编辑于\s*(.*)$/u);
+  if (match) return `Edited ${translatePattern(match[1])}`;
+  match = value.match(/^标签\s*#\s*(.+?)\s*下还没有纸页。$/u);
+  if (match) return `There are no pages under #${match[1]} yet.`;
+  match = value.match(/^(.+)纸页$/u);
+  if (match && !value.includes("张")) return `${translateText(match[1], "en")} page`;
   match = value.match(/^最近整理：(.*)$/u);
   if (match) return `Last arranged: ${translatePattern(match[1])}`;
   match = value.match(/^寄出于\s*(.*)$/u);

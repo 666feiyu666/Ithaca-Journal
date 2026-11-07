@@ -2,6 +2,7 @@ import { createAccountFeature } from "./app/account-feature.js";
 import { createAchievementsFeature } from "./app/achievements-feature.js";
 import { api, ApiClientError } from "./app/api-client.js";
 import { queryAppElements } from "./app/dom.js";
+import { createDraftStore } from "./app/draft-store.js";
 import { createEntriesFeature } from "./app/entries-feature.js";
 import { focusWhenReady } from "./app/format.js";
 import { createJourneyFeature } from "./app/journey-feature.js";
@@ -26,6 +27,23 @@ const refs = queryAppElements();
 const privacyVault = createPrivacyVault();
 const i18n = createI18n();
 i18n.start();
+
+const draftStores = new Map();
+
+function currentDraftStore() {
+  const email = typeof state.user?.email === "string" ? state.user.email.trim().toLowerCase() : "";
+  if (!email) return null;
+  if (!draftStores.has(email)) {
+    draftStores.set(email, createDraftStore({ vault: privacyVault, user: state.user }));
+  }
+  return draftStores.get(email);
+}
+
+const draftStore = Object.freeze({
+  save: (draft) => currentDraftStore()?.save(draft) ?? null,
+  load: () => currentDraftStore()?.load() ?? null,
+  clear: () => currentDraftStore()?.clear(),
+});
 
 let accountFeature;
 let achievementFeature;
@@ -86,6 +104,7 @@ function showAuth({
 } = {}) {
   state.user = null;
   privacyFeature?.lock();
+  entriesFeature?.dropDraftMemory();
   state.storyJourney = null;
   state.entries = [];
   state.entriesLoaded = false;
@@ -105,6 +124,11 @@ function showAuth({
   state.topicLayoutBusy = false;
   state.editorExpanded = false;
   state.dirty = false;
+  state.browseMode = "all";
+  state.selectedCategory = null;
+  state.selectedTag = null;
+  state.view = "desk";
+  state.filterPanelOpen = false;
   refs.booksView.hidden = true;
   refs.topicsView.hidden = true;
   refs.mailboxView.hidden = true;
@@ -324,11 +348,11 @@ entriesFeature = createEntriesFeature({
   refs,
   api,
   vault: privacyVault,
+  draft: draftStore,
   exportPlaintext: privacyFeature.exportPlaintext,
   setBusy,
   updateActions,
   renderList: () => workbenchFeature.renderList(),
-  showEmptyEditor: () => workbenchFeature?.showEmptyEditor(),
   showMessage,
   handleError: handleAppError,
   translate: i18n.translate,
@@ -369,6 +393,7 @@ workbenchFeature = createWorkbenchFeature({
   showApp,
   handleError: handleAppError,
   entries: entriesFeature,
+  getLocale: () => i18n.getLocale(),
 });
 
 libraryFeature = createLibraryFeature({

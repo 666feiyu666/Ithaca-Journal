@@ -9,8 +9,24 @@ const CATEGORY_LABELS = Object.freeze({
   journal: "日记",
 });
 
+const DRAFT_SAVE_DELAY = 500;
+
 function parseTags(value) {
   return [...new Set(String(value ?? "").split(/[，,、]/u).map((tag) => tag.trim()).filter(Boolean))].slice(0, 20);
+}
+
+function emptyEntry(category = "fragment", seed = {}) {
+  return {
+    id: null,
+    title: "",
+    body: "",
+    tags: [],
+    category,
+    source_topic_id: null,
+    source_letter_day: null,
+    updated_at: null,
+    ...seed,
+  };
 }
 
 export function createEntriesFeature({
@@ -18,11 +34,11 @@ export function createEntriesFeature({
   refs,
   api,
   vault,
+  draft = null,
   exportPlaintext,
   setBusy,
   updateActions,
   renderList,
-  showEmptyEditor = () => {},
   showMessage,
   handleError,
   onSaved,
@@ -40,9 +56,11 @@ export function createEntriesFeature({
 
   function setEditorExpanded(expanded) {
     state.editorExpanded = expanded;
+    state.view = expanded ? "page" : "desk";
     refs.editorPanel.classList.toggle("editor-panel--expanded", expanded);
     refs.expandEditorButton.setAttribute("aria-pressed", String(expanded));
     refs.expandEditorButton.textContent = expanded ? "收起纸页" : "展开书写";
+    if (expanded && refs.entryDetails) refs.entryDetails.open = true;
   }
 
   function updateEditorContext() {
@@ -66,24 +84,140 @@ export function createEntriesFeature({
       ...entry,
     };
     state.dirty = false;
-    refs.editorEmpty.hidden = true;
     refs.editorPanel.hidden = false;
-    refs.editorPanel.parentElement.scrollTop = 0;
     refs.entryCategory.value = state.current.category ?? "";
     refs.entryTags.value = (state.current.tags ?? []).join("，");
     refs.entryRecipient.value = state.current.recipient ?? "";
     refs.entryTitle.value = state.current.title ?? "";
     refs.entryBody.value = state.current.body ?? "";
-    refs.entryDate.textContent = state.current.updated_at
-      ? `最近保存：${formatDate(state.current.updated_at)}`
+    refs.entryDate.textContent = state.current.created_at
+      ? `写于 ${formatDate(state.current.created_at)}`
       : "尚未保存";
-    refs.saveButton.textContent = state.current.id ? "保存修改" : "保存纸页";
+    refs.entryEdited.textContent = state.current.updated_at
+      ? `最近保存：${formatDate(state.current.updated_at)}`
+      : "";
+    refs.entryEdited.hidden = !state.current.updated_at;
+    refs.saveButton.textContent = "保存纸页";
     setEditorExpanded(expanded);
     updateSaveState(state.current.updated_at ? "已保存" : "尚未保存", "saved");
     updateCharacterCount();
     updateEditorContext();
     updateActions();
     renderList();
+  }
+
+  function currentDraftContent() {
+    return {
+      entry_id: state.current?.id ?? null,
+      category: refs.entryCategory.value || null,
+      title: refs.entryTitle.value,
+      body: refs.entryBody.value,
+      tags: parseTags(refs.entryTags.value),
+      recipient: refs.entryRecipient.value.trim(),
+      saved_at: new Date().toISOString(),
+    };
+  }
+
+  async function clearStoredDraft() {
+    if (state.draftTimer) {
+      globalThis.clearTimeout(state.draftTimer);
+      state.draftTimer = null;
+    }
+    state.draftActive = false;
+    state.draft = null;
+    try {
+      await draft?.clear();
+    } catch {
+      // Storage failures must never block writing.
+    }
+  }
+
+  async function persistDraft() {
+    state.draftTimer = null;
+    if (!draft || !state.current) return;
+    const content = currentDraftContent();
+    if (!content.body.trim() && !content.title.trim() && content.tags.length === 0) return;
+    try {
+      const stored = await draft.save(content);
+      if (stored) state.draftActive = true;
+    } catch {
+      // Keep writing even when the encrypted local copy cannot be written.
+    }
+  }
+
+  function scheduleDraftSave() {
+    if (!draft) return;
+    if (state.draftTimer) globalThis.clearTimeout(state.draftTimer);
+    state.draftTimer = globalThis.setTimeout(() => void persistDraft(), DRAFT_SAVE_DELAY);
+  }
+
+  async function loadStoredDraft() {
+    if (!draft) return null;
+    try {
+      state.draft = await draft.load();
+    } catch {
+      state.draft = null;
+    }
+    return state.draft;
+  }
+
+  function dropDraftMemory() {
+    if (state.draftTimer) {
+      globalThis.clearTimeout(state.draftTimer);
+      state.draftTimer = null;
+    }
+    state.draft = null;
+    state.draftActive = false;
+  }
+
+  async function resumeDraft() {
+    const stored = state.draft;
+    if (!draft || !stored) return null;
+    if (state.dirty && !window.confirm(translate("现在的书写面上还有内容。载入草稿会替换它，确定继续吗？"))) {
+      return null;
+    }
+    if (stored.entry_id) {
+      setBusy(true);
+      try {
+        const data = await api(`/api/entries/${stored.entry_id}`);
+        showEditor(await vault.openEntry(data.entry), { expanded: false });
+      } catch (error) {
+        handleError(error, "无法打开这份草稿对应的纸页。");
+        return null;
+      } finally {
+        setBusy(false);
+      }
+    } else {
+      showEditor(emptyEntry(stored.category ?? "fragment"), { expanded: false });
+    }
+    refs.entryCategory.value = stored.category ?? "fragment";
+    refs.entryTitle.value = stored.title ?? "";
+    refs.entryBody.value = stored.body ?? "";
+    refs.entryTags.value = (stored.tags ?? []).join("，");
+    refs.entryRecipient.value = stored.recipient ?? "";
+    state.dirty = true;
+    state.draftActive = true;
+    state.view = "desk";
+    setEditorExpanded(false);
+    updateSaveState("有未保存修改", "dirty");
+    updateCharacterCount();
+    updateEditorContext();
+    updateActions();
+    renderList();
+    refs.entryBody.focus();
+    return stored;
+  }
+
+  async function discardDraft() {
+    const wasResumed = state.draftActive;
+    await clearStoredDraft();
+    if (wasResumed) {
+      state.dirty = false;
+      showEditor(emptyEntry(), { expanded: false });
+      refs.entryBody.focus();
+    } else {
+      renderList();
+    }
   }
 
   function canLeaveCurrentDraft() {
@@ -96,20 +230,10 @@ export function createEntriesFeature({
     return shouldLeave;
   }
 
-  function beginNewEntry(seed = {}) {
+  function beginNewEntry(seed = {}, { expanded = false } = {}) {
     if (!canLeaveCurrentDraft()) return;
     const category = seed.category === undefined ? "fragment" : seed.category;
-    showEditor({
-      id: null,
-      title: "",
-      body: "",
-      tags: [],
-      category,
-      source_topic_id: null,
-      source_letter_day: null,
-      updated_at: null,
-      ...seed,
-    }, { expanded: false });
+    showEditor(emptyEntry(category, seed), { expanded });
     if (seed.title || seed.body || seed.recipient || (seed.tags?.length ?? 0) > 0) {
       state.dirty = true;
       updateSaveState("有未保存修改", "dirty");
@@ -139,6 +263,12 @@ export function createEntriesFeature({
     }
   }
 
+  function collapseEditor() {
+    setEditorExpanded(false);
+    renderList();
+    refs.entryBody.focus();
+  }
+
   async function saveCurrentEntry() {
     if (!state.current || state.busy) return null;
     if (!refs.entryTitle.value.trim() && !refs.entryBody.value.trim()) {
@@ -155,7 +285,7 @@ export function createEntriesFeature({
       const entryId = state.current.id ?? crypto.randomUUID();
       const category = refs.entryCategory.value || null;
       const content = {
-        title: refs.entryTitle.value.trim() || `未命名${CATEGORY_LABELS[category ?? ""]}`,
+        title: refs.entryTitle.value.trim(),
         body: refs.entryBody.value,
         tags: parseTags(refs.entryTags.value),
         recipient: category === "letter" ? refs.entryRecipient.value.trim() : "",
@@ -172,15 +302,25 @@ export function createEntriesFeature({
         }),
       });
       state.current = await vault.openEntry(data.entry);
+      const savedEntry = state.current;
       state.dirty = false;
-      refs.entryDate.textContent = `最近保存：${formatDate(state.current.updated_at)}`;
-      refs.saveButton.textContent = "保存修改";
+      await clearStoredDraft();
+      refs.entryDate.textContent = savedEntry.created_at
+        ? `写于 ${formatDate(savedEntry.created_at)}`
+        : "尚未保存";
+      refs.entryEdited.textContent = `最近保存：${formatDate(savedEntry.updated_at)}`;
+      refs.entryEdited.hidden = false;
+      refs.saveButton.textContent = "保存纸页";
       updateSaveState("已保存", "saved");
+      if (!isExisting) {
+        showEditor(emptyEntry(), { expanded: false });
+        refs.editorPanel.parentElement.scrollTop = 0;
+      }
       await loadEntries();
       updateEditorContext();
-      onSaved?.({ created: !isExisting, entry: state.current });
-      showMessage(isExisting ? "纸页修改已经保存。" : "纸页已经放回书桌。");
-      return state.current;
+      onSaved?.({ created: !isExisting, entry: savedEntry });
+      showMessage(isExisting ? "纸页的修改已经保存。" : "纸页已经保存。");
+      return savedEntry;
     } catch (error) {
       updateSaveState("保存失败", "error");
       handleError(error, "保存失败，请检查连接后重试。");
@@ -197,11 +337,15 @@ export function createEntriesFeature({
 
   async function removeCurrentEntry() {
     if (!state.current?.id || state.busy) return;
+    const removedId = state.current.id;
     setBusy(true);
     try {
-      await api(`/api/entries/${state.current.id}`, { method: "DELETE" });
+      await api(`/api/entries/${removedId}`, { method: "DELETE" });
+      if (state.draft?.entry_id === removedId) await clearStoredDraft();
+      state.current = null;
+      state.dirty = false;
       await loadEntries();
-      showEmptyEditor();
+      showEditor(emptyEntry(), { expanded: false });
       showMessage("纸页已经删除。");
     } catch (error) {
       handleError(error, "无法删除这张纸页。");
@@ -226,6 +370,7 @@ export function createEntriesFeature({
     updateCharacterCount();
     updateEditorContext();
     updateActions();
+    scheduleDraftSave();
   }
 
   function bindEvents() {
@@ -239,12 +384,17 @@ export function createEntriesFeature({
     });
     refs.expandEditorButton.addEventListener("click", () => {
       setEditorExpanded(!state.editorExpanded);
+      renderList();
       (state.editorExpanded ? refs.entryTitle : refs.entryBody).focus();
     });
     refs.editorPanel.addEventListener("keydown", (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
         void saveCurrentEntry();
+      }
+      if (event.key === "Escape" && state.view === "page") {
+        event.preventDefault();
+        collapseEditor();
       }
     });
     refs.deleteEntryButton.addEventListener("click", () => refs.deleteEntryDialog.showModal());
@@ -256,9 +406,15 @@ export function createEntriesFeature({
     beginNewEntry,
     bindEvents,
     canLeaveCurrentDraft,
+    clearStoredDraft,
+    collapseEditor,
+    discardDraft,
+    dropDraftMemory,
     ensureSaved,
     loadEntries,
+    loadStoredDraft,
     openEntry,
+    resumeDraft,
     saveCurrentEntry,
     setEditorExpanded,
     showEditor,

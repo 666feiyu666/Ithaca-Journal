@@ -37,6 +37,13 @@ test("tag browsing crosses paper categories", () => {
   );
 });
 
+test("the default all-pages view keeps every category and uncategorized page", () => {
+  assert.deepEqual(
+    entriesForBrowse(papers, { mode: "all", category: null, tag: null }).map(({ id }) => id),
+    ["loose", "fragment", "theme", "letter", "book", "journal"],
+  );
+});
+
 test("tag input is trimmed, deduplicated, and accepts Chinese punctuation", () => {
   assert.deepEqual(normalizedTags(" 学术，伊萨卡手记, 学术、研究 "), ["学术", "伊萨卡手记", "研究"]);
 });

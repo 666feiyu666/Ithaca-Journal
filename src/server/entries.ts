@@ -181,7 +181,7 @@ export async function listEntries(env: Env, userId: string): Promise<EntryRecord
             source_topic_id, source_letter_day, created_at, updated_at
      FROM journal_entries
      WHERE user_id = ?1
-     ORDER BY updated_at DESC`,
+     ORDER BY created_at DESC, updated_at DESC`,
   )
     .bind(userId)
     .all<StoredEntryRow>();
